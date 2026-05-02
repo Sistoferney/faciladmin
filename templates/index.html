@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}FacilAdmin - Inicio{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <h1 class="display-4 mb-4">🎉 FacilAdmin</h1>
+            <p class="lead mb-4">Sistema de Gestión para Spas, Peluquerías y Barberías</p>
+
+            <div class="card shadow-sm">
+                <div class="card-body p-5">
+                    <h3 class="mb-4">¡Bienvenido!</h3>
+
+                    {% if user.is_authenticated %}
+                        <p class="mb-4">Hola, <strong>{{ user.nombre }}</strong></p>
+                        <a href="/admin/" class="btn btn-primary btn-lg">
+                            Ir al Panel de Administración
+                        </a>
+                    {% else %}
+                        <p class="mb-4">Accede al panel de administración para gestionar tu negocio</p>
+                        <a href="/admin/" class="btn btn-primary btn-lg">
+                            Iniciar Sesión
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="row mt-5">
+                <div class="col-md-4">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">📅 Agenda</h5>
+                            <p class="card-text">Gestiona citas y reservas en tiempo real</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">👥 Clientes</h5>
+                            <p class="card-text">CRM completo para fidelizar clientes</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">📊 Reportes</h5>
+                            <p class="card-text">Analiza el rendimiento de tu negocio</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 text-muted">
+                <small>
+                    <strong>Características:</strong>
+                    Mini página web | Sistema de abonos | Notificaciones automáticas |
+                    Fidelización | Promociones | 100% Responsive
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

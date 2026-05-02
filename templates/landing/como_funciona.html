@@ -1,0 +1,146 @@
+{% extends 'landing/base_landing.html' %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h1 class="display-4 fw-bold">Cómo Funciona FacilAdmin</h1>
+            <p class="lead text-muted">Todo lo que necesitas saber en 2 minutos</p>
+        </div>
+
+        <!-- Video Demo Placeholder -->
+        <div class="row justify-content-center mb-5">
+            <div class="col-lg-8">
+                <div class="ratio ratio-16x9 rounded-4 overflow-hidden shadow-lg">
+                    <div class="bg-primary d-flex align-items-center justify-content-center">
+                        <div class="text-center text-white">
+                            <i class="bi bi-play-circle display-1 mb-3"></i>
+                            <h4>Video Demo</h4>
+                            <p>Próximamente</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pasos Detallados -->
+        <div class="row g-5">
+            <div class="col-lg-6">
+                <div class="d-flex">
+                    <div class="flex-shrink-0">
+                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+                             style="width: 60px; height: 60px; font-size: 1.5rem; font-weight: bold;">
+                            1
+                        </div>
+                    </div>
+                    <div class="ms-4">
+                        <h4>Regístrate en Segundos</h4>
+                        <p class="text-muted">
+                            Llena un formulario simple con los datos de tu negocio.
+                            Sin necesidad de tarjeta de crédito para empezar.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="d-flex">
+                    <div class="flex-shrink-0">
+                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+                             style="width: 60px; height: 60px; font-size: 1.5rem; font-weight: bold;">
+                            2
+                        </div>
+                    </div>
+                    <div class="ms-4">
+                        <h4>Configura tu Mini Página</h4>
+                        <p class="text-muted">
+                            Personaliza los colores, sube tu logo y agrega los servicios
+                            que ofreces con sus precios y duración.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="d-flex">
+                    <div class="flex-shrink-0">
+                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+                             style="width: 60px; height: 60px; font-size: 1.5rem; font-weight: bold;">
+                            3
+                        </div>
+                    </div>
+                    <div class="ms-4">
+                        <h4>Comparte tu Enlace</h4>
+                        <p class="text-muted">
+                            Obtén una URL única (ej: faciladmin.com/tu-spa).
+                            Compártela en redes sociales, WhatsApp o agrégala a tu sitio web.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="d-flex">
+                    <div class="flex-shrink-0">
+                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+                             style="width: 60px; height: 60px; font-size: 1.5rem; font-weight: bold;">
+                            4
+                        </div>
+                    </div>
+                    <div class="ms-4">
+                        <h4>Recibe Reservas Automáticamente</h4>
+                        <p class="text-muted">
+                            Tus clientes agendan cuando quieran, 24/7.
+                            Tú recibes notificaciones de cada nueva cita.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="d-flex">
+                    <div class="flex-shrink-0">
+                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+                             style="width: 60px; height: 60px; font-size: 1.5rem; font-weight: bold;">
+                            5
+                        </div>
+                    </div>
+                    <div class="ms-4">
+                        <h4>Gestiona desde el Panel</h4>
+                        <p class="text-muted">
+                            Visualiza tu agenda, confirma abonos, envía recordatorios
+                            y crea promociones desde un panel centralizado.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="d-flex">
+                    <div class="flex-shrink-0">
+                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+                             style="width: 60px; height: 60px; font-size: 1.5rem; font-weight: bold;">
+                            6
+                        </div>
+                    </div>
+                    <div class="ms-4">
+                        <h4>Fideliza a tus Clientes</h4>
+                        <p class="text-muted">
+                            El sistema sugiere automáticamente cuándo es el momento
+                            de agendar la próxima cita según cada servicio.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CTA -->
+        <div class="text-center mt-5 pt-5">
+            <h3 class="mb-4">¿Listo para probarlo?</h3>
+            <a href="{% url 'core:registro' %}" class="btn btn-primary-gradient btn-lg px-5 py-3">
+                <i class="bi bi-rocket-takeoff-fill me-2"></i> Comenzar Gratis Ahora
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}

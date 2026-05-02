@@ -1,0 +1,155 @@
+{% extends 'landing/base_landing.html' %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-6">
+                <div class="card shadow-lg border-0 rounded-4">
+                    <div class="card-body p-5">
+                        <div class="text-center mb-4">
+                            <h2 class="fw-bold">Registra tu Negocio</h2>
+                            <p class="text-muted">Comienza gratis hoy mismo</p>
+                        </div>
+
+                        <form method="post">
+                            {% csrf_token %}
+
+                            <!-- Datos del Administrador -->
+                            <h5 class="mb-3">
+                                <i class="bi bi-person-circle me-2"></i> Tus Datos
+                            </h5>
+
+                            <div class="mb-3">
+                                <label class="form-label">{{ form.nombre_admin.label }}</label>
+                                {{ form.nombre_admin }}
+                                {% if form.nombre_admin.errors %}
+                                    <div class="text-danger small">{{ form.nombre_admin.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">{{ form.email.label }}</label>
+                                {{ form.email }}
+                                {% if form.email.errors %}
+                                    <div class="text-danger small">{{ form.email.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">{{ form.telefono_admin.label }}</label>
+                                {{ form.telefono_admin }}
+                                {% if form.telefono_admin.errors %}
+                                    <div class="text-danger small">{{ form.telefono_admin.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">{{ form.password.label }}</label>
+                                    {{ form.password }}
+                                    {% if form.password.errors %}
+                                        <div class="text-danger small">{{ form.password.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">{{ form.password_confirm.label }}</label>
+                                    {{ form.password_confirm }}
+                                    {% if form.password_confirm.errors %}
+                                        <div class="text-danger small">{{ form.password_confirm.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <hr class="my-4">
+
+                            <!-- Datos del Negocio -->
+                            <h5 class="mb-3">
+                                <i class="bi bi-shop me-2"></i> Datos del Negocio
+                            </h5>
+
+                            <div class="mb-3">
+                                <label class="form-label">{{ form.nombre_negocio.label }}</label>
+                                {{ form.nombre_negocio }}
+                                {% if form.nombre_negocio.errors %}
+                                    <div class="text-danger small">{{ form.nombre_negocio.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">{{ form.tipo_negocio.label }}</label>
+                                    {{ form.tipo_negocio }}
+                                    {% if form.tipo_negocio.errors %}
+                                        <div class="text-danger small">{{ form.tipo_negocio.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">{{ form.telefono_negocio.label }}</label>
+                                    {{ form.telefono_negocio }}
+                                    {% if form.telefono_negocio.errors %}
+                                        <div class="text-danger small">{{ form.telefono_negocio.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">{{ form.ciudad.label }}</label>
+                                {{ form.ciudad }}
+                                {% if form.ciudad.errors %}
+                                    <div class="text-danger small">{{ form.ciudad.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Términos -->
+                            <div class="form-check mb-4">
+                                {{ form.acepta_terminos }}
+                                <label class="form-check-label" for="{{ form.acepta_terminos.id_for_label }}">
+                                    {{ form.acepta_terminos.label }}
+                                </label>
+                                {% if form.acepta_terminos.errors %}
+                                    <div class="text-danger small">{{ form.acepta_terminos.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Errores generales del formulario -->
+                            {% if form.non_field_errors %}
+                                <div class="alert alert-danger">
+                                    {{ form.non_field_errors }}
+                                </div>
+                            {% endif %}
+
+                            <!-- Botón de registro -->
+                            <button type="submit" class="btn btn-primary-gradient w-100 py-3 fw-bold">
+                                <i class="bi bi-rocket-takeoff-fill me-2"></i> Crear mi Cuenta Gratis
+                            </button>
+
+                            <p class="text-center mt-4 text-muted small">
+                                ¿Ya tienes cuenta? <a href="/admin/" class="text-decoration-none">Inicia sesión aquí</a>
+                            </p>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Beneficios -->
+                <div class="mt-4">
+                    <div class="row text-center g-3">
+                        <div class="col-md-4">
+                            <i class="bi bi-check-circle-fill text-success fs-4"></i>
+                            <p class="small mb-0 mt-2">Sin tarjeta de crédito</p>
+                        </div>
+                        <div class="col-md-4">
+                            <i class="bi bi-check-circle-fill text-success fs-4"></i>
+                            <p class="small mb-0 mt-2">Configuración rápida</p>
+                        </div>
+                        <div class="col-md-4">
+                            <i class="bi bi-check-circle-fill text-success fs-4"></i>
+                            <p class="small mb-0 mt-2">Soporte incluido</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
