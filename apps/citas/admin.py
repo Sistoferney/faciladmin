@@ -70,11 +70,37 @@ class CitaAdmin(admin.ModelAdmin):
     abono_vencido_display.short_description = 'Abono'
 
     def get_queryset(self, request):
+        """Filtrar citas por negocio del usuario"""
         qs = super().get_queryset(request)
-        # Si el usuario no es superadmin, solo mostrar citas de su negocio
-        if not request.user.is_superuser and hasattr(request.user, 'negocio'):
+        # Si el usuario tiene un negocio asociado, solo mostrar citas de ese negocio
+        if hasattr(request.user, 'negocio'):
             qs = qs.filter(negocio=request.user.negocio)
+        # Si no tiene negocio asociado, es superadmin del sistema y puede ver todos
         return qs
+
+    def get_form(self, request, obj=None, **kwargs):
+        """Ocultar campo negocio si el usuario tiene un negocio asociado"""
+        form = super().get_form(request, obj, **kwargs)
+        # Si el usuario tiene negocio, ocultar el campo de selección
+        if hasattr(request.user, 'negocio') and 'negocio' in form.base_fields:
+            form.base_fields['negocio'].widget = form.base_fields['negocio'].hidden_widget()
+            form.base_fields['negocio'].required = False
+        return form
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """Filtrar clientes y servicios por negocio del usuario"""
+        if hasattr(request.user, 'negocio'):
+            if db_field.name == "cliente":
+                kwargs["queryset"] = db_field.related_model.objects.filter(negocio=request.user.negocio)
+            elif db_field.name == "servicio":
+                kwargs["queryset"] = db_field.related_model.objects.filter(negocio=request.user.negocio)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def save_model(self, request, obj, form, change):
+        """Asignar automáticamente el negocio del usuario si no es superadmin"""
+        if not change and hasattr(request.user, 'negocio'):
+            obj.negocio = request.user.negocio
+        super().save_model(request, obj, form, change)
 
     actions = ['confirmar_citas', 'marcar_completadas', 'cancelar_citas']
 

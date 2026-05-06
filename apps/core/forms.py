@@ -2,8 +2,9 @@
 Formularios para registro de negocios
 """
 from django import forms
+from django.utils.text import slugify
 from apps.authentication.models import Usuario
-from apps.negocios.models import Negocio
+from apps.negocios.models import Negocio, SLUGS_RESERVADOS
 
 
 class RegistroNegocioForm(forms.Form):
@@ -106,3 +107,18 @@ class RegistroNegocioForm(forms.Form):
         if Usuario.objects.filter(email=email).exists():
             raise forms.ValidationError('Este email ya está registrado')
         return email
+
+    def clean_nombre_negocio(self):
+        nombre = self.cleaned_data.get('nombre_negocio')
+        # Generar el slug que se usaría
+        slug = slugify(nombre)
+
+        # Verificar si el slug estaría en la lista de palabras reservadas
+        if slug.lower() in SLUGS_RESERVADOS:
+            raise forms.ValidationError(
+                f'El nombre "{nombre}" genera una URL reservada del sistema. '
+                'Por favor elige otro nombre para tu negocio. '
+                'Nombres reservados: admin, login, api, etc.'
+            )
+
+        return nombre

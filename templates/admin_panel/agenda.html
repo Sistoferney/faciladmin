@@ -1,0 +1,213 @@
+{% extends 'admin_panel/base_admin.html' %}
+
+{% block page_title %}Agenda de Citas{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <h4><i class="bi bi-calendar-check"></i> Agenda de Citas</h4>
+            <div class="d-flex gap-2">
+                <form method="GET" class="d-flex gap-2">
+                    <input type="date" name="fecha" class="form-control" value="{{ fecha|date:'Y-m-d' }}" onchange="this.form.submit()">
+                </form>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#nuevaCitaModal">
+                    <i class="bi bi-plus-circle"></i> Nueva Cita
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Estadísticas del Día -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="stat-card text-center">
+            <h3 class="text-primary mb-0">{{ stats.total }}</h3>
+            <small class="text-muted">Total del Día</small>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stat-card text-center">
+            <h3 class="text-success mb-0">{{ stats.confirmadas }}</h3>
+            <small class="text-muted">Confirmadas</small>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stat-card text-center">
+            <h3 class="text-warning mb-0">{{ stats.pendientes }}</h3>
+            <small class="text-muted">Pendientes</small>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stat-card text-center">
+            <h3 class="text-info mb-0">{{ stats.completadas }}</h3>
+            <small class="text-muted">Completadas</small>
+        </div>
+    </div>
+</div>
+
+<!-- Lista de Citas -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-bottom py-3">
+                <h5 class="mb-0">
+                    <i class="bi bi-calendar-day"></i>
+                    Citas del {{ fecha|date:"d/m/Y" }}
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                {% if citas %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Hora</th>
+                                <th>Cliente</th>
+                                <th>Servicio</th>
+                                <th>Duración</th>
+                                <th>Precio</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cita in citas %}
+                            <tr>
+                                <td class="align-middle">
+                                    <strong class="fs-5">{{ cita.fecha_hora|date:"H:i" }}</strong>
+                                </td>
+                                <td class="align-middle">
+                                    <div class="fw-bold">{{ cita.cliente.nombre }}</div>
+                                    <small class="text-muted">
+                                        <i class="bi bi-telephone"></i> {{ cita.cliente.telefono }}
+                                    </small>
+                                </td>
+                                <td class="align-middle">
+                                    <div>{{ cita.servicio.nombre }}</div>
+                                    {% if cita.notas_cliente %}
+                                    <small class="text-muted">
+                                        <i class="bi bi-chat-left-text"></i> {{ cita.notas_cliente|truncatewords:5 }}
+                                    </small>
+                                    {% endif %}
+                                </td>
+                                <td class="align-middle">{{ cita.duracion_minutos }} min</td>
+                                <td class="align-middle"><strong>${{ cita.servicio.precio }}</strong></td>
+                                <td class="align-middle">
+                                    {% if cita.estado == 'confirmada' %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle"></i> Confirmada
+                                        </span>
+                                    {% elif cita.estado == 'pendiente_abono' %}
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-clock"></i> Pend. Abono
+                                        </span>
+                                    {% elif cita.estado == 'completada' %}
+                                        <span class="badge bg-info">
+                                            <i class="bi bi-check-all"></i> Completada
+                                        </span>
+                                    {% elif cita.estado == 'cancelada' %}
+                                        <span class="badge bg-danger">
+                                            <i class="bi bi-x-circle"></i> Cancelada
+                                        </span>
+                                    {% elif cita.estado == 'no_asistio' %}
+                                        <span class="badge bg-secondary">
+                                            <i class="bi bi-person-x"></i> No asistió
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="align-middle">
+                                    <div class="btn-group btn-group-sm">
+                                        {% if cita.estado == 'pendiente_abono' %}
+                                        <button class="btn btn-sm btn-success" onclick="confirmarCita({{ cita.id }})" title="Confirmar">
+                                            <i class="bi bi-check"></i>
+                                        </button>
+                                        {% endif %}
+                                        {% if cita.estado == 'confirmada' %}
+                                        <button class="btn btn-sm btn-info" onclick="completarCita({{ cita.id }})" title="Completar">
+                                            <i class="bi bi-check-all"></i>
+                                        </button>
+                                        {% endif %}
+                                        <button class="btn btn-sm btn-primary" onclick="verDetalles({{ cita.id }})" title="Ver detalles">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-danger" onclick="cancelarCita({{ cita.id }})" title="Cancelar">
+                                            <i class="bi bi-x"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-calendar-x fs-1 text-muted"></i>
+                    <h5 class="mt-3 text-muted">No hay citas para este día</h5>
+                    <p class="text-muted">Selecciona otra fecha o crea una nueva cita</p>
+                    <button class="btn btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#nuevaCitaModal">
+                        <i class="bi bi-plus-circle"></i> Crear Nueva Cita
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nueva Cita -->
+<div class="modal fade" id="nuevaCitaModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-plus-circle"></i> Nueva Cita</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-4">
+                    <i class="bi bi-info-circle"></i>
+                    Por ahora, usa el <a href="/admin/citas/cita/add/" target="_blank">panel de Django Admin</a> para crear citas manualmente.
+                    Los clientes pueden agendar desde tu mini-página pública.
+                </p>
+                <div class="text-center">
+                    <a href="/admin/citas/cita/add/?negocio={{ negocio.id }}" target="_blank" class="btn btn-primary">
+                        <i class="bi bi-box-arrow-up-right"></i> Ir a Django Admin
+                    </a>
+                    <a href="{% url 'public:minipagina' negocio.slug %}" target="_blank" class="btn btn-outline-primary">
+                        <i class="bi bi-eye"></i> Ver Mini-Página Pública
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmarCita(id) {
+    if (confirm('¿Confirmar el abono de esta cita?')) {
+        window.open(`/admin/citas/cita/${id}/change/`, '_blank');
+    }
+}
+
+function completarCita(id) {
+    if (confirm('¿Marcar esta cita como completada?')) {
+        window.open(`/admin/citas/cita/${id}/change/`, '_blank');
+    }
+}
+
+function verDetalles(id) {
+    window.open(`/admin/citas/cita/${id}/change/`, '_blank');
+}
+
+function cancelarCita(id) {
+    if (confirm('¿Estás seguro de cancelar esta cita?')) {
+        window.open(`/admin/citas/cita/${id}/change/`, '_blank');
+    }
+}
+</script>
+{% endblock %}

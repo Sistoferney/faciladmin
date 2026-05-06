@@ -1,0 +1,201 @@
+{% extends 'minipagina/base_publica.html' %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <!-- Breadcrumb -->
+                <nav aria-label="breadcrumb" class="mb-4">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'public:minipagina' negocio.slug %}" class="text-decoration-none">
+                                {{ negocio.nombre }}
+                            </a>
+                        </li>
+                        <li class="breadcrumb-item active">Agendar Cita</li>
+                    </ol>
+                </nav>
+
+                <div class="card shadow-lg border-0">
+                    <div class="card-body p-5">
+                        <h2 class="text-center mb-4">
+                            <i class="bi bi-calendar-check text-primary"></i>
+                            Agendar Cita
+                        </h2>
+
+                        <form method="post" id="formAgendar">
+                            {% csrf_token %}
+
+                            <!-- Paso 1: Datos Personales -->
+                            <h5 class="mb-3">
+                                <span class="badge bg-primary rounded-circle me-2">1</span>
+                                Tus Datos
+                            </h5>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Nombre Completo *</label>
+                                    <input type="text" name="nombre" class="form-control" required
+                                           placeholder="Ej: Juan Pérez">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Teléfono (con WhatsApp) *</label>
+                                    <input type="tel" name="telefono" class="form-control" required
+                                           placeholder="+52 55 1234 5678">
+                                    <small class="text-muted">Te enviaremos confirmación por WhatsApp</small>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label">Email (opcional)</label>
+                                <input type="email" name="email" class="form-control"
+                                       placeholder="tu@email.com">
+                            </div>
+
+                            <hr class="my-4">
+
+                            <!-- Paso 2: Seleccionar Servicio -->
+                            <h5 class="mb-3">
+                                <span class="badge bg-primary rounded-circle me-2">2</span>
+                                Selecciona el Servicio
+                            </h5>
+
+                            <div class="row g-3 mb-4">
+                                {% for servicio in servicios %}
+                                <div class="col-md-6">
+                                    <input type="radio" class="btn-check" name="servicio"
+                                           id="servicio{{ servicio.id }}" value="{{ servicio.id }}"
+                                           required
+                                           {% if request.GET.servicio == servicio.id|stringformat:"s" %}checked{% endif %}>
+                                    <label class="btn btn-outline-primary w-100 text-start p-3"
+                                           for="servicio{{ servicio.id }}">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <strong>{{ servicio.nombre }}</strong>
+                                                <br>
+                                                <small class="text-muted">
+                                                    <i class="bi bi-clock me-1"></i>{{ servicio.duracion_minutos }} min
+                                                </small>
+                                            </div>
+                                            <span class="h5 mb-0">${{ servicio.precio }}</span>
+                                        </div>
+                                        {% if servicio.requiere_pago_abono %}
+                                        <small class="text-warning d-block mt-2">
+                                            <i class="bi bi-info-circle"></i> Requiere abono de ${{ servicio.precio_abono }}
+                                        </small>
+                                        {% endif %}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+
+                            <hr class="my-4">
+
+                            <!-- Paso 3: Fecha y Hora -->
+                            <h5 class="mb-3">
+                                <span class="badge bg-primary rounded-circle me-2">3</span>
+                                Selecciona Fecha y Hora
+                            </h5>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Fecha *</label>
+                                    <input type="date" name="fecha" class="form-control" required
+                                           min="{{ today|date:'Y-m-d' }}"
+                                           max="{{ max_date|date:'Y-m-d' }}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Hora *</label>
+                                    <select name="hora" class="form-control" required>
+                                        <option value="">Selecciona una hora</option>
+                                        <option value="09:00">09:00 AM</option>
+                                        <option value="09:30">09:30 AM</option>
+                                        <option value="10:00">10:00 AM</option>
+                                        <option value="10:30">10:30 AM</option>
+                                        <option value="11:00">11:00 AM</option>
+                                        <option value="11:30">11:30 AM</option>
+                                        <option value="12:00">12:00 PM</option>
+                                        <option value="12:30">12:30 PM</option>
+                                        <option value="13:00">01:00 PM</option>
+                                        <option value="13:30">01:30 PM</option>
+                                        <option value="14:00">02:00 PM</option>
+                                        <option value="14:30">02:30 PM</option>
+                                        <option value="15:00">03:00 PM</option>
+                                        <option value="15:30">03:30 PM</option>
+                                        <option value="16:00">04:00 PM</option>
+                                        <option value="16:30">04:30 PM</option>
+                                        <option value="17:00">05:00 PM</option>
+                                        <option value="17:30">05:30 PM</option>
+                                        <option value="18:00">06:00 PM</option>
+                                        <option value="18:30">06:30 PM</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label">Notas o comentarios (opcional)</label>
+                                <textarea name="notas" class="form-control" rows="3"
+                                          placeholder="¿Alguna preferencia especial o comentario?"></textarea>
+                            </div>
+
+                            <!-- Botón de Envío -->
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="bi bi-check-circle me-2"></i> Confirmar Cita
+                                </button>
+                                <a href="{% url 'public:minipagina' negocio.slug %}"
+                                   class="btn btn-outline-secondary">
+                                    Cancelar
+                                </a>
+                            </div>
+
+                            <!-- Información Importante -->
+                            <div class="alert alert-info mt-4">
+                                <h6><i class="bi bi-info-circle me-2"></i>Información Importante</h6>
+                                <ul class="small mb-0">
+                                    <li>Recibirás una confirmación por WhatsApp</li>
+                                    {% if negocio.requiere_abono %}
+                                    <li>Los servicios requieren abono anticipado para confirmar</li>
+                                    <li>El abono debe realizarse al menos 2 días antes de la cita</li>
+                                    {% endif %}
+                                    <li>Te enviaremos un recordatorio 24 horas antes</li>
+                                </ul>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+// Mejorar la experiencia del usuario con JavaScript
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-seleccionar servicio si viene en la URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const servicioParam = urlParams.get('servicio');
+    if (servicioParam) {
+        const radioServicio = document.getElementById('servicio' + servicioParam);
+        if (radioServicio) {
+            radioServicio.checked = true;
+        }
+    }
+
+    // Validar teléfono formato mexicano
+    const telefonoInput = document.querySelector('input[name="telefono"]');
+    if (telefonoInput) {
+        telefonoInput.addEventListener('blur', function() {
+            const telefono = this.value;
+            // Básica validación para números mexicanos
+            if (telefono && !telefono.match(/^\+?52?\s?\d{10,13}$/)) {
+                this.setCustomValidity('Ingresa un número válido (ej: +52 55 1234 5678)');
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

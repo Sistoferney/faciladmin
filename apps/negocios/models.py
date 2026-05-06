@@ -5,7 +5,21 @@ RF-08 a RF-12
 from django.db import models
 from django.conf import settings
 from django.utils.text import slugify
+from django.core.exceptions import ValidationError
 import uuid
+
+# Palabras reservadas del sistema que no se pueden usar como slugs
+SLUGS_RESERVADOS = [
+    'admin', 'login', 'logout', 'registro', 'dashboard',
+    'api', 'static', 'media', 'accounts',
+    'auth', 'authentication', 'usuarios', 'users',
+    'sistema', 'system', 'configuracion', 'config', 'settings',
+    'superadmin', 'root', 'administrador',
+    'precios', 'pricing', 'contacto', 'contact',
+    'como-funciona', 'about', 'ayuda', 'help',
+    'terminos', 'terms', 'privacidad', 'privacy',
+    'legal', 'soporte', 'support',
+]
 
 
 class Negocio(models.Model):
@@ -112,16 +126,36 @@ class Negocio(models.Model):
     def __str__(self):
         return self.nombre
 
+    def clean(self):
+        """Validar que el slug no sea una palabra reservada"""
+        super().clean()
+        if self.slug and self.slug.lower() in SLUGS_RESERVADOS:
+            raise ValidationError({
+                'slug': f'El nombre "{self.slug}" está reservado por el sistema. Por favor elige otro nombre para tu negocio.'
+            })
+
     def save(self, *args, **kwargs):
-        """Generar slug automáticamente si no existe"""
+        """Generar slug automáticamente si no existe y validar palabras reservadas"""
         if not self.slug:
             base_slug = slugify(self.nombre)
+
+            # Verificar si el slug base es una palabra reservada
+            if base_slug.lower() in SLUGS_RESERVADOS:
+                # Agregar sufijo automático para evitar palabras reservadas
+                base_slug = f"{base_slug}-negocio"
+
             slug = base_slug
             counter = 1
-            while Negocio.objects.filter(slug=slug).exists():
+
+            # Buscar un slug único que no esté reservado
+            while Negocio.objects.filter(slug=slug).exists() or slug.lower() in SLUGS_RESERVADOS:
                 slug = f"{base_slug}-{counter}"
                 counter += 1
+
             self.slug = slug
+
+        # Validación final antes de guardar
+        self.full_clean()
         super().save(*args, **kwargs)
 
     @property

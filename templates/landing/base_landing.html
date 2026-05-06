@@ -152,11 +152,13 @@
                         <a class="nav-link" href="{% url 'core:contacto' %}">Contacto</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/admin/">Iniciar Sesión</a>
+                        <a class="nav-link" href="{% url 'login' %}">
+                            <i class="bi bi-box-arrow-in-right"></i> Iniciar Sesión
+                        </a>
                     </li>
                     <li class="nav-item ms-2">
                         <a class="btn btn-primary-gradient" href="{% url 'core:registro' %}">
-                            Prueba Gratis
+                            <i class="bi bi-rocket-takeoff"></i> Prueba Gratis
                         </a>
                     </li>
                 </ul>

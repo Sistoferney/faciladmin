@@ -51,6 +51,29 @@ class NegocioAdmin(admin.ModelAdmin):
 
     inlines = [ConfiguracionHorarioInline]
 
+    def get_queryset(self, request):
+        """Filtrar negocios: cada admin solo ve su propio negocio"""
+        qs = super().get_queryset(request)
+        # Si el usuario tiene un negocio asociado, solo mostrar ese negocio
+        if hasattr(request.user, 'negocio'):
+            qs = qs.filter(id=request.user.negocio.id)
+        # Si no tiene negocio asociado, es superadmin del sistema y puede ver todos
+        return qs
+
+    def has_add_permission(self, request):
+        """Los admins de negocio no pueden crear nuevos negocios desde el admin"""
+        # Solo el superadmin del sistema puede crear negocios
+        # Los negocios se crean desde la página de registro
+        if hasattr(request.user, 'negocio'):
+            return False
+        return super().has_add_permission(request)
+
+    def has_delete_permission(self, request, obj=None):
+        """Los admins de negocio no pueden eliminar su negocio"""
+        if hasattr(request.user, 'negocio'):
+            return False
+        return super().has_delete_permission(request, obj)
+
 
 @admin.register(BloqueoAgenda)
 class BloqueoAgendaAdmin(admin.ModelAdmin):
@@ -64,3 +87,25 @@ class BloqueoAgendaAdmin(admin.ModelAdmin):
             'fields': ('negocio', 'fecha_inicio', 'fecha_fin', 'motivo_interno', 'esta_activo')
         }),
     )
+
+    def get_queryset(self, request):
+        """Filtrar bloqueos por negocio del usuario"""
+        qs = super().get_queryset(request)
+        if hasattr(request.user, 'negocio'):
+            qs = qs.filter(negocio=request.user.negocio)
+        return qs
+
+    def get_form(self, request, obj=None, **kwargs):
+        """Ocultar campo negocio si el usuario tiene un negocio asociado"""
+        form = super().get_form(request, obj, **kwargs)
+        # Si el usuario tiene negocio, ocultar el campo de selección
+        if hasattr(request.user, 'negocio') and 'negocio' in form.base_fields:
+            form.base_fields['negocio'].widget = form.base_fields['negocio'].hidden_widget()
+            form.base_fields['negocio'].required = False
+        return form
+
+    def save_model(self, request, obj, form, change):
+        """Asignar automáticamente el negocio del usuario si no es superadmin"""
+        if not change and hasattr(request.user, 'negocio'):
+            obj.negocio = request.user.negocio
+        super().save_model(request, obj, form, change)

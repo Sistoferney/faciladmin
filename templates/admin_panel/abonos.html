@@ -1,0 +1,140 @@
+{% extends 'admin_panel/base_admin.html' %}
+
+{% block page_title %}Gestión de Abonos{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h4><i class="bi bi-cash-coin"></i> Gestión de Abonos</h4>
+            <div>
+                <form method="GET" class="d-inline-block">
+                    <select name="estado" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="pendiente" {% if estado_filtro == 'pendiente' %}selected{% endif %}>Pendientes</option>
+                        <option value="confirmado" {% if estado_filtro == 'confirmado' %}selected{% endif %}>Confirmados</option>
+                        <option value="rechazado" {% if estado_filtro == 'rechazado' %}selected{% endif %}>Rechazados</option>
+                        <option value="vencido" {% if estado_filtro == 'vencido' %}selected{% endif %}>Vencidos</option>
+                        <option value="todos" {% if estado_filtro == 'todos' %}selected{% endif %}>Todos</option>
+                    </select>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lista de Abonos -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-0">
+                {% if abonos %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Cliente</th>
+                                <th>Servicio</th>
+                                <th>Monto</th>
+                                <th>Método Pago</th>
+                                <th>Referencia</th>
+                                <th>Estado</th>
+                                <th>Límite</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for abono in abonos %}
+                            <tr>
+                                <td class="align-middle">
+                                    <small>{{ abono.fecha_creacion|date:"d/m/Y H:i" }}</small>
+                                </td>
+                                <td class="align-middle">
+                                    <div class="fw-bold">{{ abono.cita.cliente.nombre }}</div>
+                                    <small class="text-muted">{{ abono.cita.cliente.telefono }}</small>
+                                </td>
+                                <td class="align-middle">
+                                    <div>{{ abono.cita.servicio.nombre }}</div>
+                                    <small class="text-muted">{{ abono.cita.fecha_hora|date:"d/m H:i" }}</small>
+                                </td>
+                                <td class="align-middle"><strong>${{ abono.monto }}</strong></td>
+                                <td class="align-middle">
+                                    {% if abono.metodo_pago == 'transferencia' %}
+                                        <i class="bi bi-bank text-primary"></i> Transferencia
+                                    {% elif abono.metodo_pago == 'efectivo' %}
+                                        <i class="bi bi-cash text-success"></i> Efectivo
+                                    {% elif abono.metodo_pago == 'tarjeta' %}
+                                        <i class="bi bi-credit-card text-info"></i> Tarjeta
+                                    {% else %}
+                                        {{ abono.get_metodo_pago_display }}
+                                    {% endif %}
+                                </td>
+                                <td class="align-middle">
+                                    {% if abono.numero_referencia %}
+                                        <code>{{ abono.numero_referencia }}</code>
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                                <td class="align-middle">
+                                    {% if abono.estado == 'pendiente' %}
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-clock"></i> Pendiente
+                                        </span>
+                                    {% elif abono.estado == 'confirmado' %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle"></i> Confirmado
+                                        </span>
+                                    {% elif abono.estado == 'rechazado' %}
+                                        <span class="badge bg-danger">
+                                            <i class="bi bi-x-circle"></i> Rechazado
+                                        </span>
+                                    {% elif abono.estado == 'vencido' %}
+                                        <span class="badge bg-secondary">
+                                            <i class="bi bi-exclamation-circle"></i> Vencido
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="align-middle">
+                                    {% if abono.fecha_limite %}
+                                        <small>{{ abono.fecha_limite|date:"d/m/Y" }}</small>
+                                        {% if abono.esta_vencido and abono.estado == 'pendiente' %}
+                                            <br><span class="badge bg-danger badge-sm">Vencido</span>
+                                        {% endif %}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                                <td class="align-middle">
+                                    {% if abono.estado == 'pendiente' %}
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="/admin/abonos/abono/{{ abono.id }}/change/" target="_blank" class="btn btn-success" title="Confirmar">
+                                            <i class="bi bi-check"></i>
+                                        </a>
+                                        <a href="/admin/abonos/abono/{{ abono.id }}/change/" target="_blank" class="btn btn-danger" title="Rechazar">
+                                            <i class="bi bi-x"></i>
+                                        </a>
+                                    </div>
+                                    {% else %}
+                                    <a href="/admin/abonos/abono/{{ abono.id }}/change/" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i> Ver
+                                    </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-cash-coin fs-1 text-muted"></i>
+                    <h5 class="mt-3 text-muted">No hay abonos {{ estado_filtro }}</h5>
+                    <p class="text-muted">Los abonos aparecerán cuando los clientes realicen pagos</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

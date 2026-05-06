@@ -1,0 +1,135 @@
+{% extends 'minipagina/base_publica.html' %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-6">
+                <div class="card shadow-lg border-0">
+                    <div class="card-body p-5 text-center">
+                        <!-- Icono de éxito -->
+                        <div class="mb-4">
+                            <i class="bi bi-check-circle-fill text-success" style="font-size: 5rem;"></i>
+                        </div>
+
+                        <h2 class="mb-3">¡Cita Agendada!</h2>
+                        <p class="lead text-muted mb-4">
+                            Tu reserva ha sido registrada exitosamente
+                        </p>
+
+                        <!-- Detalles de la Cita -->
+                        <div class="bg-light rounded p-4 mb-4 text-start">
+                            <h5 class="mb-3">Detalles de tu Cita</h5>
+
+                            <p class="mb-2">
+                                <strong><i class="bi bi-person me-2 text-primary"></i>Cliente:</strong><br>
+                                {{ cita.cliente.nombre }}
+                            </p>
+
+                            <p class="mb-2">
+                                <strong><i class="bi bi-scissors me-2 text-primary"></i>Servicio:</strong><br>
+                                {{ cita.servicio.nombre }}
+                            </p>
+
+                            <p class="mb-2">
+                                <strong><i class="bi bi-calendar3 me-2 text-primary"></i>Fecha:</strong><br>
+                                {{ cita.fecha_hora|date:"l, d \d\e F \d\e Y" }}
+                            </p>
+
+                            <p class="mb-2">
+                                <strong><i class="bi bi-clock me-2 text-primary"></i>Hora:</strong><br>
+                                {{ cita.fecha_hora|time:"H:i" }}
+                            </p>
+
+                            <p class="mb-2">
+                                <strong><i class="bi bi-hourglass me-2 text-primary"></i>Duración:</strong><br>
+                                {{ cita.duracion_minutos }} minutos
+                            </p>
+
+                            <p class="mb-0">
+                                <strong><i class="bi bi-cash me-2 text-primary"></i>Precio:</strong><br>
+                                ${{ cita.servicio.precio }}
+                            </p>
+                        </div>
+
+                        <!-- Información de Abono (si aplica) -->
+                        {% if cita.requiere_abono %}
+                        <div class="alert alert-warning text-start">
+                            <h6><i class="bi bi-exclamation-triangle me-2"></i>Información de Abono</h6>
+                            <p class="small mb-2">
+                                Para confirmar tu cita, debes realizar un abono de:
+                            </p>
+                            <p class="h4 text-center mb-3">${{ cita.monto_abono }}</p>
+
+                            <hr>
+
+                            <p class="small mb-2"><strong>Datos para Transferencia:</strong></p>
+                            <p class="small mb-1">
+                                <strong>Banco:</strong> {{ negocio.banco }}<br>
+                                <strong>Cuenta:</strong> {{ negocio.numero_cuenta }}<br>
+                                <strong>CLABE:</strong> {{ negocio.clabe }}<br>
+                                <strong>Titular:</strong> {{ negocio.titular_cuenta }}
+                            </p>
+
+                            <hr>
+
+                            <p class="small mb-0">
+                                <i class="bi bi-clock-history me-1"></i>
+                                <strong>Fecha límite de pago:</strong><br>
+                                {{ cita.fecha_limite_abono|date:"d/m/Y H:i" }}
+                            </p>
+                        </div>
+                        {% endif %}
+
+                        <!-- Próximos Pasos -->
+                        <div class="alert alert-info text-start">
+                            <h6><i class="bi bi-info-circle me-2"></i>Próximos Pasos</h6>
+                            <ol class="small mb-0 ps-3">
+                                <li>Recibirás un mensaje de confirmación en WhatsApp</li>
+                                {% if cita.requiere_abono %}
+                                <li>Realiza el abono y envía el comprobante</li>
+                                <li>Esperaremos tu abono para confirmar la cita</li>
+                                {% endif %}
+                                <li>Te enviaremos un recordatorio 24 horas antes</li>
+                                <li>¡Nos vemos en tu cita!</li>
+                            </ol>
+                        </div>
+
+                        <!-- Acciones -->
+                        <div class="d-grid gap-2 mt-4">
+                            <a href="{% url 'public:minipagina' negocio.slug %}"
+                               class="btn btn-primary">
+                                <i class="bi bi-house me-2"></i> Volver al Inicio
+                            </a>
+                            <a href="{% url 'public:agendar' negocio.slug %}"
+                               class="btn btn-outline-primary">
+                                <i class="bi bi-plus-circle me-2"></i> Agendar Otra Cita
+                            </a>
+                        </div>
+
+                        <!-- Contacto -->
+                        <div class="mt-4 pt-4 border-top">
+                            <p class="small text-muted mb-2">¿Necesitas ayuda?</p>
+                            <p class="mb-0">
+                                <i class="bi bi-telephone me-2"></i>
+                                <a href="tel:{{ negocio.telefono }}" class="text-decoration-none">
+                                    {{ negocio.telefono }}
+                                </a>
+                            </p>
+                            {% if negocio.whatsapp %}
+                            <p class="mb-0">
+                                <i class="bi bi-whatsapp me-2"></i>
+                                <a href="https://wa.me/{{ negocio.whatsapp|cut:'+' }}"
+                                   target="_blank" class="text-decoration-none">
+                                    WhatsApp
+                                </a>
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

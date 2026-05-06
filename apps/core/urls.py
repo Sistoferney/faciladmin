@@ -2,7 +2,7 @@
 URLs para vistas principales (landing, registro, etc.)
 """
 from django.urls import path
-from . import views
+from . import views, auth_views
 
 app_name = 'core'
 
@@ -12,4 +12,7 @@ urlpatterns = [
     path('precios/', views.precios, name='precios'),
     path('como-funciona/', views.como_funciona, name='como_funciona'),
     path('contacto/', views.contacto, name='contacto'),
+
+    # Redirección después de login
+    path('dashboard/', auth_views.redirect_after_login, name='dashboard_redirect'),
 ]

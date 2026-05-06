@@ -76,10 +76,12 @@ class AbonoAdmin(admin.ModelAdmin):
     dias_para_vencer_display.short_description = 'Días para vencer'
 
     def get_queryset(self, request):
+        """Filtrar abonos por negocio del usuario"""
         qs = super().get_queryset(request)
-        # Si el usuario no es superadmin, solo mostrar abonos de su negocio
-        if not request.user.is_superuser and hasattr(request.user, 'negocio'):
+        # Si el usuario tiene un negocio asociado, solo mostrar abonos de ese negocio
+        if hasattr(request.user, 'negocio'):
             qs = qs.filter(cita__negocio=request.user.negocio)
+        # Si no tiene negocio asociado, es superadmin del sistema y puede ver todos
         return qs
 
     actions = ['confirmar_abonos', 'rechazar_abonos']

@@ -8,15 +8,20 @@ from django.views.generic import TemplateView
 from apps.authentication.models import Usuario
 from apps.negocios.models import Negocio
 from .forms import RegistroNegocioForm
+from .permissions import asignar_permisos_admin_negocio
 
 
 def landing_page(request):
     """
     Landing page principal - Página de presentación del servicio
     """
-    # Si ya está autenticado, redirigir al admin
+    # Si ya está autenticado, redirigir a su mini-página
     if request.user.is_authenticated:
-        return redirect('/admin/')
+        if hasattr(request.user, 'negocio'):
+            return redirect(f'/{request.user.negocio.slug}/admin/')
+        else:
+            # Si es superadmin del sistema sin negocio, ir al admin de Django
+            return redirect('/admin/')
 
     context = {
         'title': 'FacilAdmin - Sistema de Gestión para Spas y Peluquerías',
@@ -33,13 +38,17 @@ def registro_negocio(request):
         form = RegistroNegocioForm(request.POST)
         if form.is_valid():
             try:
-                # Crear usuario administrador
+                # Crear usuario administrador con permisos de staff
                 usuario = Usuario.objects.create_user(
                     email=form.cleaned_data['email'],
                     password=form.cleaned_data['password'],
                     nombre=form.cleaned_data['nombre_admin'],
                     telefono=form.cleaned_data['telefono_admin'],
                 )
+                # Dar permisos de staff para acceder al admin
+                usuario.is_staff = True
+                usuario.is_active = True
+                usuario.save()
 
                 # Crear negocio
                 negocio = Negocio.objects.create(
@@ -52,6 +61,10 @@ def registro_negocio(request):
                     acepta_reservas_online=True,
                 )
 
+                # Asignar permisos específicos para gestionar su negocio
+                # Los filtros en los ModelAdmin aseguran que solo vea sus propios datos
+                asignar_permisos_admin_negocio(usuario)
+
                 # Login automático
                 login(request, usuario)
 
@@ -60,7 +73,8 @@ def registro_negocio(request):
                     f'¡Bienvenido a FacilAdmin! Tu negocio "{negocio.nombre}" ha sido creado exitosamente.'
                 )
 
-                return redirect('/admin/')
+                # Redirigir a su panel de administración personalizado
+                return redirect(f'/{negocio.slug}/admin/')
 
             except Exception as e:
                 messages.error(request, f'Error al crear el negocio: {str(e)}')

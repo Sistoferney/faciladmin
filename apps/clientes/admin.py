@@ -34,11 +34,28 @@ class ClienteAdmin(admin.ModelAdmin):
     )
 
     def get_queryset(self, request):
+        """Filtrar clientes por negocio del usuario"""
         qs = super().get_queryset(request)
-        # Si el usuario no es superadmin, solo mostrar clientes de su negocio
-        if not request.user.is_superuser and hasattr(request.user, 'negocio'):
+        # Si el usuario tiene un negocio asociado, solo mostrar clientes de ese negocio
+        if hasattr(request.user, 'negocio'):
             qs = qs.filter(negocio=request.user.negocio)
+        # Si no tiene negocio asociado, es superadmin del sistema y puede ver todos
         return qs
+
+    def get_form(self, request, obj=None, **kwargs):
+        """Ocultar campo negocio si el usuario tiene un negocio asociado"""
+        form = super().get_form(request, obj, **kwargs)
+        # Si el usuario tiene negocio, ocultar el campo de selección
+        if hasattr(request.user, 'negocio') and 'negocio' in form.base_fields:
+            form.base_fields['negocio'].widget = form.base_fields['negocio'].hidden_widget()
+            form.base_fields['negocio'].required = False
+        return form
+
+    def save_model(self, request, obj, form, change):
+        """Asignar automáticamente el negocio del usuario si no es superadmin"""
+        if not change and hasattr(request.user, 'negocio'):
+            obj.negocio = request.user.negocio
+        super().save_model(request, obj, form, change)
 
     actions = ['marcar_como_frecuente', 'marcar_como_inactivo']
 

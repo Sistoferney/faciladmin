@@ -56,10 +56,12 @@ class NotificacionAdmin(admin.ModelAdmin):
     estado_display.short_description = 'Estado'
 
     def get_queryset(self, request):
+        """Filtrar notificaciones por negocio del usuario"""
         qs = super().get_queryset(request)
-        # Si el usuario no es superadmin, solo mostrar notificaciones de su negocio
-        if not request.user.is_superuser and hasattr(request.user, 'negocio'):
+        # Si el usuario tiene un negocio asociado, solo mostrar notificaciones de ese negocio
+        if hasattr(request.user, 'negocio'):
             qs = qs.filter(cliente__negocio=request.user.negocio)
+        # Si no tiene negocio asociado, es superadmin del sistema y puede ver todos
         return qs
 
     actions = ['reenviar_notificaciones']
