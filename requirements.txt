@@ -5,7 +5,8 @@ django-cors-headers==4.3.1
 django-filter==23.5
 
 # Base de datos
-psycopg2-binary --only-binary :all:
+psycopg2-binary==2.9.9
+dj-database-url==2.1.0
 
 # Autenticación y seguridad
 djangorestframework-simplejwt==5.3.1
@@ -36,3 +37,7 @@ pytest-django>=4.7.0
 
 # Desarrollo
 python-decouple==3.8
+
+# Producción
+gunicorn==21.2.0
+whitenoise==6.6.0
