@@ -1,5 +1,6 @@
 """
 Modelos para gestión de clientes (CRM básico)
+Nota: "Cliente" en este contexto se refiere a usuarios del spa (personas que agendan citas)
 RF-04 a RF-06, RF-24 a RF-27, RF-40 a RF-42, RF-43 a RF-44
 """
 from django.db import models
@@ -10,7 +11,7 @@ from django.utils import timezone
 
 class Cliente(models.Model):
     """
-    Modelo de cliente con sistema híbrido
+    Modelo de cliente (usuario del spa que agenda citas)
     RF-04: Cliente puede agendar sin cuenta formal
     RF-05: Identificación por número celular
     RF-06: Recuperación automática de perfil por celular
@@ -36,7 +37,7 @@ class Cliente(models.Model):
     nombre = models.CharField('Nombre completo', max_length=200)
 
     # RF-05, RF-42: Teléfono como identificador único (por negocio)
-    telefono = PhoneNumberField('Teléfono', region='MX')
+    telefono = PhoneNumberField('Teléfono', region='CO')
 
     email = models.EmailField('Email', blank=True)
 
@@ -76,8 +77,8 @@ class Cliente(models.Model):
     esta_activo = models.BooleanField('Activo', default=True)
 
     class Meta:
-        verbose_name = 'Cliente'
-        verbose_name_plural = 'Clientes'
+        verbose_name = 'Usuario'
+        verbose_name_plural = 'Usuarios'
         ordering = ['-ultima_visita', '-fecha_registro']
         # RF-42: Un teléfono es único por negocio
         unique_together = ('negocio', 'telefono')

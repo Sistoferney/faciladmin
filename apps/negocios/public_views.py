@@ -5,6 +5,7 @@ RF-08 a RF-12, RF-16 a RF-19
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.utils import timezone
+from django.http import JsonResponse
 from datetime import datetime, timedelta
 from .models import Negocio
 from apps.servicios.models import Servicio
@@ -70,9 +71,11 @@ def agendar_cita(request, slug):
             # Obtener servicio
             servicio = Servicio.objects.get(id=servicio_id, negocio=negocio)
 
-            # Crear fecha_hora
-            fecha_hora = datetime.strptime(f"{fecha} {hora}", "%Y-%m-%d %H:%M")
-            fecha_hora = timezone.make_aware(fecha_hora)
+            # Crear fecha_hora en la zona horaria local (Colombia)
+            import pytz
+            fecha_hora_naive = datetime.strptime(f"{fecha} {hora}", "%Y-%m-%d %H:%M")
+            tz = pytz.timezone('America/Bogota')
+            fecha_hora = tz.localize(fecha_hora_naive)
 
             # Validar que la fecha sea futura
             if fecha_hora < timezone.now():
@@ -98,6 +101,17 @@ def agendar_cita(request, slug):
                 origen='web',
                 notas_cliente=notas
             )
+
+            # RF-49, RF-50: Crear registro de abono si el servicio lo requiere
+            if servicio.requiere_pago_abono:
+                from apps.abonos.models import Abono
+                Abono.objects.create(
+                    cita=cita,
+                    monto=servicio.precio_abono,
+                    metodo_pago='transferencia',  # Por defecto transferencia
+                    estado='pendiente',
+                    fecha_limite=cita.fecha_limite_abono
+                )
 
             # Mensaje de éxito
             if servicio.requiere_pago_abono:
@@ -188,9 +202,11 @@ def disponibilidad_api(request, slug):
                         continue
 
                 hora_str = f"{hora:02d}:{minuto:02d}"
-                fecha_hora = timezone.make_aware(
-                    datetime.combine(fecha_obj, datetime.strptime(hora_str, '%H:%M').time())
-                )
+                # Crear fecha_hora en zona horaria local (Colombia)
+                import pytz
+                fecha_hora_naive = datetime.combine(fecha_obj, datetime.strptime(hora_str, '%H:%M').time())
+                tz = pytz.timezone('America/Bogota')
+                fecha_hora = tz.localize(fecha_hora_naive)
 
                 # Validar que sea en el futuro
                 if fecha_hora <= timezone.now():
@@ -199,6 +215,14 @@ def disponibilidad_api(request, slug):
                 # Verificar si ya hay cita en ese horario (considerar duración del servicio)
                 # Una cita ocupa el slot + los siguientes slots según su duración
                 fin_slot = fecha_hora + timedelta(minutes=servicio.duracion_minutos)
+
+                # VALIDACIÓN: No permitir citas que terminen después del horario de cierre
+                hora_cierre_dt = datetime.combine(fecha_obj, hora_cierre)
+                if timezone.is_aware(fecha_hora):
+                    hora_cierre_dt = tz.localize(hora_cierre_dt)
+                if fin_slot > hora_cierre_dt:
+                    # La cita terminaría después del horario de cierre, no disponible
+                    continue
 
                 # Buscar citas que se traslapen con este slot
                 citas_traslapadas = Cita.objects.filter(
@@ -226,5 +250,87 @@ def disponibilidad_api(request, slug):
 
     except Servicio.DoesNotExist:
         return JsonResponse({'error': 'Servicio no encontrado'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+def buscar_cliente_api(request, slug):
+    """
+    API para buscar un cliente/usuario por teléfono.
+    Retorna los datos del cliente si existe.
+    Busca comparando los últimos 10 dígitos del teléfono (número local).
+    """
+    negocio = get_object_or_404(Negocio, slug=slug)
+    telefono = request.GET.get('telefono', '').strip()
+
+    if not telefono:
+        return JsonResponse({'existe': False})
+
+    try:
+        # Normalizar teléfono: extraer solo dígitos
+        import re
+        telefono_digitos = re.sub(r'\D', '', telefono)
+
+        # Si tiene menos de 10 dígitos, no buscar
+        if len(telefono_digitos) < 10:
+            return JsonResponse({'existe': False})
+
+        # Buscar cliente por teléfono en este negocio
+        from apps.clientes.models import Cliente
+
+        # Obtener últimos 10 dígitos del teléfono buscado (número local sin código de país)
+        ultimos_10_buscado = telefono_digitos[-10:]
+
+        # Buscar entre todos los clientes del negocio
+        clientes = Cliente.objects.filter(negocio=negocio)
+
+        for cliente in clientes:
+            # Normalizar teléfono del cliente
+            tel_cliente_digitos = re.sub(r'\D', '', str(cliente.telefono))
+
+            # Comparar de múltiples formas para mayor flexibilidad:
+            # 1. Comparar exacto
+            if telefono_digitos == tel_cliente_digitos:
+                return JsonResponse({
+                    'existe': True,
+                    'nombre': cliente.nombre,
+                    'email': cliente.email or '',
+                    'telefono': str(cliente.telefono)
+                })
+
+            # 2. Comparar los últimos 10 dígitos (número local colombiano)
+            ultimos_10_cliente = tel_cliente_digitos[-10:] if len(tel_cliente_digitos) >= 10 else tel_cliente_digitos
+            if ultimos_10_buscado == ultimos_10_cliente:
+                return JsonResponse({
+                    'existe': True,
+                    'nombre': cliente.nombre,
+                    'email': cliente.email or '',
+                    'telefono': str(cliente.telefono)
+                })
+
+            # 3. Comparar sin códigos de país (últimos 9-10 dígitos)
+            # Esto maneja casos donde un número tiene 9 o 10 dígitos sin código
+            ultimos_9_buscado = telefono_digitos[-9:]
+            ultimos_9_cliente = tel_cliente_digitos[-9:] if len(tel_cliente_digitos) >= 9 else tel_cliente_digitos
+
+            if ultimos_9_buscado == ultimos_9_cliente or tel_cliente_digitos.endswith(ultimos_10_buscado):
+                return JsonResponse({
+                    'existe': True,
+                    'nombre': cliente.nombre,
+                    'email': cliente.email or '',
+                    'telefono': str(cliente.telefono)
+                })
+
+            # 4. Comparar si el número buscado termina con el número del cliente
+            if telefono_digitos.endswith(tel_cliente_digitos):
+                return JsonResponse({
+                    'existe': True,
+                    'nombre': cliente.nombre,
+                    'email': cliente.email or '',
+                    'telefono': str(cliente.telefono)
+                })
+
+        return JsonResponse({'existe': False})
+
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)

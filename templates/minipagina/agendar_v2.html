@@ -391,18 +391,22 @@
         <div class="progress-steps">
             <div class="step active" id="step-indicator-1">
                 <div class="step-number">1</div>
-                <div class="step-label">Servicio</div>
+                <div class="step-label">Datos</div>
             </div>
             <div class="step" id="step-indicator-2">
                 <div class="step-number">2</div>
-                <div class="step-label">Fecha</div>
+                <div class="step-label">Servicio</div>
             </div>
             <div class="step" id="step-indicator-3">
                 <div class="step-number">3</div>
-                <div class="step-label">Hora</div>
+                <div class="step-label">Fecha</div>
             </div>
             <div class="step" id="step-indicator-4">
                 <div class="step-number">4</div>
+                <div class="step-label">Hora</div>
+            </div>
+            <div class="step" id="step-indicator-5">
+                <div class="step-number">5</div>
                 <div class="step-label">Confirmar</div>
             </div>
         </div>
@@ -412,8 +416,39 @@
             <form method="POST" id="bookingForm">
                 {% csrf_token %}
 
-                <!-- Step 1: Select Service -->
+                <!-- Step 1: User Data -->
                 <div class="step-content active" id="step-1">
+                    <h4 class="mb-4 text-center">Datos de Contacto</h4>
+                    <p class="text-center text-muted mb-4">Ingresa tu teléfono para comenzar</p>
+
+                    <div class="row justify-content-center">
+                        <div class="col-md-8">
+                            <div class="mb-4">
+                                <label class="form-label">Teléfono *</label>
+                                <input type="tel" name="telefono" id="telefono_step1" class="form-control form-control-lg"
+                                       placeholder="+57 300 123 4567" required pattern="[+]?[0-9\s()-]{10,}">
+                                <small class="form-text text-muted">Usamos tu teléfono como identificador. Si ya tienes citas previas, cargaremos tus datos automáticamente.</small>
+                                <div id="searchingUser" class="text-muted mt-2" style="display: none;">
+                                    <i class="bi bi-search"></i> Buscando usuario...
+                                </div>
+                                <div id="userFound" class="text-success mt-2" style="display: none;">
+                                    <i class="bi bi-check-circle-fill"></i> ¡Bienvenido de nuevo! Tus datos han sido cargados.
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Nombre Completo *</label>
+                                <input type="text" name="nombre" id="nombre_step1" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Email (opcional)</label>
+                                <input type="email" name="email" id="email_step1" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Select Service -->
+                <div class="step-content" id="step-2">
                     <h4 class="mb-4">Selecciona un Servicio</h4>
                     <div class="services-list">
                         {% for servicio in servicios %}
@@ -436,8 +471,8 @@
                     <input type="hidden" name="servicio" id="selectedService">
                 </div>
 
-                <!-- Step 2: Select Date -->
-                <div class="step-content" id="step-2">
+                <!-- Step 3: Select Date -->
+                <div class="step-content" id="step-3">
                     <h4 class="mb-4 text-center">Selecciona una Fecha</h4>
                     <div class="calendar-container">
                         <div class="calendar-header">
@@ -454,8 +489,8 @@
                     <input type="hidden" name="fecha" id="selectedDate">
                 </div>
 
-                <!-- Step 3: Select Time -->
-                <div class="step-content" id="step-3">
+                <!-- Step 4: Select Time -->
+                <div class="step-content" id="step-4">
                     <h4 class="mb-4 text-center">Selecciona un Horario</h4>
                     <div class="time-slots-container">
                         <div id="timeSlotsLoading" class="loading">
@@ -468,7 +503,7 @@
                         <div id="noSlots" class="no-slots" style="display: none;">
                             <i class="bi bi-calendar-x fs-1 text-muted"></i>
                             <p class="mt-3">No hay horarios disponibles para este día.</p>
-                            <button type="button" class="btn btn-secondary-custom" onclick="goToStep(2)">
+                            <button type="button" class="btn btn-secondary-custom" onclick="goToStep(3)">
                                 Seleccionar Otra Fecha
                             </button>
                         </div>
@@ -476,8 +511,8 @@
                     <input type="hidden" name="hora" id="selectedTime">
                 </div>
 
-                <!-- Step 4: Confirm & Details -->
-                <div class="step-content" id="step-4">
+                <!-- Step 5: Confirm -->
+                <div class="step-content" id="step-5">
                     <h4 class="mb-4">Confirma tu Cita</h4>
 
                     <div class="booking-summary">
@@ -503,23 +538,11 @@
                         </div>
                     </div>
 
-                    <h5 class="mb-3">Tus Datos</h5>
+                    <h5 class="mb-3">Notas Adicionales (opcional)</h5>
                     <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Nombre Completo *</label>
-                            <input type="text" name="nombre" class="form-control" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Teléfono *</label>
-                            <input type="tel" name="telefono" class="form-control" placeholder="+52 55 1234 5678" required>
-                        </div>
                         <div class="col-12">
-                            <label class="form-label">Email (opcional)</label>
-                            <input type="email" name="email" class="form-control">
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Notas o comentarios (opcional)</label>
-                            <textarea name="notas" class="form-control" rows="3"></textarea>
+                            <label class="form-label">Comentarios o solicitudes especiales</label>
+                            <textarea name="notas" class="form-control" rows="3" placeholder="Ej: Prefiero un color de esmalte específico, tengo alguna alergia, etc."></textarea>
                         </div>
                     </div>
                 </div>
@@ -697,15 +720,27 @@
         }
 
         function validateStep(step) {
-            if (step === 1 && !selectedService) {
+            if (step === 1) {
+                const telefono = document.getElementById('telefono_step1').value.trim();
+                const nombre = document.getElementById('nombre_step1').value.trim();
+                if (!telefono || telefono.length < 10) {
+                    alert('Por favor ingresa un teléfono válido');
+                    return false;
+                }
+                if (!nombre) {
+                    alert('Por favor ingresa tu nombre');
+                    return false;
+                }
+            }
+            if (step === 2 && !selectedService) {
                 alert('Por favor selecciona un servicio');
                 return false;
             }
-            if (step === 2 && !selectedDate) {
+            if (step === 3 && !selectedDate) {
                 alert('Por favor selecciona una fecha');
                 return false;
             }
-            if (step === 3 && !selectedTime) {
+            if (step === 4 && !selectedTime) {
                 alert('Por favor selecciona un horario');
                 return false;
             }
@@ -731,16 +766,16 @@
 
             // Update buttons
             document.getElementById('btnPrev').style.display = step > 1 ? 'block' : 'none';
-            document.getElementById('btnNext').style.display = step < 4 ? 'block' : 'none';
-            document.getElementById('btnSubmit').style.display = step === 4 ? 'block' : 'none';
+            document.getElementById('btnNext').style.display = step < 5 ? 'block' : 'none';
+            document.getElementById('btnSubmit').style.display = step === 5 ? 'block' : 'none';
 
-            // Update summary if on step 4
-            if (step === 4) {
+            // Update summary if on step 5
+            if (step === 5) {
                 updateSummary();
             }
 
-            // Load time slots if entering step 3
-            if (step === 3 && selectedDate) {
+            // Load time slots if entering step 4
+            if (step === 4 && selectedDate) {
                 loadTimeSlots();
             }
 
@@ -753,6 +788,135 @@
             document.getElementById('summaryTime').textContent = selectedTime;
             document.getElementById('summaryDuration').textContent = selectedService.duration + ' minutos';
             document.getElementById('summaryPrice').textContent = '$' + selectedService.price;
+        }
+
+        // Búsqueda automática de cliente por teléfono
+        let searchTimeout = null;
+        function buscarCliente(telefono) {
+            // Limpiar timeout anterior
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+
+            // Ocultar mensajes
+            document.getElementById('searchingUser').style.display = 'none';
+            document.getElementById('userFound').style.display = 'none';
+
+            // Solo buscar si tiene al menos 10 dígitos
+            const digitos = telefono.replace(/\D/g, '');
+            console.log('Teléfono ingresado:', telefono, 'Dígitos:', digitos);
+
+            if (digitos.length < 10) {
+                console.log('Menos de 10 dígitos, no se busca');
+                // Limpiar y habilitar campos para nuevo usuario
+                document.getElementById('nombre_step1').value = '';
+                document.getElementById('email_step1').value = '';
+                document.getElementById('nombre_step1').removeAttribute('readonly');
+                document.getElementById('email_step1').removeAttribute('readonly');
+                return;
+            }
+
+            // Mostrar mensaje de búsqueda
+            document.getElementById('searchingUser').style.display = 'block';
+
+            // Esperar 500ms después de que el usuario deje de escribir
+            searchTimeout = setTimeout(() => {
+                const url = `/{{ negocio.slug }}/api/buscar-cliente/?telefono=${encodeURIComponent(telefono)}`;
+                console.log('Buscando en:', url);
+
+                fetch(url)
+                    .then(response => {
+                        console.log('Respuesta recibida:', response.status);
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Datos recibidos:', data);
+                        document.getElementById('searchingUser').style.display = 'none';
+
+                        if (data.existe) {
+                            // Cliente encontrado - autocompletar
+                            console.log('Cliente encontrado:', data.nombre);
+                            document.getElementById('nombre_step1').value = data.nombre;
+                            document.getElementById('email_step1').value = data.email;
+                            document.getElementById('userFound').style.display = 'block';
+
+                            // Deshabilitar campos para evitar que los editen
+                            document.getElementById('nombre_step1').setAttribute('readonly', 'readonly');
+                            document.getElementById('email_step1').setAttribute('readonly', 'readonly');
+                        } else {
+                            // Cliente nuevo - limpiar y habilitar campos
+                            console.log('Cliente no encontrado - nuevo usuario');
+                            document.getElementById('nombre_step1').value = '';
+                            document.getElementById('email_step1').value = '';
+                            document.getElementById('nombre_step1').removeAttribute('readonly');
+                            document.getElementById('email_step1').removeAttribute('readonly');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error buscando cliente:', error);
+                        document.getElementById('searchingUser').style.display = 'none';
+                        // En caso de error, habilitar campos
+                        document.getElementById('nombre_step1').removeAttribute('readonly');
+                        document.getElementById('email_step1').removeAttribute('readonly');
+                    });
+            }, 500);
+        }
+
+        // Formateo automático de teléfono colombiano en step 1
+        const telefonoInput = document.getElementById('telefono_step1');
+        if (telefonoInput) {
+            telefonoInput.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, ''); // Remover todo excepto números
+
+                // Si el usuario no ha escrito +57, agregarlo automáticamente
+                if (value.length > 0 && !e.target.value.startsWith('+')) {
+                    // Si comienza con 57, agregar +
+                    if (value.startsWith('57')) {
+                        value = value;
+                    }
+                    // Si es un número local colombiano (3XX), agregar código de país
+                    else if (value.startsWith('3') && value.length >= 10) {
+                        value = '57' + value;
+                    }
+                }
+
+                // Formatear: +57 XXX XXX XXXX
+                let formatted = '';
+                if (value.length > 0) {
+                    if (value.startsWith('57')) {
+                        formatted = '+57';
+                        if (value.length > 2) {
+                            formatted += ' ' + value.substring(2, 5);
+                        }
+                        if (value.length > 5) {
+                            formatted += ' ' + value.substring(5, 8);
+                        }
+                        if (value.length > 8) {
+                            formatted += ' ' + value.substring(8, 12);
+                        }
+                    } else {
+                        // Número sin código de país, formato: XXX XXX XXXX
+                        formatted = value.substring(0, 3);
+                        if (value.length > 3) {
+                            formatted += ' ' + value.substring(3, 6);
+                        }
+                        if (value.length > 6) {
+                            formatted += ' ' + value.substring(6, 10);
+                        }
+                    }
+                    e.target.value = formatted;
+                }
+
+                // Buscar cliente automáticamente
+                buscarCliente(e.target.value);
+            });
+
+            // Si el campo está vacío al enfocarse, agregar el prefijo
+            telefonoInput.addEventListener('focus', function(e) {
+                if (e.target.value === '') {
+                    e.target.value = '+57 ';
+                }
+            });
         }
     </script>
 </body>

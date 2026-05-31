@@ -1,0 +1,623 @@
+{% extends 'admin_panel/base_admin.html' %}
+
+{% block page_title %}Agenda de Citas{% endblock %}
+
+{% block extra_css %}
+<style>
+    .calendar-header {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+
+    .calendar-grid {
+        background: white;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .calendar-week-header {
+        display: grid;
+        grid-template-columns: 80px repeat(7, 1fr);
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        font-weight: 600;
+    }
+
+    .calendar-week-header > div {
+        padding: 15px 10px;
+        text-align: center;
+        border-right: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .calendar-week-header > div:last-child {
+        border-right: none;
+    }
+
+    .calendar-day-header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .calendar-day-name {
+        font-size: 0.85rem;
+        opacity: 0.9;
+    }
+
+    .calendar-day-number {
+        font-size: 1.2rem;
+        font-weight: 700;
+    }
+
+    .calendar-day-header.today {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        padding: 5px 10px;
+    }
+
+    .calendar-body {
+        display: grid;
+        grid-template-columns: 80px repeat(7, 1fr);
+        max-height: calc(100vh - 350px);
+        overflow-y: auto;
+    }
+
+    .time-slot {
+        padding: 10px 8px;
+        text-align: center;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #666;
+        border-right: 1px solid #e5e7eb;
+        border-bottom: 1px solid #e5e7eb;
+        background: #f9fafb;
+        position: sticky;
+        left: 0;
+        z-index: 10;
+    }
+
+    .calendar-cell {
+        border-right: 1px solid #e5e7eb;
+        border-bottom: 1px solid #e5e7eb;
+        min-height: 50px;
+        position: relative;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .calendar-cell:hover {
+        background-color: #f3f4f6;
+    }
+
+    .calendar-cell.selectable:hover {
+        background-color: #dbeafe;
+    }
+
+    .calendar-cell.selected {
+        background-color: #bfdbfe !important;
+    }
+
+    .calendar-cell.past {
+        background-color: #f9fafb;
+        cursor: not-allowed;
+    }
+
+    .calendar-cell.past:hover {
+        background-color: #f9fafb;
+    }
+
+    .calendar-cell.calendar-cell-bloqueado {
+        cursor: not-allowed;
+        position: relative;
+    }
+
+    .calendar-cell.calendar-cell-bloqueado:hover {
+        background-color: transparent !important;
+    }
+
+    .calendar-cell.fuera-de-horario {
+        background-color: #f9fafb;
+        cursor: not-allowed;
+        position: relative;
+        opacity: 0.6;
+    }
+
+    .calendar-cell.fuera-de-horario::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 5px,
+            rgba(156, 163, 175, 0.1) 5px,
+            rgba(156, 163, 175, 0.1) 10px
+        );
+        pointer-events: none;
+    }
+
+    .calendar-cell.fuera-de-horario:hover {
+        background-color: #f9fafb !important;
+    }
+
+    .cita-block {
+        position: absolute;
+        left: 2px;
+        right: 2px;
+        padding: 4px 6px;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: all 0.2s;
+        border-left: 3px solid;
+    }
+
+    .cita-block:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        z-index: 100;
+    }
+
+    .cita-block.confirmada {
+        background-color: #d1fae5;
+        border-left-color: #10b981;
+        color: #065f46;
+    }
+
+    .cita-block.pendiente_abono {
+        background-color: #fef3c7;
+        border-left-color: #f59e0b;
+        color: #92400e;
+    }
+
+    .cita-block.completada {
+        background-color: #dbeafe;
+        border-left-color: #3b82f6;
+        color: #1e40af;
+    }
+
+    .cita-block.cancelada {
+        background-color: #fee2e2;
+        border-left-color: #ef4444;
+        color: #991b1b;
+        opacity: 0.7;
+    }
+
+    .cita-block.cita-continuacion {
+        opacity: 0.7;
+        font-style: italic;
+        background: repeating-linear-gradient(
+            135deg,
+            currentColor,
+            currentColor 2px,
+            transparent 2px,
+            transparent 6px
+        );
+        background-size: 100% 100%;
+        border-left-width: 2px;
+        border-style: dashed;
+    }
+
+    .cita-block.cita-continuacion:hover {
+        opacity: 0.9;
+    }
+
+    .bloqueo-block {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        background: repeating-linear-gradient(
+            45deg,
+            rgba(245, 158, 11, 0.1),
+            rgba(245, 158, 11, 0.1) 10px,
+            rgba(245, 158, 11, 0.2) 10px,
+            rgba(245, 158, 11, 0.2) 20px
+        );
+        border: 2px solid #f59e0b;
+        pointer-events: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.65rem;
+        color: #92400e;
+        font-weight: 600;
+    }
+
+    .stats-card {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .week-nav-btn {
+        padding: 8px 16px;
+        border: 1px solid #d1d5db;
+        background: white;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .week-nav-btn:hover {
+        background: #f3f4f6;
+        border-color: var(--primary-color);
+    }
+
+    .selection-toolbar {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: white;
+        padding: 15px 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        display: none;
+        z-index: 1000;
+    }
+
+    .selection-toolbar.active {
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header con navegación y estadísticas -->
+<div class="calendar-header">
+    <div class="row align-items-center mb-3">
+        <div class="col-md-6">
+            <h4 class="mb-0">
+                <i class="bi bi-calendar-week"></i>
+                Agenda - Semana del {{ inicio_semana|date:"d/m/Y" }}
+            </h4>
+        </div>
+        <div class="col-md-6 text-end">
+            <div class="btn-group" role="group">
+                <a href="?fecha={{ semana_anterior|date:'Y-m-d' }}" class="week-nav-btn">
+                    <i class="bi bi-chevron-left"></i> Anterior
+                </a>
+                <a href="?fecha={{ fecha_hoy|date:'Y-m-d' }}" class="week-nav-btn">
+                    Hoy
+                </a>
+                <a href="?fecha={{ semana_siguiente|date:'Y-m-d' }}" class="week-nav-btn">
+                    Siguiente <i class="bi bi-chevron-right"></i>
+                </a>
+            </div>
+            <a href="{% url 'public:bloqueos_admin' negocio.slug %}" class="btn btn-outline-warning ms-2">
+                <i class="bi bi-calendar-x"></i> Gestionar Bloqueos
+            </a>
+        </div>
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="row g-3">
+        <div class="col-md-3">
+            <div class="stats-card">
+                <h3 class="text-primary mb-0">{{ stats.total }}</h3>
+                <small class="text-muted">Total Semana</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <h3 class="text-success mb-0">{{ stats.confirmadas }}</h3>
+                <small class="text-muted">Confirmadas</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <h3 class="text-warning mb-0">{{ stats.pendientes }}</h3>
+                <small class="text-muted">Pendientes</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <h3 class="text-info mb-0">{{ stats.completadas }}</h3>
+                <small class="text-muted">Completadas</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Calendario Grid -->
+<div class="calendar-grid">
+    <!-- Header de días -->
+    <div class="calendar-week-header">
+        <div style="background: rgba(0,0,0,0.1);"></div>
+        {% for dia in dias_semana %}
+        <div>
+            <div class="calendar-day-header {% if dia.es_hoy %}today{% endif %}">
+                <span class="calendar-day-name">{{ dia.nombre }}</span>
+                <span class="calendar-day-number">{{ dia.fecha|date:"d" }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Cuerpo del calendario -->
+    <div class="calendar-body">
+        {% for bloque in bloques_tiempo %}
+        <!-- Columna de hora -->
+        <div class="time-slot">{{ bloque.hora_str }}</div>
+
+        <!-- Celdas de cada día -->
+        {% for dia in dias_semana %}
+        <div class="calendar-cell {% if bloque.fuera_de_horario %}fuera-de-horario{% else %}selectable{% endif %}"
+             data-fecha="{{ dia.fecha|date:'Y-m-d' }}"
+             data-hora="{{ bloque.hora_str }}"
+             id="cell-{{ dia.fecha|date:'Y-m-d' }}_{{ bloque.hora_str }}">
+        </div>
+        {% endfor %}
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Toolbar de selección (aparece al seleccionar bloques) -->
+<div id="selectionToolbar" class="selection-toolbar">
+    <div class="mb-2">
+        <strong id="selectedCount">0 bloques seleccionados</strong>
+    </div>
+    <button class="btn btn-warning btn-sm" onclick="crearBloqueoDesdeSeleccion()">
+        <i class="bi bi-lock-fill"></i> Crear Bloqueo
+    </button>
+    <button class="btn btn-secondary btn-sm ms-2" onclick="cancelarSeleccion()">
+        Cancelar
+    </button>
+</div>
+
+<!-- Modal para gestionar cita -->
+<div class="modal fade" id="citaModal" tabindex="-1" aria-labelledby="citaModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="citaModalLabel">Gestionar Cita</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Cliente:</strong> <span id="modalCliente"></span></p>
+                <p><strong>Servicio:</strong> <span id="modalServicio"></span></p>
+                <p><strong>Estado:</strong> <span id="modalEstado" class="badge"></span></p>
+                <hr>
+                <div id="modalAcciones">
+                    <!-- Las acciones se cargarán dinámicamente según el estado -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Datos del calendario
+const calendarioData = {{ calendario_grid_json|safe }};
+
+console.log('Datos del calendario cargados:', calendarioData);
+console.log('Total de celdas con datos:', Object.keys(calendarioData).length);
+
+// Renderizar citas y bloqueos
+document.addEventListener('DOMContentLoaded', () => {
+    let bloqueosRenderizados = 0;
+    let citasRenderizadas = 0;
+
+    for (const [celdaKey, datos] of Object.entries(calendarioData)) {
+        const cellId = 'cell-' + celdaKey;
+        const cell = document.getElementById(cellId);
+
+        if (!cell) {
+            console.warn('Celda no encontrada:', cellId);
+            continue;
+        }
+
+        // Renderizar bloqueos
+        if (datos.bloqueado && datos.bloqueos && datos.bloqueos.length > 0) {
+            const bloqueoDiv = document.createElement('div');
+            bloqueoDiv.className = 'bloqueo-block';
+            bloqueoDiv.title = datos.bloqueos.map(b => b.motivo).join(', ');
+            bloqueoDiv.innerHTML = '<i class="bi bi-lock-fill"></i>';
+            cell.appendChild(bloqueoDiv);
+            cell.classList.add('calendar-cell-bloqueado');
+            cell.classList.remove('selectable');
+            bloqueosRenderizados++;
+        }
+
+        // Renderizar citas
+        if (datos.citas && datos.citas.length > 0) {
+            datos.citas.forEach(cita => {
+                const citaDiv = document.createElement('div');
+
+                // Si es continuación, usar clase especial
+                if (cita.es_continuacion) {
+                    citaDiv.className = `cita-block ${cita.estado} cita-continuacion`;
+                    citaDiv.onclick = () => verCita(cita.id, cita.estado, cita.cliente, cita.servicio);
+                    citaDiv.title = `${cita.cliente} - ${cita.servicio} (Inicia a las ${cita.hora})`;
+                    citaDiv.innerHTML = `<small><i class="bi bi-arrow-up"></i> Ocupado</small>`;
+                } else {
+                    citaDiv.className = `cita-block ${cita.estado}`;
+                    citaDiv.onclick = () => verCita(cita.id, cita.estado, cita.cliente, cita.servicio);
+
+                    // Mostrar duración si es mayor a 30 minutos
+                    const duracionText = cita.duracion > 30 ? ` (${cita.duracion}min)` : '';
+                    citaDiv.title = `${cita.cliente} - ${cita.servicio}${duracionText}`;
+                    citaDiv.innerHTML = `<strong>${cita.cliente}</strong><br>${cita.servicio.substring(0, 20)}${duracionText}`;
+                }
+
+                cell.appendChild(citaDiv);
+                citasRenderizadas++;
+            });
+        }
+    }
+
+    console.log(`Renderizados: ${bloqueosRenderizados} bloqueos, ${citasRenderizadas} citas`);
+});
+
+let seleccionados = new Set();
+let seleccionando = false;
+
+// Manejar selección de celdas
+document.querySelectorAll('.calendar-cell').forEach(cell => {
+    cell.addEventListener('mousedown', (e) => {
+        // No permitir selección si está bloqueado, fuera de horario, o tiene citas
+        if (e.target.closest('.cita-block') || e.target.closest('.bloqueo-block')) return;
+        if (cell.classList.contains('calendar-cell-bloqueado')) return;
+        if (cell.classList.contains('fuera-de-horario')) return;
+
+        seleccionando = true;
+        toggleCell(cell);
+    });
+
+    cell.addEventListener('mouseenter', (e) => {
+        if (!seleccionando) return;
+        if (e.target.closest('.cita-block') || e.target.closest('.bloqueo-block')) return;
+        if (cell.classList.contains('calendar-cell-bloqueado')) return;
+        if (cell.classList.contains('fuera-de-horario')) return;
+
+        toggleCell(cell);
+    });
+});
+
+document.addEventListener('mouseup', () => {
+    seleccionando = false;
+});
+
+function toggleCell(cell) {
+    // No permitir seleccionar celdas bloqueadas o fuera de horario
+    if (cell.classList.contains('calendar-cell-bloqueado')) return;
+    if (cell.classList.contains('fuera-de-horario')) return;
+
+    const key = cell.dataset.fecha + '_' + cell.dataset.hora;
+
+    if (seleccionados.has(key)) {
+        seleccionados.delete(key);
+        cell.classList.remove('selected');
+    } else {
+        seleccionados.add(key);
+        cell.classList.add('selected');
+    }
+
+    actualizarToolbar();
+}
+
+function actualizarToolbar() {
+    const toolbar = document.getElementById('selectionToolbar');
+    const count = document.getElementById('selectedCount');
+
+    if (seleccionados.size > 0) {
+        toolbar.classList.add('active');
+        count.textContent = seleccionados.size + ' bloque(s) seleccionado(s)';
+    } else {
+        toolbar.classList.remove('active');
+    }
+}
+
+function cancelarSeleccion() {
+    seleccionados.clear();
+    document.querySelectorAll('.calendar-cell.selected').forEach(cell => {
+        cell.classList.remove('selected');
+    });
+    actualizarToolbar();
+}
+
+function crearBloqueoDesdeSeleccion() {
+    if (seleccionados.size === 0) {
+        alert('Selecciona al menos un bloque de tiempo');
+        return;
+    }
+
+    // Convertir selección a array y ordenar
+    const bloques = Array.from(seleccionados).sort();
+    const primerBloque = bloques[0].split('_');
+    const ultimoBloque = bloques[bloques.length - 1].split('_');
+
+    // Calcular hora de fin (+ 30 minutos)
+    const [horaFin, minFin] = ultimoBloque[1].split(':');
+    let nuevaHora = parseInt(horaFin);
+    let nuevoMin = parseInt(minFin) + 30;
+    if (nuevoMin >= 60) {
+        nuevaHora += 1;
+        nuevoMin = 0;
+    }
+    const horaFinCalculada = `${String(nuevaHora).padStart(2, '0')}:${String(nuevoMin).padStart(2, '0')}`;
+
+    // Construir URL con parámetros
+    const url = new URL('{% url "public:bloqueo_crear" negocio.slug %}', window.location.origin);
+    url.searchParams.set('fecha_inicio', `${primerBloque[0]}T${primerBloque[1]}`);
+    url.searchParams.set('fecha_fin', `${ultimoBloque[0]}T${horaFinCalculada}`);
+
+    window.location.href = url.toString();
+}
+
+function verCita(citaId, estado, cliente, servicio) {
+    // Actualizar información del modal
+    document.getElementById('modalCliente').textContent = cliente;
+    document.getElementById('modalServicio').textContent = servicio;
+
+    // Actualizar estado con badge apropiado
+    const modalEstado = document.getElementById('modalEstado');
+    const estadosInfo = {
+        'pendiente_abono': { texto: 'Pendiente Abono', clase: 'bg-warning' },
+        'confirmada': { texto: 'Confirmada', clase: 'bg-success' },
+        'completada': { texto: 'Completada', clase: 'bg-info' },
+        'cancelada': { texto: 'Cancelada', clase: 'bg-danger' },
+        'no_asistio': { texto: 'No Asistió', clase: 'bg-secondary' }
+    };
+
+    const info = estadosInfo[estado] || { texto: estado, clase: 'bg-secondary' };
+    modalEstado.textContent = info.texto;
+    modalEstado.className = `badge ${info.clase}`;
+
+    // Generar acciones según el estado
+    const accionesDiv = document.getElementById('modalAcciones');
+    let acciones = '';
+
+    if (estado === 'pendiente_abono') {
+        acciones = `
+            <a href="/{{ negocio.slug }}/admin/citas/${citaId}/confirmar/" class="btn btn-success w-100 mb-2">
+                <i class="bi bi-check-circle"></i> Confirmar Abono
+            </a>
+            <a href="/{{ negocio.slug }}/admin/citas/${citaId}/cancelar/" class="btn btn-danger w-100">
+                <i class="bi bi-x-circle"></i> Cancelar Cita
+            </a>
+        `;
+    } else if (estado === 'confirmada') {
+        acciones = `
+            <a href="/{{ negocio.slug }}/admin/citas/${citaId}/completar/" class="btn btn-success w-100 mb-2">
+                <i class="bi bi-check-circle-fill"></i> Marcar como Completada
+            </a>
+            <a href="/{{ negocio.slug }}/admin/citas/${citaId}/no-asistio/" class="btn btn-warning w-100 mb-2">
+                <i class="bi bi-person-x"></i> Cliente No Asistió
+            </a>
+            <a href="/{{ negocio.slug }}/admin/citas/${citaId}/cancelar/" class="btn btn-danger w-100">
+                <i class="bi bi-x-circle"></i> Cancelar Cita
+            </a>
+        `;
+    } else {
+        acciones = `
+            <div class="alert alert-info">
+                Esta cita no requiere acciones adicionales.
+            </div>
+        `;
+    }
+
+    accionesDiv.innerHTML = acciones;
+
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('citaModal'));
+    modal.show();
+}
+</script>
+{% endblock %}

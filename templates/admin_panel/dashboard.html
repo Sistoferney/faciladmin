@@ -69,7 +69,7 @@
                 <strong>{{ citas_pendientes_abono }} citas pendientes de abono</strong>
                 <p class="mb-0">Hay citas esperando confirmación de pago.</p>
             </div>
-            <a href="{% url 'public:admin_abonos' negocio.slug %}" class="btn btn-sm btn-warning ms-auto">Ver Abonos</a>
+            <a href="{% url 'public:abonos_admin' negocio.slug %}" class="btn btn-sm btn-warning ms-auto">Ver Abonos</a>
         </div>
     </div>
     {% endif %}
@@ -82,7 +82,7 @@
                 <strong>{{ abonos_pendientes.count }} abonos por confirmar</strong>
                 <p class="mb-0">Revisa y confirma los pagos recibidos.</p>
             </div>
-            <a href="{% url 'public:admin_abonos' negocio.slug %}" class="btn btn-sm btn-info ms-auto text-white">Revisar</a>
+            <a href="{% url 'public:abonos_admin' negocio.slug %}" class="btn btn-sm btn-info ms-auto text-white">Revisar</a>
         </div>
     </div>
     {% endif %}
@@ -216,7 +216,7 @@
                     {% endfor %}
                 </div>
                 <div class="text-center mt-3">
-                    <a href="{% url 'public:admin_abonos' negocio.slug %}" class="btn btn-sm btn-outline-warning">Revisar Abonos</a>
+                    <a href="{% url 'public:abonos_admin' negocio.slug %}" class="btn btn-sm btn-outline-warning">Revisar Abonos</a>
                 </div>
                 {% else %}
                 <div class="text-center py-4">

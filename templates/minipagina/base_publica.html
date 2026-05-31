@@ -36,7 +36,7 @@
         <div class="container">
             <a class="navbar-brand" href="{% url 'public:minipagina' negocio.slug %}">
                 {% if negocio.logo %}
-                    <img src="{{ negocio.logo.url }}" alt="{{ negocio.nombre }}" height="40">
+                    <img src="{{ negocio.logo.url }}" alt="{{ negocio.nombre }}" height="70" style="max-width: 200px; object-fit: contain;">
                 {% else %}
                     {{ negocio.nombre }}
                 {% endif %}

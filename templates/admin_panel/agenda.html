@@ -11,6 +11,9 @@
                 <form method="GET" class="d-flex gap-2">
                     <input type="date" name="fecha" class="form-control" value="{{ fecha|date:'Y-m-d' }}" onchange="this.form.submit()">
                 </form>
+                <a href="{% url 'public:bloqueos_admin' negocio.slug %}" class="btn btn-outline-warning">
+                    <i class="bi bi-calendar-x"></i> Bloqueos
+                </a>
                 <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#nuevaCitaModal">
                     <i class="bi bi-plus-circle"></i> Nueva Cita
                 </button>
@@ -46,6 +49,26 @@
         </div>
     </div>
 </div>
+
+<!-- Bloqueos del Día -->
+{% if bloqueos_dia %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="alert alert-warning">
+            <i class="bi bi-calendar-x"></i>
+            <strong>Bloqueos activos para este día:</strong>
+            <ul class="mb-0 mt-2">
+                {% for bloqueo in bloqueos_dia %}
+                <li>
+                    <strong>{{ bloqueo.fecha_inicio|date:"H:i" }} - {{ bloqueo.fecha_fin|date:"H:i" }}</strong>:
+                    {{ bloqueo.motivo_interno }}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <!-- Lista de Citas -->
 <div class="row">
@@ -189,25 +212,20 @@
 {% block extra_js %}
 <script>
 function confirmarCita(id) {
-    if (confirm('¿Confirmar el abono de esta cita?')) {
-        window.open(`/admin/citas/cita/${id}/change/`, '_blank');
-    }
+    window.location.href = `{{ negocio.slug }}/admin/citas/${id}/confirmar/`;
 }
 
 function completarCita(id) {
-    if (confirm('¿Marcar esta cita como completada?')) {
-        window.open(`/admin/citas/cita/${id}/change/`, '_blank');
-    }
+    window.location.href = `{{ negocio.slug }}/admin/citas/${id}/completar/`;
 }
 
 function verDetalles(id) {
-    window.open(`/admin/citas/cita/${id}/change/`, '_blank');
+    // TODO: Implementar modal con detalles de la cita
+    alert('Funcionalidad de detalles en desarrollo. Por ahora usa los botones de acción.');
 }
 
 function cancelarCita(id) {
-    if (confirm('¿Estás seguro de cancelar esta cita?')) {
-        window.open(`/admin/citas/cita/${id}/change/`, '_blank');
-    }
+    window.location.href = `{{ negocio.slug }}/admin/citas/${id}/cancelar/`;
 }
 </script>
 {% endblock %}

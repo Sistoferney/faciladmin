@@ -1,0 +1,67 @@
+{% extends 'admin_panel/base_admin.html' %}
+
+{% block page_title %}Rechazar Abono{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="bi bi-x-circle"></i> Rechazar Abono</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    Estás a punto de rechazar el abono de <strong>{{ abono.cita.cliente.nombre }}</strong>
+                </div>
+
+                <table class="table table-bordered mb-3">
+                    <tr>
+                        <th>Cliente:</th>
+                        <td>
+                            {{ abono.cita.cliente.nombre }}<br>
+                            <small class="text-muted">{{ abono.cita.cliente.telefono }}</small>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Servicio:</th>
+                        <td>{{ abono.cita.servicio.nombre }}</td>
+                    </tr>
+                    <tr>
+                        <th>Fecha y Hora:</th>
+                        <td>{{ abono.cita.fecha_hora|date:"d/m/Y H:i" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Monto del Abono:</th>
+                        <td><strong>${{ abono.monto }}</strong></td>
+                    </tr>
+                    {% if abono.numero_referencia %}
+                    <tr>
+                        <th>Referencia:</th>
+                        <td><code>{{ abono.numero_referencia }}</code></td>
+                    </tr>
+                    {% endif %}
+                </table>
+
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="motivo" class="form-label">Motivo del rechazo</label>
+                        <textarea name="motivo" id="motivo" class="form-control" rows="3" placeholder="Explica por qué se rechaza este abono..."></textarea>
+                        <small class="form-text text-muted">Este motivo será visible para referencia interna</small>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-danger btn-lg">
+                            <i class="bi bi-x-circle"></i> Rechazar Abono
+                        </button>
+                        <a href="{% url 'public:abonos_admin' negocio.slug %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Cancelar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

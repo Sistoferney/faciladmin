@@ -1,0 +1,104 @@
+{% extends 'admin_panel/base_admin.html' %}
+
+{% block page_title %}{% if accion == 'crear' %}Nuevo Bloqueo{% else %}Editar Bloqueo{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-{% if accion == 'crear' %}plus-circle{% else %}pencil{% endif %}"></i>
+                    {% if accion == 'crear' %}Nuevo Bloqueo de Horario{% else %}Editar Bloqueo{% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>¿Qué es un bloqueo de horario?</strong><br>
+                    Los bloqueos te permiten reservar tiempo en tu agenda para vacaciones, mantenimiento,
+                    eventos privados o cualquier otra situación donde no quieras recibir citas.
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.fecha_inicio.id_for_label }}" class="form-label">
+                                {{ form.fecha_inicio.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.fecha_inicio }}
+                            {% if form.fecha_inicio.errors %}
+                                <div class="text-danger small">{{ form.fecha_inicio.errors }}</div>
+                            {% endif %}
+                            {% if form.fecha_inicio.help_text %}
+                                <small class="form-text text-muted">{{ form.fecha_inicio.help_text }}</small>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.fecha_fin.id_for_label }}" class="form-label">
+                                {{ form.fecha_fin.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.fecha_fin }}
+                            {% if form.fecha_fin.errors %}
+                                <div class="text-danger small">{{ form.fecha_fin.errors }}</div>
+                            {% endif %}
+                            {% if form.fecha_fin.help_text %}
+                                <small class="form-text text-muted">{{ form.fecha_fin.help_text }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.motivo_interno.id_for_label }}" class="form-label">
+                            {{ form.motivo_interno.label }} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.motivo_interno }}
+                        {% if form.motivo_interno.errors %}
+                            <div class="text-danger small">{{ form.motivo_interno.errors }}</div>
+                        {% endif %}
+                        {% if form.motivo_interno.help_text %}
+                            <small class="form-text text-muted">{{ form.motivo_interno.help_text }}</small>
+                        {% endif %}
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <i class="bi bi-lightbulb"></i>
+                                <strong>Ejemplos:</strong> Vacaciones, Día festivo, Mantenimiento de local, Evento privado, Capacitación
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            {{ form.esta_activo }}
+                            <label class="form-check-label" for="{{ form.esta_activo.id_for_label }}">
+                                {{ form.esta_activo.label }}
+                            </label>
+                        </div>
+                        {% if form.esta_activo.help_text %}
+                            <small class="form-text text-muted">{{ form.esta_activo.help_text }}</small>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                        <a href="{% url 'public:bloqueos_admin' negocio.slug %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i>
+                            {% if accion == 'crear' %}Crear Bloqueo{% else %}Guardar Cambios{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

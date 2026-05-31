@@ -108,17 +108,15 @@
                                 <td class="align-middle">
                                     {% if abono.estado == 'pendiente' %}
                                     <div class="btn-group btn-group-sm">
-                                        <a href="/admin/abonos/abono/{{ abono.id }}/change/" target="_blank" class="btn btn-success" title="Confirmar">
+                                        <a href="{% url 'public:abono_confirmar' negocio.slug abono.id %}" class="btn btn-success" title="Confirmar">
                                             <i class="bi bi-check"></i>
                                         </a>
-                                        <a href="/admin/abonos/abono/{{ abono.id }}/change/" target="_blank" class="btn btn-danger" title="Rechazar">
+                                        <a href="{% url 'public:abono_rechazar' negocio.slug abono.id %}" class="btn btn-danger" title="Rechazar">
                                             <i class="bi bi-x"></i>
                                         </a>
                                     </div>
                                     {% else %}
-                                    <a href="/admin/abonos/abono/{{ abono.id }}/change/" target="_blank" class="btn btn-sm btn-outline-primary">
-                                        <i class="bi bi-eye"></i> Ver
-                                    </a>
+                                    <span class="text-muted">—</span>
                                     {% endif %}
                                 </td>
                             </tr>

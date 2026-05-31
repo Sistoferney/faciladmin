@@ -1,0 +1,76 @@
+{% extends 'admin_panel/base_admin.html' %}
+
+{% block page_title %}Eliminar Servicio{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 mx-auto">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-exclamation-triangle"></i> Confirmar Eliminación
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>¿Estás seguro de que deseas eliminar este servicio?</strong>
+                </div>
+
+                <div class="card mb-4">
+                    {% if servicio.imagen %}
+                    <img src="{{ servicio.imagen.url }}" class="card-img-top" style="height: 200px; object-fit: cover;" alt="{{ servicio.nombre }}">
+                    {% else %}
+                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                        <i class="bi bi-scissors fs-1 text-muted"></i>
+                    </div>
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ servicio.nombre }}</h5>
+                        <p class="card-text text-muted">{{ servicio.descripcion }}</p>
+
+                        <div class="row g-2 mt-3">
+                            <div class="col-6">
+                                <div class="text-center p-2 bg-light rounded">
+                                    <i class="bi bi-currency-dollar text-success"></i>
+                                    <div class="fw-bold">${{ servicio.precio }}</div>
+                                    <small class="text-muted">Precio</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-center p-2 bg-light rounded">
+                                    <i class="bi bi-clock text-primary"></i>
+                                    <div class="fw-bold">{{ servicio.duracion_minutos }} min</div>
+                                    <small class="text-muted">Duración</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-danger mb-4">
+                    <i class="bi bi-exclamation-circle"></i>
+                    <strong>Advertencia:</strong> Esta acción no se puede deshacer.
+                    {% if servicio.citas.count > 0 %}
+                        <br><br>
+                        <strong>Nota importante:</strong> Este servicio tiene {{ servicio.citas.count }} cita(s) asociada(s).
+                        Al eliminarlo, las citas quedarán sin servicio asignado.
+                    {% endif %}
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'public:admin_servicios' negocio.slug %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash"></i> Sí, Eliminar Servicio
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

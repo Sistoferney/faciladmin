@@ -1,228 +1,485 @@
 {% extends 'admin_panel/base_admin.html' %}
+{% load static %}
 
-{% block page_title %}Configuración{% endblock %}
+{% block page_title %}Configuración de tu Mini-Página{% endblock %}
 
 {% block content %}
 <div class="row mb-4">
     <div class="col-md-12">
-        <h4><i class="bi bi-gear"></i> Configuración del Negocio</h4>
+        <h4><i class="bi bi-gear"></i> Configuración de tu Mini-Página</h4>
+        <p class="text-muted">Personaliza la información, imágenes y colores de tu mini-página</p>
     </div>
 </div>
 
-<div class="row">
-    <!-- Información General -->
-    <div class="col-md-6 mb-4">
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-white border-bottom py-3">
-                <h5 class="mb-0"><i class="bi bi-info-circle text-primary"></i> Información General</h5>
-            </div>
-            <div class="card-body">
-                <table class="table table-borderless mb-0">
-                    <tr>
-                        <td class="text-muted">Nombre del Negocio:</td>
-                        <td><strong>{{ negocio.nombre }}</strong></td>
-                    </tr>
-                    <tr>
-                        <td class="text-muted">Tipo:</td>
-                        <td><strong>{{ negocio.get_tipo_display }}</strong></td>
-                    </tr>
-                    <tr>
-                        <td class="text-muted">Teléfono:</td>
-                        <td><strong>{{ negocio.telefono }}</strong></td>
-                    </tr>
-                    <tr>
-                        <td class="text-muted">Email:</td>
-                        <td><strong>{{ negocio.email|default:"—" }}</strong></td>
-                    </tr>
-                    <tr>
-                        <td class="text-muted">WhatsApp:</td>
-                        <td><strong>{{ negocio.whatsapp|default:"—" }}</strong></td>
-                    </tr>
-                    <tr>
-                        <td class="text-muted">Ciudad:</td>
-                        <td><strong>{{ negocio.ciudad|default:"—" }}</strong></td>
-                    </tr>
-                </table>
-                <div class="text-center mt-3">
-                    <a href="/admin/negocios/negocio/{{ negocio.id }}/change/" target="_blank" class="btn btn-primary">
-                        <i class="bi bi-pencil"></i> Editar Información
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
+<!-- Alerta de guía -->
+<div class="alert alert-info alert-dismissible fade show" role="alert">
+    <i class="bi bi-info-circle"></i>
+    <strong>Guía de Imágenes:</strong> Para mejores resultados, sube un <strong>logo de 500x500 px</strong> y una <strong>imagen de portada de 1920x600 px</strong>.
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
 
-    <!-- Horarios -->
-    <div class="col-md-6 mb-4">
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-white border-bottom py-3">
-                <h5 class="mb-0"><i class="bi bi-clock text-info"></i> Horarios de Atención</h5>
-            </div>
-            <div class="card-body">
-                <table class="table table-sm">
-                    <tr>
-                        <td class="text-muted">Horario:</td>
-                        <td>
-                            <strong>
-                                {{ negocio.horario_apertura|default:"—" }} - {{ negocio.horario_cierre|default:"—" }}
-                            </strong>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="text-muted">Días de atención:</td>
-                        <td><strong>{{ negocio.dias_atencion|default:"—" }}</strong></td>
-                    </tr>
-                </table>
+<form method="post" enctype="multipart/form-data" id="configForm">
+    {% csrf_token %}
 
-                <div class="alert alert-info mt-3">
-                    <i class="bi bi-info-circle"></i>
-                    <small>Configura horarios específicos por día de la semana en el panel de Django Admin</small>
-                </div>
+    <!-- Tabs de navegación -->
+    <ul class="nav nav-tabs mb-4" id="configTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button">
+                <i class="bi bi-info-circle"></i> Información Básica
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="personalizacion-tab" data-bs-toggle="tab" data-bs-target="#personalizacion" type="button">
+                <i class="bi bi-palette"></i> Personalización
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="horarios-tab" data-bs-toggle="tab" data-bs-target="#horarios" type="button">
+                <i class="bi bi-clock"></i> Horarios
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="abonos-tab" data-bs-toggle="tab" data-bs-target="#abonos" type="button">
+                <i class="bi bi-cash-coin"></i> Abonos
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="redes-tab" data-bs-toggle="tab" data-bs-target="#redes" type="button">
+                <i class="bi bi-share"></i> Redes & Config
+            </button>
+        </li>
+    </ul>
 
-                <div class="text-center">
-                    <a href="/admin/negocios/configuracionhorario/" target="_blank" class="btn btn-info text-white">
-                        <i class="bi bi-calendar-week"></i> Gestionar Horarios
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
+    <div class="tab-content" id="configTabsContent">
+        <!-- Tab 1: Información Básica -->
+        <div class="tab-pane fade show active" id="info" role="tabpanel">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">Información del Negocio</h5>
 
-    <!-- Configuración de Abonos -->
-    <div class="col-md-6 mb-4">
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-white border-bottom py-3">
-                <h5 class="mb-0"><i class="bi bi-cash-coin text-success"></i> Configuración de Abonos</h5>
-            </div>
-            <div class="card-body">
-                <table class="table table-borderless mb-0">
-                    <tr>
-                        <td class="text-muted">Requiere Abono:</td>
-                        <td>
-                            {% if negocio.requiere_abono %}
-                                <span class="badge bg-success">Sí</span>
-                            {% else %}
-                                <span class="badge bg-secondary">No</span>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{{ form.nombre.label }}</label>
+                            {{ form.nombre }}
+                            {% if form.nombre.errors %}
+                                <div class="text-danger small">{{ form.nombre.errors }}</div>
                             {% endif %}
-                        </td>
-                    </tr>
-                    {% if negocio.requiere_abono %}
-                    <tr>
-                        <td class="text-muted">Porcentaje:</td>
-                        <td><strong>{{ negocio.porcentaje_abono|default:"—" }}%</strong></td>
-                    </tr>
-                    <tr>
-                        <td class="text-muted">Monto Fijo:</td>
-                        <td><strong>${{ negocio.monto_abono_fijo|default:"—" }}</strong></td>
-                    </tr>
-                    <tr>
-                        <td class="text-muted">Banco:</td>
-                        <td><strong>{{ negocio.banco|default:"—" }}</strong></td>
-                    </tr>
-                    <tr>
-                        <td class="text-muted">Cuenta:</td>
-                        <td><strong>{{ negocio.numero_cuenta|default:"—" }}</strong></td>
-                    </tr>
-                    {% endif %}
-                </table>
-                <div class="text-center mt-3">
-                    <a href="/admin/negocios/negocio/{{ negocio.id }}/change/" target="_blank" class="btn btn-success">
-                        <i class="bi bi-pencil"></i> Configurar Abonos
-                    </a>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{{ form.tipo.label }}</label>
+                            {{ form.tipo }}
+                            {% if form.tipo.errors %}
+                                <div class="text-danger small">{{ form.tipo.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.descripcion.label }}</label>
+                        {{ form.descripcion }}
+                        <small class="text-muted">{{ form.descripcion.help_text }}</small>
+                        {% if form.descripcion.errors %}
+                            <div class="text-danger small">{{ form.descripcion.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <hr class="my-4">
+                    <h6 class="mb-3">Contacto</h6>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">{{ form.telefono.label }} <span class="text-danger">*</span></label>
+                            {{ form.telefono }}
+                            {% if form.telefono.errors %}
+                                <div class="text-danger small">{{ form.telefono.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">{{ form.email.label }}</label>
+                            {{ form.email }}
+                            {% if form.email.errors %}
+                                <div class="text-danger small">{{ form.email.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">{{ form.whatsapp.label }}</label>
+                            {{ form.whatsapp }}
+                            {% if form.whatsapp.errors %}
+                                <div class="text-danger small">{{ form.whatsapp.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+                    <h6 class="mb-3">Dirección</h6>
+
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.direccion.label }}</label>
+                        {{ form.direccion }}
+                        {% if form.direccion.errors %}
+                            <div class="text-danger small">{{ form.direccion.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">{{ form.ciudad.label }}</label>
+                            {{ form.ciudad }}
+                            {% if form.ciudad.errors %}
+                                <div class="text-danger small">{{ form.ciudad.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">{{ form.estado.label }}</label>
+                            {{ form.estado }}
+                            {% if form.estado.errors %}
+                                <div class="text-danger small">{{ form.estado.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">{{ form.codigo_postal.label }}</label>
+                            {{ form.codigo_postal }}
+                            {% if form.codigo_postal.errors %}
+                                <div class="text-danger small">{{ form.codigo_postal.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Personalización -->
+        <div class="tab-pane fade" id="personalizacion" role="tabpanel">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">Personaliza tu Mini-Página</h5>
+
+                    <div class="row">
+                        <!-- Logo -->
+                        <div class="col-md-6 mb-4">
+                            <label class="form-label">{{ form.logo.label }}</label>
+                            {% if negocio.logo %}
+                                <div class="mb-2">
+                                    <img src="{{ negocio.logo.url }}" alt="Logo actual" class="img-thumbnail" style="max-width: 200px;">
+                                    <p class="small text-muted mt-1">Logo actual</p>
+                                </div>
+                            {% endif %}
+                            {{ form.logo }}
+                            <small class="text-muted d-block mt-1">{{ form.logo.help_text }}</small>
+                            {% if form.logo.errors %}
+                                <div class="text-danger small">{{ form.logo.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Imagen de Portada -->
+                        <div class="col-md-6 mb-4">
+                            <label class="form-label">{{ form.imagen_portada.label }}</label>
+                            {% if negocio.imagen_portada %}
+                                <div class="mb-2">
+                                    <img src="{{ negocio.imagen_portada.url }}" alt="Portada actual" class="img-thumbnail" style="max-width: 100%; max-height: 150px;">
+                                    <p class="small text-muted mt-1">Imagen de portada actual</p>
+                                </div>
+                            {% endif %}
+                            {{ form.imagen_portada }}
+                            <small class="text-muted d-block mt-1">{{ form.imagen_portada.help_text }}</small>
+                            {% if form.imagen_portada.errors %}
+                                <div class="text-danger small">{{ form.imagen_portada.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+                    <h6 class="mb-3">Colores de la Marca</h6>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{{ form.color_primario.label }}</label>
+                            <div class="input-group">
+                                {{ form.color_primario }}
+                                <span class="input-group-text">
+                                    <div class="rounded" style="width: 30px; height: 30px; background: {{ negocio.color_primario }}; border: 1px solid #ddd;"></div>
+                                </span>
+                            </div>
+                            <small class="text-muted">{{ form.color_primario.help_text }}</small>
+                            {% if form.color_primario.errors %}
+                                <div class="text-danger small">{{ form.color_primario.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{{ form.color_secundario.label }}</label>
+                            <div class="input-group">
+                                {{ form.color_secundario }}
+                                <span class="input-group-text">
+                                    <div class="rounded" style="width: 30px; height: 30px; background: {{ negocio.color_secundario }}; border: 1px solid #ddd;"></div>
+                                </span>
+                            </div>
+                            <small class="text-muted">{{ form.color_secundario.help_text }}</small>
+                            {% if form.color_secundario.errors %}
+                                <div class="text-danger small">{{ form.color_secundario.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+                    <h6 class="mb-3">Vista Previa y Compartir</h6>
+
+                    <div class="mb-3">
+                        <label class="form-label">URL de tu Mini-Página</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" value="{{ request.scheme }}://{{ request.get_host }}/{{ negocio.slug }}/" readonly>
+                            <button class="btn btn-outline-secondary" type="button" onclick="copiarURL()">
+                                <i class="bi bi-clipboard"></i> Copiar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-4">
+                        <a href="{% url 'public:minipagina' negocio.slug %}" target="_blank" class="btn btn-outline-primary">
+                            <i class="bi bi-eye"></i> Vista Previa de tu Mini-Página
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 3: Horarios -->
+        <div class="tab-pane fade" id="horarios" role="tabpanel">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">Horarios de Atención</h5>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">{{ form.horario_apertura.label }}</label>
+                            {{ form.horario_apertura }}
+                            {% if form.horario_apertura.errors %}
+                                <div class="text-danger small">{{ form.horario_apertura.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">{{ form.horario_cierre.label }}</label>
+                            {{ form.horario_cierre }}
+                            {% if form.horario_cierre.errors %}
+                                <div class="text-danger small">{{ form.horario_cierre.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">{{ form.dias_atencion.label }}</label>
+                            {{ form.dias_atencion }}
+                            {% if form.dias_atencion.errors %}
+                                <div class="text-danger small">{{ form.dias_atencion.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info mt-3">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Nota:</strong> Estos son los horarios generales. Puedes bloquear horarios específicos desde la sección de Agenda.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 4: Abonos -->
+        <div class="tab-pane fade" id="abonos" role="tabpanel">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">Configuración de Abonos</h5>
+
+                    <div class="mb-4">
+                        <div class="form-check form-switch">
+                            {{ form.requiere_abono }}
+                            <label class="form-check-label" for="{{ form.requiere_abono.id_for_label }}">
+                                {{ form.requiere_abono.label }}
+                            </label>
+                        </div>
+                        <small class="text-muted">{{ form.requiere_abono.help_text }}</small>
+                    </div>
+
+                    <div id="abonosConfig" style="display: {% if negocio.requiere_abono %}block{% else %}none{% endif %};">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">{{ form.porcentaje_abono.label }}</label>
+                                {{ form.porcentaje_abono }}
+                                <small class="text-muted">{{ form.porcentaje_abono.help_text }}</small>
+                                {% if form.porcentaje_abono.errors %}
+                                    <div class="text-danger small">{{ form.porcentaje_abono.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">{{ form.monto_abono_fijo.label }}</label>
+                                {{ form.monto_abono_fijo }}
+                                <small class="text-muted">{{ form.monto_abono_fijo.help_text }}</small>
+                                {% if form.monto_abono_fijo.errors %}
+                                    <div class="text-danger small">{{ form.monto_abono_fijo.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+                        <h6 class="mb-3">Información Bancaria</h6>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">{{ form.banco.label }}</label>
+                                {{ form.banco }}
+                                {% if form.banco.errors %}
+                                    <div class="text-danger small">{{ form.banco.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">{{ form.titular_cuenta.label }}</label>
+                                {{ form.titular_cuenta }}
+                                {% if form.titular_cuenta.errors %}
+                                    <div class="text-danger small">{{ form.titular_cuenta.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">{{ form.numero_cuenta.label }}</label>
+                                {{ form.numero_cuenta }}
+                                {% if form.numero_cuenta.errors %}
+                                    <div class="text-danger small">{{ form.numero_cuenta.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">{{ form.clabe.label }}</label>
+                                {{ form.clabe }}
+                                <small class="text-muted">{{ form.clabe.help_text }}</small>
+                                {% if form.clabe.errors %}
+                                    <div class="text-danger small">{{ form.clabe.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 5: Redes Sociales -->
+        <div class="tab-pane fade" id="redes" role="tabpanel">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">Redes Sociales</h5>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="bi bi-facebook text-primary"></i> {{ form.facebook.label }}
+                        </label>
+                        {{ form.facebook }}
+                        {% if form.facebook.errors %}
+                            <div class="text-danger small">{{ form.facebook.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="bi bi-instagram text-danger"></i> {{ form.instagram.label }}
+                        </label>
+                        {{ form.instagram }}
+                        {% if form.instagram.errors %}
+                            <div class="text-danger small">{{ form.instagram.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="bi bi-twitter text-info"></i> {{ form.twitter.label }}
+                        </label>
+                        {{ form.twitter }}
+                        {% if form.twitter.errors %}
+                            <div class="text-danger small">{{ form.twitter.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <hr class="my-4">
+                    <h6 class="mb-3">Configuración General</h6>
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            {{ form.esta_activo }}
+                            <label class="form-check-label" for="{{ form.esta_activo.id_for_label }}">
+                                {{ form.esta_activo.label }}
+                            </label>
+                        </div>
+                        <small class="text-muted">{{ form.esta_activo.help_text }}</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            {{ form.acepta_reservas_online }}
+                            <label class="form-check-label" for="{{ form.acepta_reservas_online.id_for_label }}">
+                                {{ form.acepta_reservas_online.label }}
+                            </label>
+                        </div>
+                        <small class="text-muted">{{ form.acepta_reservas_online.help_text }}</small>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Personalización -->
-    <div class="col-md-6 mb-4">
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-white border-bottom py-3">
-                <h5 class="mb-0"><i class="bi bi-palette text-warning"></i> Personalización</h5>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <label class="text-muted">Color Primario:</label>
-                    <div class="d-flex align-items-center">
-                        <div class="rounded me-2" style="width: 40px; height: 40px; background: {{ negocio.color_primario|default:'#6366f1' }}; border: 2px solid #ddd;"></div>
-                        <code>{{ negocio.color_primario|default:'#6366f1' }}</code>
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <label class="text-muted">Color Secundario:</label>
-                    <div class="d-flex align-items-center">
-                        <div class="rounded me-2" style="width: 40px; height: 40px; background: {{ negocio.color_secundario|default:'#8b5cf6' }}; border: 2px solid #ddd;"></div>
-                        <code>{{ negocio.color_secundario|default:'#8b5cf6' }}</code>
-                    </div>
-                </div>
-
-                <hr>
-
-                <div class="mb-3">
-                    <label class="text-muted">URL de tu Mini-Página:</label>
-                    <div class="input-group">
-                        <input type="text" class="form-control" value="{{ negocio.url_publica }}" readonly>
-                        <button class="btn btn-outline-secondary" onclick="copiarURL()">
-                            <i class="bi bi-clipboard"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="text-center mt-4">
-                    <a href="/admin/negocios/negocio/{{ negocio.id }}/change/" target="_blank" class="btn btn-warning">
-                        <i class="bi bi-palette"></i> Personalizar
-                    </a>
-                    <a href="{% url 'public:minipagina' negocio.slug %}" target="_blank" class="btn btn-outline-primary">
-                        <i class="bi bi-eye"></i> Vista Previa
-                    </a>
-                </div>
+    <!-- Botones de acción -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'public:admin_dashboard' negocio.slug %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Volver al Dashboard
+                </a>
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-check-circle"></i> Guardar Cambios
+                </button>
             </div>
         </div>
     </div>
-
-    <!-- Estado y Reservas -->
-    <div class="col-md-12 mb-4">
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-white border-bottom py-3">
-                <h5 class="mb-0"><i class="bi bi-toggles text-secondary"></i> Estado y Configuración</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-4 text-center mb-3">
-                        <i class="bi bi-{{ negocio.esta_activo|yesno:'check-circle-fill,x-circle-fill' }} fs-1 text-{{ negocio.esta_activo|yesno:'success,danger' }}"></i>
-                        <h6 class="mt-2">Negocio {{ negocio.esta_activo|yesno:'Activo,Inactivo' }}</h6>
-                        <p class="text-muted small">Tu mini-página {{ negocio.esta_activo|yesno:'está visible,no está visible' }} para los clientes</p>
-                    </div>
-                    <div class="col-md-4 text-center mb-3">
-                        <i class="bi bi-{{ negocio.acepta_reservas_online|yesno:'calendar-check-fill,calendar-x-fill' }} fs-1 text-{{ negocio.acepta_reservas_online|yesno:'info,secondary' }}"></i>
-                        <h6 class="mt-2">Reservas Online {{ negocio.acepta_reservas_online|yesno:'Activas,Desactivadas' }}</h6>
-                        <p class="text-muted small">Los clientes {{ negocio.acepta_reservas_online|yesno:'pueden,no pueden' }} agendar citas online</p>
-                    </div>
-                    <div class="col-md-4 text-center mb-3">
-                        <i class="bi bi-calendar-event fs-1 text-primary"></i>
-                        <h6 class="mt-2">Fecha de Creación</h6>
-                        <p class="text-muted small">{{ negocio.fecha_creacion|date:"d/m/Y H:i" }}</p>
-                    </div>
-                </div>
-                <div class="text-center mt-3">
-                    <a href="/admin/negocios/negocio/{{ negocio.id }}/change/" target="_blank" class="btn btn-secondary">
-                        <i class="bi bi-sliders"></i> Ajustar Configuración
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+</form>
 
 {% endblock %}
 
 {% block extra_js %}
 <script>
+// Copiar URL al portapapeles
 function copiarURL() {
-    const url = "{{ negocio.url_publica }}";
+    const url = "{{ request.scheme }}://{{ request.get_host }}/{{ negocio.slug }}/";
     navigator.clipboard.writeText(url).then(() => {
-        alert('URL copiada al portapapeles!');
+        alert('¡URL copiada al portapapeles!');
     });
 }
+
+// Mostrar/ocultar configuración de abonos
+document.getElementById('{{ form.requiere_abono.id_for_label }}').addEventListener('change', function() {
+    document.getElementById('abonosConfig').style.display = this.checked ? 'block' : 'none';
+});
+
+// Confirmación antes de salir si hay cambios no guardados
+let formModificado = false;
+document.getElementById('configForm').addEventListener('change', function() {
+    formModificado = true;
+});
+
+window.addEventListener('beforeunload', function(e) {
+    if (formModificado) {
+        e.preventDefault();
+        e.returnValue = '';
+    }
+});
+
+// No mostrar alerta si se envió el formulario
+document.getElementById('configForm').addEventListener('submit', function() {
+    formModificado = false;
+});
 </script>
 {% endblock %}

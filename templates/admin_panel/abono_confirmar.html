@@ -1,0 +1,65 @@
+{% extends 'admin_panel/base_admin.html' %}
+
+{% block page_title %}Confirmar Abono{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-check-circle"></i> Confirmar Abono</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    Estás a punto de confirmar el abono de <strong>{{ abono.cita.cliente.nombre }}</strong>
+                </div>
+
+                <table class="table table-bordered">
+                    <tr>
+                        <th>Cliente:</th>
+                        <td>
+                            {{ abono.cita.cliente.nombre }}<br>
+                            <small class="text-muted">{{ abono.cita.cliente.telefono }}</small>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Servicio:</th>
+                        <td>{{ abono.cita.servicio.nombre }}</td>
+                    </tr>
+                    <tr>
+                        <th>Fecha y Hora:</th>
+                        <td>{{ abono.cita.fecha_hora|date:"d/m/Y H:i" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Monto del Abono:</th>
+                        <td><strong class="text-success">${{ abono.monto }}</strong></td>
+                    </tr>
+                    <tr>
+                        <th>Método de Pago:</th>
+                        <td>{{ abono.get_metodo_pago_display }}</td>
+                    </tr>
+                    {% if abono.numero_referencia %}
+                    <tr>
+                        <th>Referencia:</th>
+                        <td><code>{{ abono.numero_referencia }}</code></td>
+                    </tr>
+                    {% endif %}
+                </table>
+
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="bi bi-check-circle"></i> Confirmar Abono
+                        </button>
+                        <a href="{% url 'public:abonos_admin' negocio.slug %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Cancelar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
