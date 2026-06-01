@@ -96,7 +96,7 @@ class Negocio(models.Model):
     # Información bancaria para abonos (RF-51)
     banco = models.CharField('Banco', max_length=100, blank=True)
     numero_cuenta = models.CharField('Número de cuenta', max_length=50, blank=True)
-    clabe = models.CharField('CLABE interbancaria', max_length=18, blank=True)
+    clabe = models.CharField('Número de cuenta bancaria', max_length=50, blank=True)
     titular_cuenta = models.CharField('Titular de la cuenta', max_length=200, blank=True)
 
     # Personalización de mini página

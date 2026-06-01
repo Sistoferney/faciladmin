@@ -42,7 +42,7 @@
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Teléfono (con WhatsApp) *</label>
                                     <input type="tel" name="telefono" class="form-control" required
-                                           placeholder="+52 55 1234 5678">
+                                           placeholder="+57 300 123 4567">
                                     <small class="text-muted">Te enviaremos confirmación por WhatsApp</small>
                                 </div>
                             </div>
@@ -188,9 +188,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (telefonoInput) {
         telefonoInput.addEventListener('blur', function() {
             const telefono = this.value;
-            // Básica validación para números mexicanos
-            if (telefono && !telefono.match(/^\+?52?\s?\d{10,13}$/)) {
-                this.setCustomValidity('Ingresa un número válido (ej: +52 55 1234 5678)');
+            // Básica validación para números colombianos
+            if (telefono && !telefono.match(/^\+?57?\s?\d{10,13}$/)) {
+                this.setCustomValidity('Ingresa un número válido (ej: +57 300 123 4567)');
             } else {
                 this.setCustomValidity('');
             }

@@ -32,7 +32,7 @@ class RegistroNegocioForm(forms.Form):
         label='Tu teléfono',
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': '+52 55 1234 5678'
+            'placeholder': '+57 300 123 4567'
         })
     )
     password = forms.CharField(
@@ -69,7 +69,7 @@ class RegistroNegocioForm(forms.Form):
         label='Teléfono del negocio',
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': '+52 55 9876 5432'
+            'placeholder': '+57 300 987 6543'
         })
     )
     ciudad = forms.CharField(
@@ -77,7 +77,7 @@ class RegistroNegocioForm(forms.Form):
         label='Ciudad',
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Ej: Ciudad de México'
+            'placeholder': 'Ej: Bogotá'
         })
     )
 

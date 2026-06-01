@@ -7,14 +7,14 @@ document.addEventListener('DOMContentLoaded', function() {
 // Utilidades
 const Utils = {
     formatCurrency: function(amount) {
-        return new Intl.NumberFormat('es-MX', {
+        return new Intl.NumberFormat('es-CO', {
             style: 'currency',
-            currency: 'MXN'
+            currency: 'COP'
         }).format(amount);
     },
 
     formatDate: function(date) {
-        return new Intl.DateTimeFormat('es-MX').format(new Date(date));
+        return new Intl.DateTimeFormat('es-CO').format(new Date(date));
     },
 
     formatPhone: function(phone) {
