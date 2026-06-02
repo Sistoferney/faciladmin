@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -187,6 +188,9 @@
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
+            <div class="text-center mb-3">
+                <img src="{% static 'images/faciladmin-logo.png' %}" alt="FacilAdmin" style="max-width: 120px; height: auto;">
+            </div>
             <h4>{{ negocio.nombre }}</h4>
             <p><i class="bi bi-person-circle"></i> {{ request.user.nombre }}</p>
         </div>
