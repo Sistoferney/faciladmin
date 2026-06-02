@@ -223,10 +223,13 @@
                 <i class="bi bi-eye"></i>
                 <span>Ver Mini-Página</span>
             </a>
-            <a href="{% url 'logout' %}" class="nav-link">
-                <i class="bi bi-box-arrow-right"></i>
-                <span>Cerrar Sesión</span>
-            </a>
+            <form method="post" action="{% url 'logout' %}" style="margin: 0;">
+                {% csrf_token %}
+                <button type="submit" class="nav-link" style="border: none; background: none; width: 100%; text-align: left; cursor: pointer;">
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span>Cerrar Sesión</span>
+                </button>
+            </form>
         </nav>
     </div>
 

@@ -1,4 +1,5 @@
 {% extends 'landing/base_landing.html' %}
+{% load static %}
 
 {% block content %}
 <!-- Hero Section -->
@@ -28,8 +29,8 @@
             </div>
             <div class="col-lg-6">
                 <div class="text-center">
-                    <img src="https://via.placeholder.com/500x400/667eea/ffffff?text=FacilAdmin+Dashboard"
-                         alt="Dashboard Preview"
+                    <img src="{% static 'images/dashboard-preview.png' %}"
+                         alt="Dashboard Preview - FacilAdmin"
                          class="img-fluid rounded-4 shadow-lg"
                          style="border: 10px solid rgba(255,255,255,0.2);">
                 </div>
