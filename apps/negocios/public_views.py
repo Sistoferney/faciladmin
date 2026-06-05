@@ -334,3 +334,104 @@ def buscar_cliente_api(request, slug):
 
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+def manifest_minipagina(request, slug):
+    """
+    Genera el manifest.json dinámico para la PWA de la mini-página (clientes)
+    """
+    negocio = get_object_or_404(Negocio, slug=slug, esta_activo=True)
+
+    # URL base del sitio
+    site_url = request.build_absolute_uri('/').rstrip('/')
+
+    manifest = {
+        "name": f"{negocio.nombre}",
+        "short_name": negocio.nombre[:12] if len(negocio.nombre) > 12 else negocio.nombre,
+        "description": negocio.descripcion or f"Agenda tu cita en {negocio.nombre}",
+        "start_url": f"/{slug}/",
+        "scope": f"/{slug}/",
+        "display": "standalone",
+        "background_color": "#ffffff",
+        "theme_color": negocio.color_primario or "#6366f1",
+        "orientation": "portrait-primary",
+        "icons": []
+    }
+
+    # Agregar iconos si el negocio tiene logo
+    if negocio.logo:
+        logo_url = request.build_absolute_uri(negocio.logo.url)
+        # Generar múltiples tamaños (los navegadores escogen el apropiado)
+        for size in [192, 512]:
+            manifest["icons"].append({
+                "src": logo_url,
+                "sizes": f"{size}x{size}",
+                "type": "image/png",
+                "purpose": "any maskable"
+            })
+    else:
+        # Si no hay logo, usar el logo de FacilAdmin como fallback
+        manifest["icons"] = [
+            {
+                "src": f"{site_url}/static/images/faciladmin-logo.png",
+                "sizes": "192x192",
+                "type": "image/png"
+            },
+            {
+                "src": f"{site_url}/static/images/faciladmin-logo.png",
+                "sizes": "512x512",
+                "type": "image/png"
+            }
+        ]
+
+    return JsonResponse(manifest, content_type='application/manifest+json')
+
+
+def manifest_admin(request, slug):
+    """
+    Genera el manifest.json dinámico para la PWA del panel admin (dueños)
+    """
+    negocio = get_object_or_404(Negocio, slug=slug)
+
+    # URL base del sitio
+    site_url = request.build_absolute_uri('/').rstrip('/')
+
+    manifest = {
+        "name": f"{negocio.nombre} - Admin",
+        "short_name": f"{negocio.nombre[:8]} Admin",
+        "description": f"Panel de administración de {negocio.nombre}",
+        "start_url": f"/{slug}/admin/",
+        "scope": f"/{slug}/admin/",
+        "display": "standalone",
+        "background_color": "#ffffff",
+        "theme_color": negocio.color_primario or "#6366f1",
+        "orientation": "portrait-primary",
+        "icons": []
+    }
+
+    # Agregar iconos si el negocio tiene logo
+    if negocio.logo:
+        logo_url = request.build_absolute_uri(negocio.logo.url)
+        for size in [192, 512]:
+            manifest["icons"].append({
+                "src": logo_url,
+                "sizes": f"{size}x{size}",
+                "type": "image/png",
+                "purpose": "any maskable"
+            })
+    else:
+        # Si no hay logo, usar el logo de FacilAdmin como fallback
+        manifest["icons"] = [
+            {
+                "src": f"{site_url}/static/images/faciladmin-logo.png",
+                "sizes": "192x192",
+                "type": "image/png"
+            },
+            {
+                "src": f"{site_url}/static/images/faciladmin-logo.png",
+                "sizes": "512x512",
+                "type": "image/png"
+            }
+        ]
+
+    return JsonResponse(manifest, content_type='application/manifest+json')

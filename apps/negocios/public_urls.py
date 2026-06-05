@@ -47,4 +47,8 @@ urlpatterns = [
     # API para disponibilidad
     path('<slug:slug>/api/disponibilidad/', public_views.disponibilidad_api, name='disponibilidad_api'),
     path('<slug:slug>/api/buscar-cliente/', public_views.buscar_cliente_api, name='buscar_cliente_api'),
+
+    # PWA Manifests
+    path('<slug:slug>/manifest.json', public_views.manifest_minipagina, name='manifest_minipagina'),
+    path('<slug:slug>/admin/manifest.json', public_views.manifest_admin, name='manifest_admin'),
 ]
