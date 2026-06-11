@@ -15,17 +15,16 @@ def landing_page(request):
     """
     Landing page principal - Página de presentación del servicio
     """
-    # Si ya está autenticado, redirigir a su mini-página
-    if request.user.is_authenticated:
+    # Si ya está autenticado Y NO es superadmin, redirigir a su mini-página
+    if request.user.is_authenticated and not request.user.is_superuser:
         if hasattr(request.user, 'negocio'):
             return redirect(f'/{request.user.negocio.slug}/admin/')
-        else:
-            # Si es superadmin del sistema sin negocio, ir al admin de Django
-            return redirect('/admin/')
 
+    # Para superadmin o usuarios no autenticados, mostrar landing
     context = {
         'title': 'FacilAdmin - Sistema de Gestión para Spas y Peluquerías',
         'total_negocios': Negocio.objects.filter(esta_activo=True).count(),
+        'negocios': Negocio.objects.filter(esta_activo=True).order_by('-fecha_creacion') if request.user.is_superuser else None,
     }
     return render(request, 'landing/index.html', context)
 
