@@ -27,6 +27,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_filters',
     'phonenumber_field',
+    'cloudinary_storage',
+    'cloudinary',
 
     # Local apps
     'apps.authentication',
