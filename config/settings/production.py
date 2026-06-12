@@ -44,7 +44,9 @@ MEDIA_ROOT = BASE_DIR / 'media'
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME', default=''),
     'API_KEY': config('CLOUDINARY_API_KEY', default=''),
-    'API_SECRET': config('CLOUDINARY_API_SECRET', default='')
+    'API_SECRET': config('CLOUDINARY_API_SECRET', default=''),
+    # Configuración para evitar duplicados
+    'INVALIDATE': True,  # Invalidar cache del CDN al actualizar
 }
 
 # Usar Cloudinary para archivos media en producción
