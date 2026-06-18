@@ -26,6 +26,7 @@ class Notificacion(models.Model):
     ]
 
     CANAL_CHOICES = [
+        ('push', 'Push Notification'),  # PWA Push (Gratis)
         ('whatsapp', 'WhatsApp'),
         ('sms', 'SMS'),
         ('email', 'Email'),
@@ -89,7 +90,9 @@ class Notificacion(models.Model):
 
         service = NotificacionService()
 
-        if self.canal == 'whatsapp':
+        if self.canal == 'push':
+            resultado = service.enviar_push(self.cliente, self.asunto, self.mensaje, self.cita)
+        elif self.canal == 'whatsapp':
             resultado = service.enviar_whatsapp(self.cliente.telefono.as_e164, self.mensaje)
         elif self.canal == 'sms':
             resultado = service.enviar_sms(self.cliente.telefono.as_e164, self.mensaje)

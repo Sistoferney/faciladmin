@@ -105,15 +105,20 @@ def enviar_recordatorios_citas():
         cliente = cita.cliente
         negocio = cita.negocio
 
-        # Determinar canal
-        if cliente.acepta_whatsapp:
-            canal = 'whatsapp'
-        elif cliente.acepta_sms:
-            canal = 'sms'
-        elif cliente.acepta_email and cliente.email:
-            canal = 'email'
-        else:
-            continue
+        # Determinar canal (prioridad: Push > WhatsApp > SMS > Email)
+        # Push es GRATIS y no requiere configuración de Twilio
+        canal = 'push'  # Intentar push primero (gratis, funciona con PWA instalada)
+
+        # Fallback si push falla
+        if not canal:
+            if cliente.acepta_whatsapp:
+                canal = 'whatsapp'
+            elif cliente.acepta_sms:
+                canal = 'sms'
+            elif cliente.acepta_email and cliente.email:
+                canal = 'email'
+            else:
+                continue
 
         mensaje = f"""
 ¡Hola {cliente.nombre}!
