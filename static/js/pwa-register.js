@@ -153,6 +153,8 @@ async function promptInstall() {
 async function requestNotificationPermission() {
     if (Notification.permission === 'granted') {
         console.log('[PWA] Permisos de notificación ya concedidos');
+        // Suscribirse a push notifications
+        await subscribeToPushNotifications();
         return true;
     }
 
@@ -166,11 +168,118 @@ async function requestNotificationPermission() {
 
     if (permission === 'granted') {
         console.log('[PWA] Permisos de notificación concedidos');
+        // Suscribirse a push notifications
+        await subscribeToPushNotifications();
         return true;
     } else {
         console.log('[PWA] Permisos de notificación denegados');
         return false;
     }
+}
+
+/**
+ * Se suscribe a notificaciones push
+ */
+async function subscribeToPushNotifications() {
+    try {
+        // Verificar soporte
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+            console.log('[PWA] Push notifications no soportadas');
+            return null;
+        }
+
+        // Obtener registro del Service Worker
+        const registration = await navigator.serviceWorker.ready;
+
+        // Verificar si ya está suscrito
+        let subscription = await registration.pushManager.getSubscription();
+
+        if (subscription) {
+            console.log('[PWA] Ya está suscrito a push notifications');
+            return subscription;
+        }
+
+        // Obtener clave pública VAPID del servidor
+        const response = await fetch('/api/notificaciones/push/vapid-key/');
+        const data = await response.json();
+        const publicKey = data.publicKey;
+
+        if (!publicKey) {
+            console.error('[PWA] No se pudo obtener la clave VAPID');
+            return null;
+        }
+
+        // Convertir clave VAPID a formato Uint8Array
+        const applicationServerKey = urlBase64ToUint8Array(publicKey);
+
+        // Suscribirse
+        subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: applicationServerKey
+        });
+
+        console.log('[PWA] Suscrito a push notifications:', subscription);
+
+        // Enviar suscripción al servidor
+        await savePushSubscription(subscription);
+
+        return subscription;
+
+    } catch (error) {
+        console.error('[PWA] Error suscribiéndose a push:', error);
+        return null;
+    }
+}
+
+/**
+ * Guarda la suscripción en el servidor
+ */
+async function savePushSubscription(subscription) {
+    try {
+        const response = await fetch('/api/notificaciones/push/subscribe/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                subscription: subscription.toJSON(),
+                negocio_slug: window.location.pathname.split('/')[1] || null
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            console.log('[PWA] Suscripción guardada en servidor');
+            localStorage.setItem('push_subscribed', 'true');
+        } else {
+            console.error('[PWA] Error guardando suscripción:', data.error);
+        }
+
+        return data.success;
+
+    } catch (error) {
+        console.error('[PWA] Error guardando suscripción:', error);
+        return false;
+    }
+}
+
+/**
+ * Convierte una clave VAPID de Base64 a Uint8Array
+ */
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+        .replace(/\-/g, '+')
+        .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
 }
 
 /**
@@ -190,5 +299,6 @@ window.PWA = {
     promptInstall,
     isPWAInstalled,
     requestNotificationPermission,
+    subscribeToPushNotifications,
     hideInstallBanner
 };

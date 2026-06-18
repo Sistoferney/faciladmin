@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'phonenumber_field',
     'cloudinary_storage',
     'cloudinary',
+    'webpush',
 
     # Local apps
     'apps.authentication',
@@ -154,6 +155,13 @@ TWILIO_ACCOUNT_SID = config('TWILIO_ACCOUNT_SID', default='')
 TWILIO_AUTH_TOKEN = config('TWILIO_AUTH_TOKEN', default='')
 TWILIO_PHONE_NUMBER = config('TWILIO_PHONE_NUMBER', default='')
 TWILIO_WHATSAPP_NUMBER = config('TWILIO_WHATSAPP_NUMBER', default='')
+
+# Web Push Notifications (PWA)
+WEBPUSH_SETTINGS = {
+    "VAPID_PUBLIC_KEY": config('VAPID_PUBLIC_KEY', default=''),
+    "VAPID_PRIVATE_KEY": config('VAPID_PRIVATE_KEY', default=''),
+    "VAPID_ADMIN_EMAIL": config('VAPID_ADMIN_EMAIL', default='admin@faciladmin.com')
+}
 
 # Celery Configuration (base)
 CELERY_ACCEPT_CONTENT = ['json']

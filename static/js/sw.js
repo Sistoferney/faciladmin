@@ -99,28 +99,48 @@ self.addEventListener('message', (event) => {
     }
 });
 
-// Push Notifications (preparado para Fase 2)
+// Push Notifications
 self.addEventListener('push', (event) => {
+    console.log('[SW] Push recibido:', event);
+
     if (!event.data) {
+        console.log('[SW] Push sin datos');
         return;
     }
 
-    const data = event.data.json();
-    const title = data.title || 'Notificación';
-    const options = {
-        body: data.body || '',
-        icon: data.icon || '/static/images/icon-192.png',
-        badge: data.badge || '/static/images/badge.png',
-        vibrate: [200, 100, 200],
-        data: {
-            url: data.url || '/'
-        },
-        actions: data.actions || []
-    };
+    try {
+        const data = event.data.json();
+        console.log('[SW] Datos del push:', data);
 
-    event.waitUntil(
-        self.registration.showNotification(title, options)
-    );
+        const title = data.title || data.head || 'FacilAdmin';
+        const options = {
+            body: data.body || data.message || '',
+            icon: data.icon || '/static/images/faciladmin-logo.png',
+            badge: data.badge || '/static/images/faciladmin-logo.png',
+            tag: data.tag || 'faciladmin-notification',
+            requireInteraction: data.requireInteraction || false,
+            vibrate: data.vibrate || [200, 100, 200],
+            data: {
+                url: data.url || data.link || '/',
+                citaId: data.citaId || null,
+                tipo: data.tipo || 'general'
+            },
+            actions: data.actions || []
+        };
+
+        event.waitUntil(
+            self.registration.showNotification(title, options)
+        );
+    } catch (error) {
+        console.error('[SW] Error procesando push:', error);
+        // Mostrar notificación genérica en caso de error
+        event.waitUntil(
+            self.registration.showNotification('Nueva notificación', {
+                body: 'Tienes una nueva actualización',
+                icon: '/static/images/faciladmin-logo.png'
+            })
+        );
+    }
 });
 
 // Manejar click en notificaciones
