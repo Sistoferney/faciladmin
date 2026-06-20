@@ -416,9 +416,16 @@ def servicio_crear(request, slug):
         if form.is_valid():
             servicio = form.save(commit=False)
             servicio.negocio = negocio
-            servicio.save()
-            messages.success(request, f'¡Servicio "{servicio.nombre}" creado exitosamente!')
-            return redirect('public:admin_servicios', slug=slug)
+            try:
+                servicio.save()
+                messages.success(request, f'¡Servicio "{servicio.nombre}" creado exitosamente!')
+                return redirect('public:admin_servicios', slug=slug)
+            except Exception as e:
+                # Manejar error de nombre duplicado
+                if 'unique constraint' in str(e).lower() or 'duplicate key' in str(e).lower():
+                    messages.error(request, f'Ya existe un servicio con el nombre "{servicio.nombre}". Por favor usa un nombre diferente.')
+                else:
+                    messages.error(request, f'Error al crear el servicio: {str(e)}')
         else:
             messages.error(request, 'Por favor corrige los errores en el formulario.')
     else:
@@ -447,9 +454,16 @@ def servicio_editar(request, slug, servicio_id):
     if request.method == 'POST':
         form = ServicioForm(request.POST, request.FILES, instance=servicio)
         if form.is_valid():
-            form.save()
-            messages.success(request, f'¡Servicio "{servicio.nombre}" actualizado exitosamente!')
-            return redirect('public:admin_servicios', slug=slug)
+            try:
+                form.save()
+                messages.success(request, f'¡Servicio "{servicio.nombre}" actualizado exitosamente!')
+                return redirect('public:admin_servicios', slug=slug)
+            except Exception as e:
+                # Manejar error de nombre duplicado
+                if 'unique constraint' in str(e).lower() or 'duplicate key' in str(e).lower():
+                    messages.error(request, f'Ya existe otro servicio con el nombre "{form.cleaned_data.get("nombre")}". Por favor usa un nombre diferente.')
+                else:
+                    messages.error(request, f'Error al actualizar el servicio: {str(e)}')
         else:
             messages.error(request, 'Por favor corrige los errores en el formulario.')
     else:
