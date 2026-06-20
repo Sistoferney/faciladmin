@@ -84,7 +84,7 @@
         </div>
     </nav>
 
-    <!-- Banner de Instalación PWA -->
+    <!-- Banner de Instalación PWA (Android) -->
     <div id="install-banner" class="alert alert-info alert-dismissible fade show sticky-top mb-0" style="display: none; z-index: 1050; border-radius: 0;">
         <div class="container">
             <div class="row align-items-center">
@@ -102,6 +102,29 @@
                         <i class="bi bi-download"></i> Instalar
                     </button>
                     <button type="button" class="btn-close ms-2" onclick="PWA.hideInstallBanner()" aria-label="Close"></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Banner de Instalación PWA (iOS) -->
+    <div id="install-banner-ios" class="alert alert-info alert-dismissible fade show sticky-top mb-0" style="display: none; z-index: 1050; border-radius: 0;">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-12">
+                    <div class="d-flex align-items-start">
+                        <i class="bi bi-apple fs-3 me-3"></i>
+                        <div class="flex-grow-1">
+                            <strong>¡Instala nuestra app!</strong>
+                            <p class="mb-2 small">Para recibir recordatorios de citas:</p>
+                            <ol class="mb-0 small ps-3">
+                                <li>Toca el botón <i class="bi bi-box-arrow-up"></i> <strong>Compartir</strong> (abajo)</li>
+                                <li>Selecciona <strong>"Agregar a pantalla de inicio"</strong></li>
+                                <li>Confirma tocando <strong>"Agregar"</strong></li>
+                            </ol>
+                        </div>
+                        <button type="button" class="btn-close ms-2" onclick="PWA.hideInstallBanner()" aria-label="Close"></button>
+                    </div>
                 </div>
             </div>
         </div>

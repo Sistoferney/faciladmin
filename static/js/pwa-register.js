@@ -96,12 +96,29 @@ window.addEventListener('beforeinstallprompt', (e) => {
 });
 
 /**
+ * Detecta si es un dispositivo iOS
+ */
+function isIOS() {
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    return /iphone|ipad|ipod/.test(userAgent);
+}
+
+/**
  * Muestra el banner de instalación
  */
 function showInstallBanner() {
-    const banner = document.getElementById('install-banner');
-    if (banner) {
-        banner.style.display = 'block';
+    // En iOS, mostrar banner especial con instrucciones
+    if (isIOS()) {
+        const iosBanner = document.getElementById('install-banner-ios');
+        if (iosBanner && !isPWAInstalled()) {
+            iosBanner.style.display = 'block';
+        }
+    } else {
+        // Android/Chrome: banner normal
+        const banner = document.getElementById('install-banner');
+        if (banner) {
+            banner.style.display = 'block';
+        }
     }
 }
 
@@ -110,9 +127,17 @@ function showInstallBanner() {
  */
 function hideInstallBanner() {
     const banner = document.getElementById('install-banner');
+    const iosBanner = document.getElementById('install-banner-ios');
+
     if (banner) {
         banner.style.display = 'none';
     }
+    if (iosBanner) {
+        iosBanner.style.display = 'none';
+    }
+
+    // Guardar preferencia para no mostrar más
+    localStorage.setItem('pwa_banner_dismissed', 'true');
 }
 
 /**
