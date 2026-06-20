@@ -38,6 +38,7 @@ urlpatterns = [
     # Otros
     path('<slug:slug>/admin/clientes/', admin_views.clientes_admin, name='admin_clientes'),
     path('<slug:slug>/admin/configuracion/', admin_views.configuracion_admin, name='admin_configuracion'),
+    path('<slug:slug>/admin/qr/', admin_views.generar_qr, name='generar_qr'),
 
     # Mini página pública del negocio
     path('<slug:slug>/', public_views.minipagina_negocio, name='minipagina'),

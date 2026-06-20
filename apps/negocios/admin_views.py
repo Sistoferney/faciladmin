@@ -796,3 +796,129 @@ def abono_rechazar(request, slug, abono_id):
     }
 
     return render(request, 'admin_panel/abono_rechazar.html', context)
+
+
+# ==================== GENERACIÓN DE CÓDIGO QR ====================
+
+@admin_required
+def generar_qr(request, slug):
+    """
+    Genera un código QR personalizado con la URL de la mini-página del negocio
+    Incluye el nombre del negocio y opcionalmente el logo en el centro
+    """
+    from django.http import HttpResponse
+    from django.conf import settings
+    import qrcode
+    from io import BytesIO
+    from PIL import Image, ImageDraw, ImageFont
+    import requests
+
+    negocio = get_object_or_404(Negocio, slug=slug)
+
+    # Construir URL completa de la mini-página
+    site_url = settings.SITE_URL.rstrip('/')
+    minipagina_url = f"{site_url}/{negocio.slug}/"
+
+    # Crear código QR con alta corrección de errores (permite logo en el centro)
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_H,  # Alta corrección (permite hasta 30% de daño)
+        box_size=10,
+        border=4,
+    )
+
+    qr.add_data(minipagina_url)
+    qr.make(fit=True)
+
+    # Crear imagen del QR
+    qr_img = qr.make_image(fill_color="black", back_color="white").convert('RGB')
+
+    # Si tiene logo, agregarlo al centro del QR
+    if negocio.logo:
+        try:
+            # Descargar/abrir logo
+            if negocio.logo.url.startswith('http'):
+                logo_response = requests.get(negocio.logo.url, timeout=5)
+                logo = Image.open(BytesIO(logo_response.content))
+            else:
+                logo = Image.open(negocio.logo.path)
+
+            # Calcular tamaño del logo (20% del QR)
+            qr_width, qr_height = qr_img.size
+            logo_size = int(qr_width * 0.2)
+
+            # Redimensionar logo manteniendo aspecto
+            logo.thumbnail((logo_size, logo_size), Image.Resampling.LANCZOS)
+
+            # Crear fondo blanco para el logo (para mejor visibilidad)
+            logo_bg_size = int(logo_size * 1.2)
+            logo_bg = Image.new('RGB', (logo_bg_size, logo_bg_size), 'white')
+
+            # Calcular posición centrada del logo
+            logo_pos = ((logo_bg_size - logo.size[0]) // 2, (logo_bg_size - logo.size[1]) // 2)
+
+            # Pegar logo en fondo blanco (con transparencia si existe)
+            if logo.mode == 'RGBA':
+                logo_bg.paste(logo, logo_pos, logo)
+            else:
+                logo_bg.paste(logo, logo_pos)
+
+            # Calcular posición central en el QR
+            qr_logo_pos = ((qr_width - logo_bg_size) // 2, (qr_height - logo_bg_size) // 2)
+
+            # Pegar logo con fondo en el QR
+            qr_img.paste(logo_bg, qr_logo_pos)
+        except Exception as e:
+            # Si falla, continuar sin logo
+            print(f"Error agregando logo al QR: {e}")
+
+    # Crear imagen final con texto
+    # Agregar espacio abajo para el nombre
+    final_width = qr_img.size[0] + 40  # Padding lateral
+    final_height = qr_img.size[1] + 100  # Espacio para texto
+    final_img = Image.new('RGB', (final_width, final_height), 'white')
+
+    # Pegar QR centrado
+    qr_pos = (20, 20)
+    final_img.paste(qr_img, qr_pos)
+
+    # Agregar nombre del negocio
+    draw = ImageDraw.Draw(final_img)
+
+    # Intentar usar fuente del sistema, si no, usar default
+    try:
+        font_title = ImageFont.truetype("arial.ttf", 28)
+        font_url = ImageFont.truetype("arial.ttf", 16)
+    except:
+        font_title = ImageFont.load_default()
+        font_url = ImageFont.load_default()
+
+    # Dibujar nombre del negocio
+    text = negocio.nombre
+    # Calcular posición centrada
+    bbox = draw.textbbox((0, 0), text, font=font_title)
+    text_width = bbox[2] - bbox[0]
+    text_x = (final_width - text_width) // 2
+    text_y = qr_img.size[1] + 30
+
+    draw.text((text_x, text_y), text, fill='black', font=font_title)
+
+    # Agregar URL pequeña
+    url_text = f"{negocio.slug}"
+    bbox_url = draw.textbbox((0, 0), url_text, font=font_url)
+    url_width = bbox_url[2] - bbox_url[0]
+    url_x = (final_width - url_width) // 2
+    url_y = text_y + 40
+
+    draw.text((url_x, url_y), url_text, fill='gray', font=font_url)
+
+    # Guardar en buffer
+    buffer = BytesIO()
+    final_img.save(buffer, format='PNG')
+    buffer.seek(0)
+
+    # Retornar como respuesta HTTP
+    response = HttpResponse(buffer.getvalue(), content_type='image/png')
+    response['Content-Disposition'] = f'attachment; filename="qr_{negocio.slug}.png"'
+
+    return response

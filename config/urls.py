@@ -6,8 +6,12 @@ from django.contrib.auth.views import LoginView, LogoutView
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from apps.core import views as core_views
 
 urlpatterns = [
+    # Service Worker (debe ir primero para tener scope en toda la app)
+    path('sw.js', core_views.service_worker, name='service_worker'),
+
     # Landing page y páginas principales
     path('', include('apps.core.urls')),
 

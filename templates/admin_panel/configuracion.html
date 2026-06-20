@@ -14,7 +14,7 @@
 <!-- Alerta de guía -->
 <div class="alert alert-info alert-dismissible fade show" role="alert">
     <i class="bi bi-info-circle"></i>
-    <strong>Guía de Imágenes:</strong> Para mejores resultados, sube un <strong>logo de 500x500 px</strong> y una <strong>imagen de portada de 1920x600 px</strong>.
+    <strong>Guía de Imágenes:</strong> Para mejores resultados, sube un <strong>logo de 800x400 px (horizontal)</strong> y una <strong>imagen de portada de 1600x900 px (16:9)</strong>.
     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
 </div>
 
@@ -243,6 +243,35 @@
                         <a href="{% url 'public:minipagina' negocio.slug %}" target="_blank" class="btn btn-outline-primary">
                             <i class="bi bi-eye"></i> Vista Previa de tu Mini-Página
                         </a>
+                    </div>
+
+                    <hr class="my-4">
+                    <h6 class="mb-3"><i class="bi bi-qr-code"></i> Código QR</h6>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i>
+                                <strong>Comparte tu mini-página fácilmente:</strong> Descarga el código QR y compártelo con tus clientes. Pueden escanearlo para acceder directamente a tu mini-página.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mx-auto text-center">
+                            <div class="card border-2" style="border-color: {{ negocio.color_primario }};">
+                                <div class="card-body p-4">
+                                    <img src="{% url 'public:generar_qr' negocio.slug %}" alt="Código QR" class="img-fluid mb-3" style="max-width: 250px;">
+                                    <p class="text-muted small mb-3">Escanea para acceder a<br><strong>{{ negocio.nombre }}</strong></p>
+                                    <a href="{% url 'public:generar_qr' negocio.slug %}" download="qr_{{ negocio.slug }}.png" class="btn btn-primary">
+                                        <i class="bi bi-download"></i> Descargar QR
+                                    </a>
+                                </div>
+                            </div>
+                            <p class="text-muted small mt-2">
+                                <i class="bi bi-lightbulb"></i> <strong>Tip:</strong> Imprime este QR y colócalo en tu local para que tus clientes puedan agendar citas fácilmente.
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>

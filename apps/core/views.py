@@ -115,3 +115,26 @@ def contacto(request):
         'title': 'Contacto - FacilAdmin',
     }
     return render(request, 'landing/contacto.html', context)
+
+
+def service_worker(request):
+    """
+    Sirve el Service Worker desde la raíz para que pueda controlar todo el sitio
+    """
+    from django.http import HttpResponse
+    from django.conf import settings
+    import os
+
+    # Leer el archivo sw.js desde static
+    sw_path = os.path.join(settings.BASE_DIR, 'static', 'js', 'sw.js')
+
+    try:
+        with open(sw_path, 'r', encoding='utf-8') as f:
+            sw_content = f.read()
+
+        response = HttpResponse(sw_content, content_type='application/javascript')
+        # Agregar header para permitir scope en toda la aplicación
+        response['Service-Worker-Allowed'] = '/'
+        return response
+    except FileNotFoundError:
+        return HttpResponse('Service Worker not found', status=404)

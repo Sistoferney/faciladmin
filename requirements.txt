@@ -16,6 +16,7 @@ django-environ==0.11.2
 Pillow>=10.3.0
 cloudinary==1.44.2
 django-cloudinary-storage==0.3.0
+qrcode[pil]==8.2
 
 # Validación de teléfonos
 phonenumbers>=8.13.0
