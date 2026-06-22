@@ -123,6 +123,22 @@ function showInstallBanner() {
 }
 
 /**
+ * Inicializar banner en iOS cuando cargue la página
+ * En iOS no existe beforeinstallprompt, así que mostramos el banner directamente
+ */
+window.addEventListener('load', () => {
+    // Verificar si ya fue descartado
+    const bannerDismissed = localStorage.getItem('pwa_banner_dismissed');
+
+    if (!bannerDismissed && isIOS() && !isPWAInstalled()) {
+        // Esperar un poco para que el DOM esté listo
+        setTimeout(() => {
+            showInstallBanner();
+        }, 1000);
+    }
+});
+
+/**
  * Oculta el banner de instalación
  */
 function hideInstallBanner() {
