@@ -83,6 +83,19 @@ class Servicio(models.Model):
     def __str__(self):
         return f"{self.nombre} - ${self.precio}"
 
+    def clean(self):
+        """
+        Validaciones personalizadas
+        """
+        from django.core.exceptions import ValidationError
+
+        # Validar que la duración no supere 360 minutos (6 horas)
+        if self.duracion_minutos:
+            if self.duracion_minutos < 5:
+                raise ValidationError({'duracion_minutos': 'La duración mínima es de 5 minutos.'})
+            if self.duracion_minutos > 360:
+                raise ValidationError({'duracion_minutos': 'La duración máxima es de 360 minutos (6 horas).'})
+
     @property
     def precio_abono(self):
         """

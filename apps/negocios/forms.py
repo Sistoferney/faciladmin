@@ -214,6 +214,20 @@ class ConfiguracionNegocioForm(forms.ModelForm):
             'acepta_reservas_online': 'Si está desactivado, no se podrán hacer reservas desde la web',
         }
 
+    def clean(self):
+        """Validar horarios de apertura y cierre"""
+        cleaned_data = super().clean()
+        hora_apertura = cleaned_data.get('horario_apertura')
+        hora_cierre = cleaned_data.get('horario_cierre')
+
+        if hora_apertura and hora_cierre:
+            if hora_cierre <= hora_apertura:
+                raise forms.ValidationError(
+                    'El horario de cierre debe ser posterior al horario de apertura.'
+                )
+
+        return cleaned_data
+
 
 class ServicioForm(forms.ModelForm):
     """
@@ -254,6 +268,7 @@ class ServicioForm(forms.ModelForm):
             'duracion_minutos': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'min': '5',
+                'max': '360',
                 'step': '5',
                 'placeholder': '60'
             }),
@@ -306,7 +321,7 @@ class ServicioForm(forms.ModelForm):
             'nombre': 'Nombre del servicio que aparecerá en la mini-página',
             'descripcion': 'Descripción detallada del servicio',
             'precio': 'Precio del servicio en tu moneda local',
-            'duracion_minutos': 'Duración aproximada del servicio (en minutos)',
+            'duracion_minutos': 'Duración aproximada del servicio (5-360 minutos / máx. 6 horas)',
             'frecuencia_dias': 'Cada cuántos días se recomienda repetir este servicio (opcional)',
             'imagen': 'Imagen que representa el servicio (opcional, 800x600 px recomendado)',
             'orden': 'Número para ordenar los servicios (menor número aparece primero)',
@@ -315,6 +330,18 @@ class ServicioForm(forms.ModelForm):
             'monto_abono': 'Monto fijo de abono para este servicio (deja vacío si usas porcentaje)',
             'porcentaje_abono': 'Porcentaje del precio como abono (deja vacío si usas monto fijo)',
         }
+
+    def clean_duracion_minutos(self):
+        """Validar duración del servicio"""
+        duracion = self.cleaned_data.get('duracion_minutos')
+
+        if duracion is not None:
+            if duracion < 5:
+                raise forms.ValidationError('La duración mínima es de 5 minutos.')
+            if duracion > 360:
+                raise forms.ValidationError('La duración máxima es de 360 minutos (6 horas). Los servicios no pueden exceder este tiempo.')
+
+        return duracion
 
 
 class BloqueoAgendaForm(forms.ModelForm):
