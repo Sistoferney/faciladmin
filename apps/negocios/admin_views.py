@@ -197,6 +197,9 @@ def agenda_admin(request, slug):
 
     # Mapear citas y marcar todos los slots que ocupan
     for cita in citas_semana:
+        # Convertir a zona horaria local (America/Bogota)
+        fecha_hora_local = timezone.localtime(cita.fecha_hora)
+
         # Calcular cuántos slots de 30 minutos ocupa esta cita
         duracion_minutos = cita.duracion_minutos
         num_slots = (duracion_minutos + 29) // 30  # Redondear hacia arriba
@@ -207,13 +210,13 @@ def agenda_admin(request, slug):
             'cliente': cita.cliente.nombre,
             'servicio': cita.servicio.nombre,
             'estado': cita.estado,
-            'hora': cita.fecha_hora.strftime('%H:%M'),
+            'hora': fecha_hora_local.strftime('%H:%M'),
             'duracion': duracion_minutos,
         }
 
         # Marcar todos los slots que ocupa esta cita
         for i in range(num_slots):
-            slot_tiempo = cita.fecha_hora + timedelta(minutes=i * 30)
+            slot_tiempo = fecha_hora_local + timedelta(minutes=i * 30)
             dia_key = slot_tiempo.date().isoformat()
             hora_key = slot_tiempo.strftime('%H:%M')
             celda_key = f"{dia_key}_{hora_key}"
@@ -232,7 +235,7 @@ def agenda_admin(request, slug):
                     'cliente': cita.cliente.nombre,
                     'servicio': f"(Continuación) {cita.servicio.nombre}",
                     'estado': cita.estado,
-                    'hora': cita.fecha_hora.strftime('%H:%M'),
+                    'hora': fecha_hora_local.strftime('%H:%M'),
                     'duracion': duracion_minutos,
                     'es_continuacion': True,
                 })
