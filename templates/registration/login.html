@@ -129,10 +129,28 @@
 
         .input-group .form-control {
             border-left: none;
-            border-radius: 0 10px 10px 0;
+            border-radius: 0 0 0 0;
         }
 
         .input-group:focus-within .input-group-text {
+            border-color: #667eea;
+        }
+
+        .password-toggle {
+            background: transparent;
+            border: 2px solid #e9ecef;
+            border-left: none;
+            border-radius: 0 10px 10px 0;
+            cursor: pointer;
+            transition: all 0.3s;
+            padding: 0 15px;
+        }
+
+        .password-toggle:hover {
+            background: #f8f9fa;
+        }
+
+        .input-group:focus-within .password-toggle {
             border-color: #667eea;
         }
 
@@ -218,6 +236,9 @@
                             autocomplete="current-password"
                             required
                         >
+                        <button class="password-toggle" type="button" id="togglePassword" title="Mostrar contraseña">
+                            <i class="bi bi-eye" id="toggleIcon"></i>
+                        </button>
                     </div>
                 </div>
 
@@ -250,5 +271,28 @@
 
     <!-- Bootstrap 5 JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Toggle password visibility
+        document.getElementById('togglePassword').addEventListener('click', function() {
+            const passwordInput = document.getElementById('id_password');
+            const toggleIcon = document.getElementById('toggleIcon');
+            const toggleButton = document.getElementById('togglePassword');
+
+            if (passwordInput.type === 'password') {
+                // Mostrar contraseña
+                passwordInput.type = 'text';
+                toggleIcon.classList.remove('bi-eye');
+                toggleIcon.classList.add('bi-eye-slash');
+                toggleButton.title = 'Ocultar contraseña';
+            } else {
+                // Ocultar contraseña
+                passwordInput.type = 'password';
+                toggleIcon.classList.remove('bi-eye-slash');
+                toggleIcon.classList.add('bi-eye');
+                toggleButton.title = 'Mostrar contraseña';
+            }
+        });
+    </script>
 </body>
 </html>

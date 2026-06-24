@@ -325,10 +325,27 @@
             background: rgba(99, 102, 241, 0.05);
         }
 
+        .btn-cancel-custom {
+            background: white;
+            border: 2px solid #dc3545;
+            color: #dc3545;
+            padding: 12px 30px;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-cancel-custom:hover {
+            background: #dc3545;
+            color: white;
+        }
+
         .booking-actions {
             display: flex;
             justify-content: space-between;
+            align-items: center;
             margin-top: 30px;
+            gap: 10px;
         }
 
         /* Summary */
@@ -372,6 +389,24 @@
 
             .time-slots-grid {
                 grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            }
+
+            .booking-actions {
+                flex-wrap: wrap;
+            }
+
+            .btn-cancel-custom,
+            .btn-secondary-custom,
+            .btn-primary-custom {
+                padding: 10px 20px;
+                font-size: 0.9rem;
+            }
+
+            /* En móvil, cancelar ocupa toda la fila superior */
+            #btnCancel {
+                order: -1;
+                width: 100%;
+                margin-bottom: 10px;
             }
         }
     </style>
@@ -552,6 +587,9 @@
                 <div class="booking-actions">
                     <button type="button" class="btn btn-secondary-custom" id="btnPrev" style="display: none;">
                         <i class="bi bi-arrow-left"></i> Anterior
+                    </button>
+                    <button type="button" class="btn btn-cancel-custom" id="btnCancel" onclick="cancelarReserva()">
+                        <i class="bi bi-x-circle"></i> Cancelar
                     </button>
                     <div style="flex: 1"></div>
                     <button type="button" class="btn btn-primary-custom" id="btnNext">
@@ -918,6 +956,17 @@
                     e.target.value = '+57 ';
                 }
             });
+        }
+
+        /**
+         * Cancelar el proceso de reserva
+         */
+        function cancelarReserva() {
+            // Preguntar confirmación al usuario
+            if (confirm('¿Estás seguro de que deseas cancelar la reserva? Se perderán todos los datos ingresados.')) {
+                // Redirigir a la página principal del negocio
+                window.location.href = '/{{ negocio.slug }}/';
+            }
         }
     </script>
 </body>
