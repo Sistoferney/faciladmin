@@ -65,6 +65,13 @@ class Negocio(models.Model):
     estado = models.CharField('Estado', max_length=100, blank=True)
     codigo_postal = models.CharField('Código postal', max_length=10, blank=True)
 
+    # Tipo de servicio
+    es_a_domicilio = models.BooleanField(
+        'Servicio a domicilio',
+        default=False,
+        help_text='Marcar si el negocio ofrece servicios a domicilio (sin local fijo)'
+    )
+
     # Horarios de atención
     horario_apertura = models.TimeField('Hora de apertura', null=True, blank=True)
     horario_cierre = models.TimeField('Hora de cierre', null=True, blank=True)

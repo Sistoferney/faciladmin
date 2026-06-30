@@ -479,6 +479,35 @@
                                 <label class="form-label">Email (opcional)</label>
                                 <input type="email" name="email" id="email_step1" class="form-control">
                             </div>
+
+                            {% if negocio.es_a_domicilio %}
+                            <!-- Campos adicionales para servicio a domicilio -->
+                            <div class="alert alert-info mt-3">
+                                <i class="bi bi-house-door"></i>
+                                <strong>Servicio a domicilio:</strong> Por favor ingresa la dirección donde se prestará el servicio.
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Dirección *</label>
+                                <input type="text" name="direccion" id="direccion_step1" class="form-control" required placeholder="Calle, número, colonia">
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-8 mb-3">
+                                    <label class="form-label">Ciudad *</label>
+                                    <input type="text" name="ciudad" id="ciudad_step1" class="form-control" required placeholder="Ciudad">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">C.P.</label>
+                                    <input type="text" name="codigo_postal" id="codigo_postal_step1" class="form-control" placeholder="12345">
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Referencias (opcional)</label>
+                                <textarea name="referencia_direccion" id="referencia_step1" class="form-control" rows="2" placeholder="Ej: Torre A, Apto 302, portón negro, entre calles..."></textarea>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -488,10 +517,20 @@
                     <h4 class="mb-4">Selecciona un Servicio</h4>
                     <div class="services-list">
                         {% for servicio in servicios %}
-                        <div class="service-card" data-service-id="{{ servicio.id }}" data-service-name="{{ servicio.nombre }}" data-service-price="{{ servicio.precio }}" data-service-duration="{{ servicio.duracion_minutos }}">
+                        <div class="service-card"
+                             data-service-id="{{ servicio.id }}"
+                             data-service-name="{{ servicio.nombre }}"
+                             data-service-price="{{ servicio.precio }}"
+                             data-service-duration="{{ servicio.duracion_minutos }}"
+                             data-requires-contact="{{ servicio.requiere_contacto_directo|yesno:'true,false' }}">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
-                                    <div class="service-name">{{ servicio.nombre }}</div>
+                                    <div class="service-name">
+                                        {{ servicio.nombre }}
+                                        {% if servicio.requiere_contacto_directo %}
+                                        <span class="badge bg-info ms-2"><i class="bi bi-telephone"></i> Requiere coordinación</span>
+                                        {% endif %}
+                                    </div>
                                     <div class="service-duration">
                                         <i class="bi bi-clock"></i> {{ servicio.duracion_minutos }} minutos
                                     </div>
@@ -505,6 +544,45 @@
                         {% endfor %}
                     </div>
                     <input type="hidden" name="servicio" id="selectedService">
+                </div>
+
+                <!-- Step Contact: Contacto Directo para Servicios Especiales -->
+                <div class="step-content" id="step-contact" style="display: none;">
+                    <div class="text-center">
+                        <div class="mb-4">
+                            <i class="bi bi-telephone-fill text-primary" style="font-size: 4rem;"></i>
+                        </div>
+                        <h4 class="mb-3">Coordinación Directa Requerida</h4>
+                        <p class="lead text-muted mb-4">
+                            El servicio <strong id="contactServiceName"></strong> requiere coordinar directamente para confirmar disponibilidad, ubicación y detalles específicos.
+                        </p>
+
+                        <div class="alert alert-info text-start mb-4">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>¿Por qué contactar directamente?</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>Servicios a domicilio que dependen de la distancia</li>
+                                <li>Disponibilidad especial según la zona</li>
+                                <li>Coordinación de horarios personalizados</li>
+                            </ul>
+                        </div>
+
+                        <div class="d-grid gap-3">
+                            {% if negocio.whatsapp %}
+                            <a href="#" id="btnWhatsAppContact" class="btn btn-success btn-lg" target="_blank">
+                                <i class="bi bi-whatsapp"></i> Contactar por WhatsApp
+                            </a>
+                            {% endif %}
+
+                            <a href="tel:{{ negocio.telefono }}" class="btn btn-primary btn-lg">
+                                <i class="bi bi-telephone-fill"></i> Llamar a {{ negocio.telefono }}
+                            </a>
+
+                            <button type="button" class="btn btn-outline-secondary" onclick="location.reload()">
+                                <i class="bi bi-arrow-left"></i> Seleccionar Otro Servicio
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Step 3: Select Date -->
@@ -572,6 +650,12 @@
                             <span>Precio:</span>
                             <strong id="summaryPrice">-</strong>
                         </div>
+                        {% if negocio.es_a_domicilio %}
+                        <div class="summary-item" id="summaryAddressContainer" style="display: none;">
+                            <span><i class="bi bi-house-door"></i> Dirección:</span>
+                            <strong id="summaryAddress">-</strong>
+                        </div>
+                        {% endif %}
                     </div>
 
                     <h5 class="mb-3">Notas Adicionales (opcional)</h5>
@@ -632,7 +716,8 @@
                         id: this.dataset.serviceId,
                         name: this.dataset.serviceName,
                         price: this.dataset.servicePrice,
-                        duration: this.dataset.serviceDuration
+                        duration: this.dataset.serviceDuration,
+                        requiresContact: this.dataset.requiresContact === 'true'
                     };
                     document.getElementById('selectedService').value = selectedService.id;
                 });
@@ -739,7 +824,12 @@
         function setupNavigation() {
             document.getElementById('btnNext').addEventListener('click', function() {
                 if (validateStep(currentStep)) {
-                    goToStep(currentStep + 1);
+                    // Si estamos en step 2 y el servicio requiere contacto directo
+                    if (currentStep === 2 && selectedService && selectedService.requiresContact) {
+                        showContactScreen();
+                    } else {
+                        goToStep(currentStep + 1);
+                    }
                 }
             });
 
@@ -770,6 +860,20 @@
                     alert('Por favor ingresa tu nombre');
                     return false;
                 }
+
+                // Validar dirección si el negocio es a domicilio
+                {% if negocio.es_a_domicilio %}
+                const direccion = document.getElementById('direccion_step1').value.trim();
+                const ciudad = document.getElementById('ciudad_step1').value.trim();
+                if (!direccion) {
+                    alert('Por favor ingresa la dirección donde se prestará el servicio');
+                    return false;
+                }
+                if (!ciudad) {
+                    alert('Por favor ingresa la ciudad');
+                    return false;
+                }
+                {% endif %}
             }
             if (step === 2 && !selectedService) {
                 alert('Por favor selecciona un servicio');
@@ -786,6 +890,32 @@
             return true;
         }
 
+        function showContactScreen() {
+            // Ocultar todos los pasos
+            document.querySelectorAll('.step-content').forEach(s => s.classList.remove('active'));
+
+            // Mostrar pantalla de contacto
+            document.getElementById('step-contact').style.display = 'block';
+            document.getElementById('step-contact').classList.add('active');
+
+            // Ocultar botones de navegación
+            document.getElementById('btnPrev').style.display = 'none';
+            document.getElementById('btnNext').style.display = 'none';
+            document.getElementById('btnSubmit').style.display = 'none';
+            document.getElementById('btnCancel').style.display = 'block';
+
+            // Actualizar nombre del servicio
+            document.getElementById('contactServiceName').textContent = selectedService.name;
+
+            // Preparar mensaje de WhatsApp
+            const whatsappBtn = document.getElementById('btnWhatsAppContact');
+            if (whatsappBtn) {
+                const mensaje = `Hola, me interesa el servicio *${selectedService.name}* (${selectedService.duration} min - $${selectedService.price}). Me gustaría coordinar fecha, hora y dirección para el servicio a domicilio.`;
+                const whatsappNumber = '{{ negocio.whatsapp }}'.replace(/\D/g, ''); // Solo dígitos
+                whatsappBtn.href = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(mensaje)}`;
+            }
+        }
+
         function goToStep(step) {
             // Hide all steps
             document.querySelectorAll('.step-content').forEach(s => s.classList.remove('active'));
@@ -793,6 +923,9 @@
                 s.classList.remove('active');
                 s.classList.remove('completed');
             });
+
+            // Ocultar pantalla de contacto si estaba visible
+            document.getElementById('step-contact').style.display = 'none';
 
             // Show current step
             document.getElementById(`step-${step}`).classList.add('active');
@@ -827,6 +960,21 @@
             document.getElementById('summaryTime').textContent = selectedTime;
             document.getElementById('summaryDuration').textContent = selectedService.duration + ' minutos';
             document.getElementById('summaryPrice').textContent = '$' + selectedService.price;
+
+            {% if negocio.es_a_domicilio %}
+            // Mostrar dirección en el resumen
+            const direccion = document.getElementById('direccion_step1').value;
+            const ciudad = document.getElementById('ciudad_step1').value;
+            const codigo_postal = document.getElementById('codigo_postal_step1').value;
+            if (direccion && ciudad) {
+                let addressText = direccion + ', ' + ciudad;
+                if (codigo_postal) {
+                    addressText += ', C.P. ' + codigo_postal;
+                }
+                document.getElementById('summaryAddress').textContent = addressText;
+                document.getElementById('summaryAddressContainer').style.display = 'flex';
+            }
+            {% endif %}
         }
 
         // Búsqueda automática de cliente por teléfono

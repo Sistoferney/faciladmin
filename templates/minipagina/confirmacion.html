@@ -46,10 +46,20 @@
                                 {{ cita.duracion_minutos }} minutos
                             </p>
 
-                            <p class="mb-0">
+                            <p class="mb-2">
                                 <strong><i class="bi bi-cash me-2 text-primary"></i>Precio:</strong><br>
                                 ${{ cita.servicio.precio }}
                             </p>
+
+                            {% if negocio.es_a_domicilio and cita.cliente.direccion %}
+                            <p class="mb-0">
+                                <strong><i class="bi bi-house-door me-2 text-primary"></i>Dirección del servicio:</strong><br>
+                                {{ cita.cliente.direccion }}, {{ cita.cliente.ciudad }}{% if cita.cliente.codigo_postal %}, C.P. {{ cita.cliente.codigo_postal }}{% endif %}
+                                {% if cita.cliente.referencia_direccion %}
+                                <br><small class="text-muted">{{ cita.cliente.referencia_direccion }}</small>
+                                {% endif %}
+                            </p>
+                            {% endif %}
                         </div>
 
                         <!-- Información de Abono (si aplica) -->

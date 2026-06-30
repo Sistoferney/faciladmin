@@ -27,6 +27,9 @@ class ConfiguracionNegocioForm(forms.ModelForm):
             'estado',
             'codigo_postal',
 
+            # Tipo de servicio
+            'es_a_domicilio',
+
             # Horarios
             'horario_apertura',
             'horario_cierre',
@@ -96,6 +99,7 @@ class ConfiguracionNegocioForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': 'C.P.'
             }),
+            'es_a_domicilio': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'horario_apertura': forms.TimeInput(attrs={
                 'class': 'form-control',
                 'type': 'time'
@@ -179,6 +183,7 @@ class ConfiguracionNegocioForm(forms.ModelForm):
             'ciudad': 'Ciudad',
             'estado': 'Estado',
             'codigo_postal': 'Código Postal',
+            'es_a_domicilio': 'Servicio a Domicilio',
             'horario_apertura': 'Hora de Apertura',
             'horario_cierre': 'Hora de Cierre',
             'dias_atencion': 'Días de Atención',
@@ -202,6 +207,7 @@ class ConfiguracionNegocioForm(forms.ModelForm):
 
         help_texts = {
             'descripcion': 'Describe brevemente tu negocio y servicios',
+            'es_a_domicilio': 'Marcar si ofreces servicios a domicilio (sin local fijo). Se solicitará la dirección del cliente al agendar.',
             'logo': 'Formato: PNG (transparente recomendado) o JPG. Tamaño: 500x500 px. Peso máximo: 500 KB',
             'imagen_portada': 'Formato: JPG o PNG. Tamaño: 1920x600 px. Peso máximo: 1 MB',
             'color_primario': 'Color principal de tu marca (botones, enlaces)',
@@ -244,6 +250,7 @@ class ServicioForm(forms.ModelForm):
             'imagen',
             'orden',
             'esta_activo',
+            'requiere_contacto_directo',
             'requiere_abono',
             'monto_abono',
             'porcentaje_abono',
@@ -287,6 +294,7 @@ class ServicioForm(forms.ModelForm):
                 'placeholder': '0'
             }),
             'esta_activo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'requiere_contacto_directo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'requiere_abono': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'monto_abono': forms.NumberInput(attrs={
                 'class': 'form-control',
@@ -312,6 +320,7 @@ class ServicioForm(forms.ModelForm):
             'imagen': 'Imagen del Servicio',
             'orden': 'Orden de Visualización',
             'esta_activo': 'Servicio Activo',
+            'requiere_contacto_directo': 'Requiere Coordinación Directa',
             'requiere_abono': 'Requiere Abono Específico',
             'monto_abono': 'Monto Fijo de Abono ($)',
             'porcentaje_abono': 'Porcentaje de Abono (%)',
@@ -326,6 +335,7 @@ class ServicioForm(forms.ModelForm):
             'imagen': 'Imagen que representa el servicio (opcional, 800x600 px recomendado)',
             'orden': 'Número para ordenar los servicios (menor número aparece primero)',
             'esta_activo': 'Si está desactivado, el servicio no será visible en la mini-página',
+            'requiere_contacto_directo': 'Marcar si este servicio requiere contactar directamente para coordinar (ej: servicios a domicilio). Los clientes serán redirigidos a WhatsApp/llamada en lugar de agendar directamente.',
             'requiere_abono': 'Marcar si este servicio requiere un abono diferente al configurado para el negocio',
             'monto_abono': 'Monto fijo de abono para este servicio (deja vacío si usas porcentaje)',
             'porcentaje_abono': 'Porcentaje del precio como abono (deja vacío si usas monto fijo)',

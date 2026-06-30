@@ -47,6 +47,13 @@ class Servicio(models.Model):
     # RF-15: Estado
     esta_activo = models.BooleanField('Activo', default=True)
 
+    # Servicio a domicilio que requiere coordinación directa
+    requiere_contacto_directo = models.BooleanField(
+        'Requiere coordinación directa',
+        default=False,
+        help_text='Marcar si este servicio requiere contactar directamente para coordinar (ej: servicios a domicilio que dependen de distancia y disponibilidad)'
+    )
+
     # Configuración de abono específico del servicio (opcional)
     requiere_abono = models.BooleanField(
         'Requiere abono específico',

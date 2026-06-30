@@ -149,6 +149,25 @@
                             {% endif %}
                         </div>
                     </div>
+
+                    <hr class="my-4">
+                    <h6 class="mb-3"><i class="bi bi-house-door"></i> Tipo de Servicio</h6>
+
+                    <div class="form-check mb-3">
+                        {{ form.es_a_domicilio }}
+                        <label class="form-check-label" for="{{ form.es_a_domicilio.id_for_label }}">
+                            {{ form.es_a_domicilio.label }}
+                        </label>
+                        <small class="text-muted d-block mt-1">{{ form.es_a_domicilio.help_text }}</small>
+                        {% if form.es_a_domicilio.errors %}
+                            <div class="text-danger small">{{ form.es_a_domicilio.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Nota:</strong> Si marcas "Servicio a Domicilio", al momento de agendar una cita se solicitará la dirección del cliente donde se prestará el servicio. Ideal para spas móviles, masajistas o estilistas que trabajan a domicilio.
+                    </div>
                 </div>
             </div>
         </div>
