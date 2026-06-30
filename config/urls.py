@@ -2,11 +2,16 @@
 URL configuration for FacilAdmin project.
 """
 from django.contrib import admin
-from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth.views import LogoutView
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from apps.core import views as core_views
+from apps.authentication.views import (
+    RateLimitedLoginView,
+    SolicitarRecuperacionView,
+    RestablecerPasswordView
+)
 
 urlpatterns = [
     # Service Worker (debe ir primero para tener scope en toda la app)
@@ -15,9 +20,11 @@ urlpatterns = [
     # Landing page y páginas principales
     path('', include('apps.core.urls')),
 
-    # Autenticación
-    path('login/', LoginView.as_view(template_name='registration/login.html'), name='login'),
+    # Autenticación (con protección contra fuerza bruta)
+    path('login/', RateLimitedLoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
+    path('recuperar-password/', SolicitarRecuperacionView.as_view(), name='solicitar_recuperacion'),
+    path('recuperar-password/<uuid:token>/', RestablecerPasswordView.as_view(), name='restablecer_password'),
 
     # Panel de administración
     path('admin/', admin.site.urls),

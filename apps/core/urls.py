@@ -13,6 +13,9 @@ urlpatterns = [
     path('como-funciona/', views.como_funciona, name='como_funciona'),
     path('contacto/', views.contacto, name='contacto'),
 
+    # Health check para monitoreo
+    path('health/', views.health_check, name='health_check'),
+
     # Redirección después de login
     path('dashboard/', auth_views.redirect_after_login, name='dashboard_redirect'),
 ]

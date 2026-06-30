@@ -27,6 +27,7 @@ CORS_ALLOWED_ORIGINS = [
 
 # Email - Imprime en consola en desarrollo
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'noreply@faciladmin.local'  # Email temporal para desarrollo
 
 # Celery - Modo EAGER (sin Redis) para desarrollo
 CELERY_TASK_ALWAYS_EAGER = True

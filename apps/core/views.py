@@ -138,3 +138,72 @@ def service_worker(request):
         return response
     except FileNotFoundError:
         return HttpResponse('Service Worker not found', status=404)
+
+
+def health_check(request):
+    """
+    Endpoint de health check para monitoreo de Railway/servicios externos
+    Verifica estado de componentes críticos del sistema
+    """
+    from django.http import JsonResponse
+    from django.db import connection
+    from django.conf import settings
+    import logging
+
+    logger = logging.getLogger(__name__)
+    status = 'healthy'
+    checks = {}
+
+    try:
+        # 1. Verificar conexión a base de datos
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            checks['database'] = 'ok'
+    except Exception as e:
+        logger.error(f"Health check - Database error: {str(e)}")
+        checks['database'] = 'error'
+        status = 'unhealthy'
+
+    try:
+        # 2. Verificar configuración de Cloudinary
+        cloudinary_configured = bool(
+            settings.CLOUDINARY_STORAGE.get('CLOUD_NAME') and
+            settings.CLOUDINARY_STORAGE.get('API_KEY')
+        )
+        checks['cloudinary'] = 'configured' if cloudinary_configured else 'not_configured'
+    except Exception as e:
+        logger.error(f"Health check - Cloudinary error: {str(e)}")
+        checks['cloudinary'] = 'error'
+
+    try:
+        # 3. Verificar configuración de VAPID (Push Notifications)
+        vapid_configured = bool(
+            settings.WEBPUSH_SETTINGS.get('VAPID_PUBLIC_KEY') and
+            settings.WEBPUSH_SETTINGS.get('VAPID_PRIVATE_KEY')
+        )
+        checks['push_notifications'] = 'configured' if vapid_configured else 'not_configured'
+    except Exception as e:
+        logger.error(f"Health check - VAPID error: {str(e)}")
+        checks['push_notifications'] = 'error'
+
+    try:
+        # 4. Verificar archivos estáticos
+        import os
+        static_root = settings.STATIC_ROOT
+        static_exists = os.path.exists(static_root) if static_root else False
+        checks['static_files'] = 'ok' if static_exists else 'not_found'
+    except Exception as e:
+        logger.error(f"Health check - Static files error: {str(e)}")
+        checks['static_files'] = 'error'
+
+    # Respuesta
+    response_data = {
+        'status': status,
+        'checks': checks,
+        'timestamp': timezone.now().isoformat()
+    }
+
+    # Si no es saludable, retornar código 503
+    status_code = 200 if status == 'healthy' else 503
+
+    return JsonResponse(response_data, status=status_code)

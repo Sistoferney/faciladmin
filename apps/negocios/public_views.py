@@ -6,7 +6,10 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.utils import timezone
 from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django_ratelimit.decorators import ratelimit
 from datetime import datetime, timedelta
+import re
 from .models import Negocio
 from apps.servicios.models import Servicio
 from apps.clientes.models import Cliente
@@ -35,10 +38,12 @@ def minipagina_negocio(request, slug):
     return render(request, 'minipagina/index.html', context)
 
 
+@ratelimit(key='ip', rate='10/h', method='POST', block=True)
 def agendar_cita(request, slug):
     """
     RF-16 a RF-19: Sistema de reservas
     Permite al cliente agendar una cita
+    Rate limit: 10 reservas por hora por IP
     """
     negocio = get_object_or_404(Negocio, slug=slug, esta_activo=True)
 
@@ -54,18 +59,45 @@ def agendar_cita(request, slug):
 
     if request.method == 'POST':
         try:
-            # Obtener datos del formulario
-            nombre = request.POST.get('nombre')
-            telefono = request.POST.get('telefono')
-            email = request.POST.get('email', '')
+            # Obtener y limpiar datos del formulario
+            nombre = request.POST.get('nombre', '').strip()
+            telefono = request.POST.get('telefono', '').strip()
+            email = request.POST.get('email', '').strip()
             servicio_id = request.POST.get('servicio')
             fecha = request.POST.get('fecha')
             hora = request.POST.get('hora')
-            notas = request.POST.get('notas', '')
+            notas = request.POST.get('notas', '').strip()
+
+            # Datos de dirección para servicios a domicilio
+            direccion = request.POST.get('direccion', '').strip()
+            ciudad = request.POST.get('ciudad', '').strip()
+            codigo_postal = request.POST.get('codigo_postal', '').strip()
+            referencia_direccion = request.POST.get('referencia_direccion', '').strip()
 
             # Validaciones básicas
             if not all([nombre, telefono, servicio_id, fecha, hora]):
                 messages.error(request, 'Por favor completa todos los campos obligatorios.')
+                return redirect('public:agendar', slug=slug)
+
+            # Validar longitud del nombre
+            if len(nombre) < 2 or len(nombre) > 200:
+                messages.error(request, 'El nombre debe tener entre 2 y 200 caracteres.')
+                return redirect('public:agendar', slug=slug)
+
+            # Validar formato de teléfono (números, espacios, +, -, (), mínimo 10 dígitos)
+            telefono_digitos = re.sub(r'\D', '', telefono)
+            if len(telefono_digitos) < 10 or len(telefono_digitos) > 15:
+                messages.error(request, 'El número de teléfono debe tener entre 10 y 15 dígitos.')
+                return redirect('public:agendar', slug=slug)
+
+            # Validar email si fue proporcionado
+            if email and not re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', email):
+                messages.error(request, 'El formato del email no es válido.')
+                return redirect('public:agendar', slug=slug)
+
+            # Validar dirección si el negocio es a domicilio
+            if negocio.es_a_domicilio and not all([direccion, ciudad]):
+                messages.error(request, 'Por favor completa la dirección para el servicio a domicilio.')
                 return redirect('public:agendar', slug=slug)
 
             # Obtener servicio
@@ -89,6 +121,26 @@ def agendar_cita(request, slug):
                 nombre=nombre,
                 email=email
             )
+
+            # Actualizar dirección del cliente si el negocio es a domicilio
+            if negocio.es_a_domicilio:
+                cliente.direccion = direccion
+                cliente.ciudad = ciudad
+                cliente.codigo_postal = codigo_postal
+                cliente.referencia_direccion = referencia_direccion
+                cliente.save()
+
+            # Validar que no exista una cita duplicada
+            citas_existentes = Cita.objects.filter(
+                cliente=cliente,
+                negocio=negocio,
+                fecha_hora=fecha_hora,
+                estado__in=['pendiente_abono', 'confirmada']
+            ).exists()
+
+            if citas_existentes:
+                messages.error(request, 'Ya tienes una cita agendada en este horario. Por favor elige otro horario.')
+                return redirect('public:agendar', slug=slug)
 
             # Crear la cita
             cita = Cita.objects.create(
@@ -161,10 +213,12 @@ def confirmacion_cita(request, slug, cita_id):
     return render(request, 'minipagina/confirmacion.html', context)
 
 
+@ratelimit(key='ip', rate='60/m', block=True)
 def disponibilidad_api(request, slug):
     """
     API para obtener horarios disponibles
     RF-17: Disponibilidad en tiempo real
+    Rate limit: 60 consultas por minuto por IP
     """
     import json
     from django.http import JsonResponse
@@ -254,11 +308,13 @@ def disponibilidad_api(request, slug):
         return JsonResponse({'error': str(e)}, status=500)
 
 
+@ratelimit(key='ip', rate='30/m', block=True)
 def buscar_cliente_api(request, slug):
     """
     API para buscar un cliente/usuario por teléfono.
     Retorna los datos del cliente si existe.
     Busca comparando los últimos 10 dígitos del teléfono (número local).
+    Rate limit: 30 búsquedas por minuto por IP
     """
     negocio = get_object_or_404(Negocio, slug=slug)
     telefono = request.GET.get('telefono', '').strip()

@@ -120,6 +120,42 @@
             padding: 12px 15px;
         }
 
+        .alert-warning {
+            background-color: #fff3cd;
+            border: 2px solid #ffc107;
+            color: #856404;
+            font-weight: 600;
+        }
+
+        .alert-warning i {
+            color: #ffc107;
+            font-size: 1.2rem;
+            margin-right: 8px;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+            border: none;
+            color: #000;
+            transition: transform 0.3s, box-shadow 0.3s;
+            animation: pulse-warning 2s infinite;
+        }
+
+        .btn-warning:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 193, 7, 0.4);
+            color: #000;
+        }
+
+        @keyframes pulse-warning {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 8px rgba(255, 193, 7, 0);
+            }
+        }
+
         .input-group-text {
             background: transparent;
             border: 2px solid #e9ecef;
@@ -183,16 +219,16 @@
                 <p>Ingresa a tu panel de administración</p>
             </div>
 
-            {% if form.errors %}
-            <div class="alert alert-danger" role="alert">
-                <i class="bi bi-exclamation-circle"></i>
-                <strong>Error:</strong> Usuario o contraseña incorrectos.
-            </div>
-            {% endif %}
-
             {% if messages %}
                 {% for message in messages %}
                 <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {% if message.tags == 'warning' %}
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    {% elif message.tags == 'error' %}
+                        <i class="bi bi-exclamation-circle"></i>
+                    {% else %}
+                        <i class="bi bi-info-circle"></i>
+                    {% endif %}
                     {{ message }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
@@ -246,6 +282,22 @@
                     <i class="bi bi-box-arrow-in-right"></i> Iniciar Sesión
                 </button>
             </form>
+
+            {% if show_recovery_link %}
+            <!-- Enlace de recuperación PROMINENTE después del 3er intento -->
+            <div class="mt-3">
+                <a href="{% url 'solicitar_recuperacion' %}" class="btn btn-warning w-100" style="border-radius: 10px; font-weight: 600; padding: 12px;">
+                    <i class="bi bi-key-fill"></i> Recuperar Contraseña
+                </a>
+            </div>
+            {% else %}
+            <!-- Enlace discreto antes del 3er intento -->
+            <div class="text-center mt-3">
+                <a href="{% url 'solicitar_recuperacion' %}" class="text-muted" style="text-decoration: none; font-size: 0.9rem;">
+                    <i class="bi bi-question-circle"></i> ¿Olvidaste tu contraseña?
+                </a>
+            </div>
+            {% endif %}
 
             <div class="divider">
                 <span>¿No tienes cuenta?</span>

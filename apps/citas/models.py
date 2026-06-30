@@ -107,6 +107,9 @@ class Cita(models.Model):
             models.Index(fields=['fecha_hora']),
             models.Index(fields=['estado']),
             models.Index(fields=['negocio', 'fecha_hora']),
+            models.Index(fields=['negocio', 'estado', 'fecha_hora']),  # Para filtros del panel admin
+            models.Index(fields=['cliente', '-fecha_hora']),  # Para historial del cliente
+            models.Index(fields=['negocio', 'cliente', 'fecha_hora', 'estado']),  # Para validar duplicados
         ]
 
     def __str__(self):

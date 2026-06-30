@@ -2,16 +2,14 @@
 URLs para autenticación
 """
 from django.urls import path
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-)
+from rest_framework_simplejwt.views import TokenRefreshView
+from .views import RateLimitedTokenObtainPairView
 
 app_name = 'authentication'
 
 urlpatterns = [
-    # JWT Authentication
-    path('login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    # JWT Authentication (con protección contra fuerza bruta)
+    path('login/', RateLimitedTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 
     # Implementar vistas personalizadas en el futuro:

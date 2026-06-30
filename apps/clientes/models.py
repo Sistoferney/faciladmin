@@ -41,6 +41,16 @@ class Cliente(models.Model):
 
     email = models.EmailField('Email', blank=True)
 
+    # Dirección para servicios a domicilio
+    direccion = models.CharField('Dirección', max_length=300, blank=True)
+    ciudad = models.CharField('Ciudad', max_length=100, blank=True)
+    codigo_postal = models.CharField('Código postal', max_length=10, blank=True)
+    referencia_direccion = models.TextField(
+        'Referencias de dirección',
+        blank=True,
+        help_text='Instrucciones adicionales para llegar (torre, apartamento, color de casa, etc.)'
+    )
+
     # RF-43: Tipo de cliente
     tipo_cliente = models.CharField(
         'Tipo de cliente',
@@ -86,6 +96,8 @@ class Cliente(models.Model):
             models.Index(fields=['telefono']),
             models.Index(fields=['tipo_cliente']),
             models.Index(fields=['ultima_visita']),
+            models.Index(fields=['negocio', 'telefono']),  # Para búsquedas rápidas de clientes
+            models.Index(fields=['negocio', 'tipo_cliente', '-ultima_visita']),  # Para filtros admin
         ]
 
     def __str__(self):
