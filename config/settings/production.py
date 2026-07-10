@@ -77,11 +77,15 @@ CORS_ALLOWED_ORIGINS = config(
     default=''
 ).split(',') if config('CORS_ALLOWED_ORIGINS', default='') else []
 
-# Email - Usar servicio real en producción
+# Email - Usar Resend (HTTPS) en producción en lugar de SMTP
+# Resend funciona en Railway sin plan Pro porque usa puerto 443 (HTTPS)
 EMAIL_BACKEND = config(
     'EMAIL_BACKEND',
-    default='django.core.mail.backends.smtp.EmailBackend'
+    default='apps.core.email_backends.resend_backend.ResendEmailBackend'
 )
+
+# Resend API Configuration
+RESEND_API_KEY = config('RESEND_API_KEY', default='')
 
 # Celery - Usar Redis en producción
 USE_CELERY_EAGER = config('USE_CELERY_EAGER', default=False, cast=bool)
