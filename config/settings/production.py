@@ -33,7 +33,9 @@ DATABASES = {
 # Static files - Usar WhiteNoise para servir archivos estáticos
 MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# Usar CompressedStaticFilesStorage en lugar de Manifest para evitar errores
+# si collectstatic no se ejecuta correctamente
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Media files - Cloudinary para almacenamiento permanente
