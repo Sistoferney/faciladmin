@@ -1,5 +1,6 @@
 from django.contrib import admin
 from .models import Negocio, ConfiguracionHorario, BloqueoAgenda
+from .onboarding import OnboardingProgress
 
 
 class ConfiguracionHorarioInline(admin.TabularInline):
@@ -109,3 +110,46 @@ class BloqueoAgendaAdmin(admin.ModelAdmin):
         if not change and hasattr(request.user, 'negocio'):
             obj.negocio = request.user.negocio
         super().save_model(request, obj, form, change)
+
+
+@admin.register(OnboardingProgress)
+class OnboardingProgressAdmin(admin.ModelAdmin):
+    list_display = ('negocio', 'porcentaje_completado', 'onboarding_finalizado', 'onboarding_saltado', 'updated_at')
+    list_filter = ('onboarding_finalizado', 'onboarding_saltado', 'datos_basicos_completado', 'servicios_completado')
+    search_fields = ('negocio__nombre',)
+    readonly_fields = (
+        'porcentaje_completado',
+        'datos_basicos_completado', 'datos_basicos_fecha',
+        'identidad_visual_completado', 'identidad_visual_fecha',
+        'ubicacion_contacto_completado', 'ubicacion_contacto_fecha',
+        'horarios_completado', 'horarios_fecha',
+        'servicios_completado', 'servicios_fecha',
+        'created_at', 'updated_at'
+    )
+
+    fieldsets = (
+        ('Información General', {
+            'fields': ('negocio', 'porcentaje_completado', 'onboarding_finalizado', 'fecha_finalizacion', 'onboarding_saltado')
+        }),
+        ('Progreso de Pasos', {
+            'fields': (
+                ('datos_basicos_completado', 'datos_basicos_fecha'),
+                ('identidad_visual_completado', 'identidad_visual_fecha'),
+                ('ubicacion_contacto_completado', 'ubicacion_contacto_fecha'),
+                ('horarios_completado', 'horarios_fecha'),
+                ('servicios_completado', 'servicios_fecha'),
+            )
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def has_add_permission(self, request):
+        """No permitir crear manualmente OnboardingProgress (se crea automáticamente)"""
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        """No permitir eliminar OnboardingProgress"""
+        return False

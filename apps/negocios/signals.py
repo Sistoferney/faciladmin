@@ -1,76 +1,47 @@
 """
-Signals para el modelo Negocio
-Maneja la eliminación de imágenes antiguas en Cloudinary
+Señales para gestión automática del onboarding
 """
-from django.db.models.signals import pre_save, post_delete
+from django.db.models.signals import post_save
 from django.dispatch import receiver
 from .models import Negocio
-import cloudinary
+from .onboarding import OnboardingProgress, OnboardingManager
 
 
-@receiver(pre_save, sender=Negocio)
-def eliminar_imagen_anterior(sender, instance, **kwargs):
+@receiver(post_save, sender=Negocio)
+def actualizar_progreso_onboarding(sender, instance, created, **kwargs):
     """
-    Elimina la imagen anterior de Cloudinary cuando se sube una nueva
-    Evita duplicación de imágenes
+    Actualiza el progreso del onboarding cuando se modifica un negocio
     """
-    if not instance.pk:
-        # Es un objeto nuevo, no hay imagen anterior que eliminar
+    # Crear OnboardingProgress si es un negocio nuevo
+    if created:
+        OnboardingProgress.objects.create(negocio=instance)
         return
 
+    # Actualizar progreso existente
     try:
-        # Obtener la instancia antigua de la base de datos
-        old_instance = Negocio.objects.get(pk=instance.pk)
+        progress = instance.onboarding_progress
+    except OnboardingProgress.DoesNotExist:
+        progress = OnboardingProgress.objects.create(negocio=instance)
 
-        # Verificar si el logo cambió
-        if old_instance.logo and old_instance.logo != instance.logo:
-            # Eliminar el logo antiguo de Cloudinary
-            try:
-                # Extraer el public_id de la URL
-                public_id = old_instance.logo.name
-                if public_id:
-                    cloudinary.uploader.destroy(public_id)
-                    print(f"✓ Logo anterior eliminado: {public_id}")
-            except Exception as e:
-                print(f"Error al eliminar logo anterior: {e}")
+    # Recalcular progreso
+    manager = OnboardingManager(instance)
 
-        # Verificar si la imagen de portada cambió
-        if old_instance.imagen_portada and old_instance.imagen_portada != instance.imagen_portada:
-            # Eliminar la imagen de portada antigua de Cloudinary
-            try:
-                public_id = old_instance.imagen_portada.name
-                if public_id:
-                    cloudinary.uploader.destroy(public_id)
-                    print(f"✓ Imagen de portada anterior eliminada: {public_id}")
-            except Exception as e:
-                print(f"Error al eliminar imagen de portada anterior: {e}")
+    # Verificar y marcar pasos completados
+    for paso_key in manager.PASOS.keys():
+        if manager._paso_completado(paso_key):
+            campo_completado = f"{paso_key}_completado"
+            campo_fecha = f"{paso_key}_fecha"
 
-    except Negocio.DoesNotExist:
-        # El objeto no existe aún en la BD
-        pass
+            # Si no estaba marcado antes, marcarlo ahora
+            if not getattr(progress, campo_completado, False):
+                progress.marcar_paso_completado(paso_key)
+        else:
+            # Si ya no cumple el requisito, desmarcarlo
+            campo_completado = f"{paso_key}_completado"
+            if getattr(progress, campo_completado, False):
+                setattr(progress, campo_completado, False)
+                setattr(progress, f"{paso_key}_fecha", None)
 
-
-@receiver(post_delete, sender=Negocio)
-def eliminar_imagenes_al_borrar_negocio(sender, instance, **kwargs):
-    """
-    Elimina todas las imágenes de Cloudinary cuando se elimina un negocio
-    """
-    # Eliminar logo
-    if instance.logo:
-        try:
-            public_id = instance.logo.name
-            if public_id:
-                cloudinary.uploader.destroy(public_id)
-                print(f"✓ Logo eliminado al borrar negocio: {public_id}")
-        except Exception as e:
-            print(f"Error al eliminar logo: {e}")
-
-    # Eliminar imagen de portada
-    if instance.imagen_portada:
-        try:
-            public_id = instance.imagen_portada.name
-            if public_id:
-                cloudinary.uploader.destroy(public_id)
-                print(f"✓ Portada eliminada al borrar negocio: {public_id}")
-        except Exception as e:
-            print(f"Error al eliminar portada: {e}")
+    # Actualizar porcentaje
+    progress.calcular_progreso()
+    progress.save()
