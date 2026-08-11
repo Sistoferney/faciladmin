@@ -1,0 +1,99 @@
+{% extends 'negocios/onboarding/_paso_base.html' %}
+
+{% block paso_titulo %}Paso 3: Ubicación y Contacto{% endblock %}
+{% block paso_titulo_header %}¿Dónde te Pueden Encontrar?{% endblock %}
+{% block paso_descripcion %}Dirección física y canales de contacto{% endblock %}
+
+{% block paso_form_content %}
+<div class="row">
+    <div class="col-md-8 mb-4">
+        {{ form.direccion.label_tag }}
+        {{ form.direccion }}
+        {% if form.direccion.errors %}<div class="invalid-feedback d-block">{{ form.direccion.errors }}</div>{% endif %}
+        <small class="form-text text-muted">{{ form.direccion.help_text }}</small>
+    </div>
+
+    <div class="col-md-4 mb-4">
+        {{ form.ciudad.label_tag }}
+        {{ form.ciudad }}
+        {% if form.ciudad.errors %}<div class="invalid-feedback d-block">{{ form.ciudad.errors }}</div>{% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        {{ form.telefono.label_tag }}
+        {{ form.telefono }}
+        {% if form.telefono.errors %}<div class="invalid-feedback d-block">{{ form.telefono.errors }}</div>{% endif %}
+        <small class="form-text text-muted">{{ form.telefono.help_text }}</small>
+    </div>
+
+    <div class="col-md-6 mb-4">
+        {{ form.email.label_tag }}
+        {{ form.email }}
+        {% if form.email.errors %}<div class="invalid-feedback d-block">{{ form.email.errors }}</div>{% endif %}
+        <small class="form-text text-muted">{{ form.email.help_text }}</small>
+    </div>
+</div>
+
+<h5 class="mt-4 mb-3">Redes Sociales (Opcional)</h5>
+<div class="row">
+    <div class="col-md-4 mb-4">
+        {{ form.instagram.label_tag }}
+        {{ form.instagram }}
+        {% if form.instagram.errors %}<div class="invalid-feedback d-block">{{ form.instagram.errors }}</div>{% endif %}
+        <small class="form-text text-muted">{{ form.instagram.help_text }}</small>
+    </div>
+
+    <div class="col-md-4 mb-4">
+        {{ form.facebook.label_tag }}
+        {{ form.facebook }}
+        {% if form.facebook.errors %}<div class="invalid-feedback d-block">{{ form.facebook.errors }}</div>{% endif %}
+        <small class="form-text text-muted">{{ form.facebook.help_text }}</small>
+    </div>
+
+    <div class="col-md-4 mb-4">
+        {{ form.whatsapp.label_tag }}
+        {{ form.whatsapp }}
+        {% if form.whatsapp.errors %}<div class="invalid-feedback d-block">{{ form.whatsapp.errors }}</div>{% endif %}
+        <small class="form-text text-muted">{{ form.whatsapp.help_text }}</small>
+    </div>
+</div>
+{% endblock %}
+
+{% block paso_consejo %}
+<strong>Información de contacto visible:</strong>
+<ul class="small">
+    <li>Tu dirección aparecerá en Google Maps</li>
+    <li>Los clientes podrán llamarte directamente</li>
+    <li>Las redes sociales aumentan la confianza</li>
+    <li>WhatsApp facilita la comunicación rápida</li>
+</ul>
+{% endblock %}
+
+{% block paso_preview %}
+<div class="alert alert-info">
+    <i class="bi bi-lightbulb"></i>
+    <strong>Tip:</strong> Completa todos los datos de contacto para que tus clientes puedan encontrarte fácilmente.
+    Esto aumenta las reservas hasta un 40%.
+</div>
+
+{% if negocio.direccion or negocio.telefono %}
+<div class="card mt-3">
+    <div class="card-header">
+        <strong>Vista previa de contacto</strong>
+    </div>
+    <div class="card-body">
+        {% if negocio.direccion %}
+        <p><i class="bi bi-geo-alt-fill text-primary"></i> {{ negocio.direccion }}{% if negocio.ciudad %}, {{ negocio.ciudad }}{% endif %}</p>
+        {% endif %}
+        {% if negocio.telefono %}
+        <p><i class="bi bi-telephone-fill text-success"></i> {{ negocio.telefono }}</p>
+        {% endif %}
+        {% if negocio.email %}
+        <p><i class="bi bi-envelope-fill text-info"></i> {{ negocio.email }}</p>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

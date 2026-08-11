@@ -1,0 +1,171 @@
+{% extends 'admin_panel/base.html' %}
+{% load static %}
+
+{% block title %}{% block paso_titulo %}Configuración{% endblock %} - FacilAdmin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .onboarding-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+    }
+
+    .step-indicator {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .step-number {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin: 0 0.5rem;
+    }
+
+    .step-number.active {
+        background: white;
+        color: #667eea;
+    }
+
+    .form-card {
+        border: none;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        border-radius: 12px;
+    }
+
+    .preview-section {
+        position: sticky;
+        top: 20px;
+    }
+
+    .image-preview {
+        max-width: 100%;
+        height: auto;
+        border-radius: 8px;
+        margin-top: 1rem;
+    }
+</style>
+{% block paso_css %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+<div class="onboarding-header">
+    <div class="container">
+        <!-- Indicador de Pasos -->
+        <div class="step-indicator">
+            {% for i in "12345" %}
+                <div class="step-number {% if paso_numero == forloop.counter %}active{% endif %}">
+                    {{ forloop.counter }}
+                </div>
+                {% if not forloop.last %}
+                    <div class="px-2">—</div>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <!-- Título del Paso -->
+        <div class="text-center">
+            <h1 class="mb-2">{% block paso_titulo_header %}{% endblock %}</h1>
+            <p class="mb-0">{% block paso_descripcion %}{% endblock %}</p>
+        </div>
+
+        <!-- Barra de Progreso -->
+        <div class="row justify-content-center mt-3">
+            <div class="col-md-8">
+                <div class="progress" style="height: 8px; background: rgba(255,255,255,0.3);">
+                    <div class="progress-bar bg-white"
+                         role="progressbar"
+                         style="width: {{ progreso }}%;"
+                         aria-valuenow="{{ progreso }}"
+                         aria-valuemin="0"
+                         aria-valuemax="100"></div>
+                </div>
+                <div class="text-center mt-2">
+                    <small>Progreso general: {{ progreso }}%</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container pb-5">
+    <div class="row">
+        <!-- Formulario -->
+        <div class="col-lg-8">
+            <div class="card form-card">
+                <div class="card-body p-4">
+                    {% if messages %}
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <form method="post" enctype="multipart/form-data" id="onboarding-form">
+                        {% csrf_token %}
+
+                        {% block paso_form_content %}
+                        {{ form.as_p }}
+                        {% endblock %}
+
+                        <!-- Botones de navegación -->
+                        <div class="row mt-4">
+                            <div class="col-6">
+                                <a href="{% url 'negocios:onboarding_dashboard' %}"
+                                   class="btn btn-outline-secondary w-100">
+                                    <i class="bi bi-arrow-left"></i> Volver al resumen
+                                </a>
+                            </div>
+                            <div class="col-6">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    Guardar y continuar <i class="bi bi-arrow-right"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="text-center mt-3">
+                            <a href="{% url 'negocios:onboarding_saltar' %}"
+                               class="btn btn-link text-muted">
+                                Completar después
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview/Ayuda Lateral -->
+        <div class="col-lg-4">
+            <div class="preview-section">
+                {% block paso_preview %}
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            <i class="bi bi-lightbulb text-warning"></i> Consejo
+                        </h6>
+                        <p class="card-text text-muted">
+                            {% block paso_consejo %}
+                            Completa este paso para mejorar tu perfil.
+                            {% endblock %}
+                        </p>
+                    </div>
+                </div>
+                {% endblock %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block paso_js %}{% endblock %}
+{% endblock %}

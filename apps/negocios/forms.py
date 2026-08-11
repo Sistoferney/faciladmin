@@ -409,3 +409,11 @@ class BloqueoAgendaForm(forms.ModelForm):
                 )
 
         return cleaned_data
+
+# Importar formularios de onboarding
+from .forms_onboarding import (
+    DatosBasicosOnboardingForm,
+    IdentidadVisualOnboardingForm,
+    UbicacionContactoOnboardingForm,
+    HorariosOnboardingForm,
+)

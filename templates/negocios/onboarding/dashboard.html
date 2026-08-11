@@ -1,0 +1,182 @@
+{% extends 'admin_panel/base.html' %}
+{% load static %}
+
+{% block title %}Configuración Inicial - {{ negocio.nombre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .onboarding-card {
+        border: none;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        transition: transform 0.2s;
+    }
+
+    .progress-circle {
+        width: 150px;
+        height: 150px;
+        margin: 0 auto;
+    }
+
+    .paso-item {
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        border-radius: 12px;
+        border: 2px solid #e9ecef;
+        transition: all 0.3s;
+    }
+
+    .paso-item:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+
+    .paso-item.completado {
+        border-color: #28a745;
+        background-color: #f8fff9;
+    }
+
+    .paso-item.en-progreso {
+        border-color: #007bff;
+        background-color: #f0f8ff;
+    }
+
+    .paso-icon {
+        font-size: 2rem;
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        margin-right: 1rem;
+    }
+
+    .paso-icon.completado {
+        background-color: #28a745;
+        color: white;
+    }
+
+    .paso-icon.pendiente {
+        background-color: #e9ecef;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header con Progreso -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card onboarding-card">
+                <div class="card-body text-center py-5">
+                    <h1 class="mb-3">¡Bienvenido a FacilAdmin!</h1>
+                    <p class="lead text-muted mb-4">
+                        Configura tu negocio en 5 sencillos pasos
+                    </p>
+
+                    <!-- Barra de Progreso -->
+                    <div class="row justify-content-center mb-4">
+                        <div class="col-md-8">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-bold">Tu progreso</span>
+                                <span class="badge bg-primary fs-5">{{ progreso }}%</span>
+                            </div>
+                            <div class="progress" style="height: 30px;">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated"
+                                     role="progressbar"
+                                     style="width: {{ progreso }}%;"
+                                     aria-valuenow="{{ progreso }}"
+                                     aria-valuemin="0"
+                                     aria-valuemax="100">
+                                    {{ progreso }}%
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if onboarding_finalizado %}
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <strong>¡Felicidades!</strong> Has completado la configuración inicial de tu negocio.
+                    </div>
+                    <a href="{% url 'admin_panel:dashboard' %}" class="btn btn-primary btn-lg">
+                        Ir al Panel de Control
+                    </a>
+                    {% elif progreso >= 100 %}
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <strong>¡Excelente!</strong> Tu negocio está 100% configurado.
+                    </div>
+                    <form method="post" action="{% url 'negocios:onboarding_completar' %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="bi bi-check-circle"></i> Finalizar Configuración
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Pasos -->
+    <div class="row">
+        <div class="col-12">
+            <h3 class="mb-3">Pasos de configuración</h3>
+
+            {% for paso in pasos %}
+            <div class="paso-item {% if paso.completado %}completado{% elif paso.key == siguiente_paso %}en-progreso{% endif %}">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <div class="paso-icon {% if paso.completado %}completado{% else %}pendiente{% endif %}">
+                            {% if paso.completado %}
+                                <i class="bi bi-check-lg"></i>
+                            {% else %}
+                                <i class="{{ paso.icono }}"></i>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col">
+                        <h5 class="mb-1">
+                            {{ paso.nombre }}
+                            {% if paso.requerido %}
+                            <span class="badge bg-danger ms-2">Requerido</span>
+                            {% endif %}
+                        </h5>
+                        <p class="text-muted mb-0">{{ paso.descripcion }}</p>
+                    </div>
+                    <div class="col-auto">
+                        {% if paso.completado %}
+                            <span class="badge bg-success fs-6">
+                                <i class="bi bi-check-circle-fill"></i> Completado
+                            </span>
+                        {% else %}
+                            <a href="{% url 'negocios:onboarding_paso_'|add:paso.key %}"
+                               class="btn btn-primary">
+                                {% if paso.key == siguiente_paso %}
+                                    <i class="bi bi-arrow-right-circle"></i> Continuar
+                                {% else %}
+                                    <i class="bi bi-pencil"></i> Configurar
+                                {% endif %}
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Acciones del Footer -->
+    <div class="row mt-4">
+        <div class="col-12 text-center">
+            {% if not onboarding_finalizado %}
+            <a href="{% url 'negocios:onboarding_saltar' %}" class="btn btn-link text-muted">
+                <i class="bi bi-skip-forward"></i> Completar después
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

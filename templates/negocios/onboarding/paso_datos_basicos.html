@@ -1,0 +1,49 @@
+{% extends 'negocios/onboarding/_paso_base.html' %}
+{% load static %}
+
+{% block paso_titulo %}Paso 1: Datos Básicos{% endblock %}
+{% block paso_titulo_header %}Datos Básicos de tu Negocio{% endblock %}
+{% block paso_descripcion %}Comencemos con lo esencial: nombre y tipo de tu negocio{% endblock %}
+
+{% block paso_form_content %}
+<div class="mb-4">
+    {{ form.nombre.label_tag }}
+    {{ form.nombre }}
+    {% if form.nombre.errors %}
+        <div class="invalid-feedback d-block">{{ form.nombre.errors }}</div>
+    {% endif %}
+    <small class="form-text text-muted">Este será el nombre visible en tu mini-página</small>
+</div>
+
+<div class="mb-4">
+    {{ form.tipo.label_tag }}
+    {{ form.tipo }}
+    {% if form.tipo.errors %}
+        <div class="invalid-feedback d-block">{{ form.tipo.errors }}</div>
+    {% endif %}
+    <small class="form-text text-muted">Selecciona el tipo que mejor describe tu negocio</small>
+</div>
+
+<div class="mb-4">
+    {{ form.descripcion.label_tag }}
+    {{ form.descripcion }}
+    {% if form.descripcion.errors %}
+        <div class="invalid-feedback d-block">{{ form.descripcion.errors }}</div>
+    {% endif %}
+    <small class="form-text text-muted">Esta descripción aparecerá en tu mini-página para atraer clientes</small>
+</div>
+{% endblock %}
+
+{% block paso_consejo %}
+<strong>¿Por qué es importante?</strong><br>
+Un nombre claro y una buena descripción ayudan a que tus clientes te encuentren y confíen en tus servicios.
+
+<hr class="my-3">
+
+<strong>Ejemplos de buenas descripciones:</strong>
+<ul class="small">
+    <li>"Spa especializado en tratamientos de relajación y bienestar con más de 10 años de experiencia."</li>
+    <li>"Barbería moderna con estilo clásico. Cortes personalizados y atención de primera."</li>
+</ul>
+{% endblock %}
+{% endblock %}

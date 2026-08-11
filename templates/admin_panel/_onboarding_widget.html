@@ -1,0 +1,131 @@
+{% load static %}
+
+{# Widget de Progreso de Onboarding - Solo se muestra si el onboarding no está finalizado #}
+{% if negocio.onboarding_progress and not negocio.onboarding_progress.onboarding_finalizado and not negocio.onboarding_progress.onboarding_saltado %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <div class="card-body text-white">
+                <div class="row align-items-center">
+                    <!-- Icono y Título -->
+                    <div class="col-md-2 text-center mb-3 mb-md-0">
+                        <i class="bi bi-rocket-takeoff" style="font-size: 3rem;"></i>
+                    </div>
+
+                    <!-- Progreso y Mensaje -->
+                    <div class="col-md-7 mb-3 mb-md-0">
+                        <h5 class="mb-2">
+                            <i class="bi bi-stars"></i>
+                            {% if negocio.onboarding_progress.porcentaje_completado == 0 %}
+                                ¡Bienvenido! Configura tu Perfil
+                            {% elif negocio.onboarding_progress.porcentaje_completado < 50 %}
+                                Completa tu Perfil - ¡Ya estás en camino!
+                            {% elif negocio.onboarding_progress.porcentaje_completado < 100 %}
+                                ¡Casi listo! - Completa los últimos pasos
+                            {% else %}
+                                ¡Perfil Completo! - Revisa tu configuración
+                            {% endif %}
+                        </h5>
+                        <div class="progress mb-2" style="height: 25px; background-color: rgba(255,255,255,0.2);">
+                            <div class="progress-bar bg-success progress-bar-striped progress-bar-animated"
+                                 role="progressbar"
+                                 style="width: {{ negocio.onboarding_progress.porcentaje_completado }}%;"
+                                 aria-valuenow="{{ negocio.onboarding_progress.porcentaje_completado }}"
+                                 aria-valuemin="0"
+                                 aria-valuemax="100">
+                                <strong>{{ negocio.onboarding_progress.porcentaje_completado }}%</strong>
+                            </div>
+                        </div>
+                        <small>
+                            {% if negocio.onboarding_progress.porcentaje_completado < 100 %}
+                            Completar tu perfil te ayudará a atraer más clientes y gestionar mejor tu negocio.
+                            {% else %}
+                            Tu perfil está completo, pero puedes seguir mejorándolo.
+                            {% endif %}
+                        </small>
+                    </div>
+
+                    <!-- Botones de Acción -->
+                    <div class="col-md-3 text-center text-md-end">
+                        {% if negocio.onboarding_progress.porcentaje_completado < 100 %}
+                        <a href="{% url 'negocios:onboarding_dashboard' %}"
+                           class="btn btn-light btn-lg mb-2 w-100">
+                            <i class="bi bi-arrow-right-circle"></i> Continuar
+                        </a>
+                        <a href="{% url 'negocios:onboarding_saltar' %}"
+                           class="btn btn-outline-light btn-sm w-100">
+                            Completar después
+                        </a>
+                        {% else %}
+                        <a href="{% url 'negocios:onboarding_completar' %}"
+                           class="btn btn-success btn-lg w-100">
+                            <i class="bi bi-check-circle"></i> Marcar como Listo
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Checklist Resumida (solo si está incompleto) -->
+                {% if negocio.onboarding_progress.porcentaje_completado < 100 %}
+                <div class="row mt-3 pt-3" style="border-top: 1px solid rgba(255,255,255,0.2);">
+                    <div class="col-12">
+                        <div class="row text-center">
+                            <div class="col">
+                                <div class="d-flex flex-column align-items-center">
+                                    {% if negocio.onboarding_progress.datos_basicos_completado %}
+                                        <i class="bi bi-check-circle-fill text-success bg-white rounded-circle" style="font-size: 1.5rem;"></i>
+                                    {% else %}
+                                        <i class="bi bi-circle text-white-50" style="font-size: 1.5rem;"></i>
+                                    {% endif %}
+                                    <small class="mt-1">Datos Básicos</small>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="d-flex flex-column align-items-center">
+                                    {% if negocio.onboarding_progress.identidad_visual_completado %}
+                                        <i class="bi bi-check-circle-fill text-success bg-white rounded-circle" style="font-size: 1.5rem;"></i>
+                                    {% else %}
+                                        <i class="bi bi-circle text-white-50" style="font-size: 1.5rem;"></i>
+                                    {% endif %}
+                                    <small class="mt-1">Logo e Imagen</small>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="d-flex flex-column align-items-center">
+                                    {% if negocio.onboarding_progress.ubicacion_contacto_completado %}
+                                        <i class="bi bi-check-circle-fill text-success bg-white rounded-circle" style="font-size: 1.5rem;"></i>
+                                    {% else %}
+                                        <i class="bi bi-circle text-white-50" style="font-size: 1.5rem;"></i>
+                                    {% endif %}
+                                    <small class="mt-1">Ubicación</small>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="d-flex flex-column align-items-center">
+                                    {% if negocio.onboarding_progress.horarios_completado %}
+                                        <i class="bi bi-check-circle-fill text-success bg-white rounded-circle" style="font-size: 1.5rem;"></i>
+                                    {% else %}
+                                        <i class="bi bi-circle text-white-50" style="font-size: 1.5rem;"></i>
+                                    {% endif %}
+                                    <small class="mt-1">Horarios</small>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="d-flex flex-column align-items-center">
+                                    {% if negocio.onboarding_progress.servicios_completado %}
+                                        <i class="bi bi-check-circle-fill text-success bg-white rounded-circle" style="font-size: 1.5rem;"></i>
+                                    {% else %}
+                                        <i class="bi bi-circle text-white-50" style="font-size: 1.5rem;"></i>
+                                    {% endif %}
+                                    <small class="mt-1">Servicios</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}

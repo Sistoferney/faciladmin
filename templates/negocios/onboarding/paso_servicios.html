@@ -1,0 +1,130 @@
+{% extends 'negocios/onboarding/_paso_base.html' %}
+
+{% block paso_titulo %}Paso 5: Servicios{% endblock %}
+{% block paso_titulo_header %}¿Qué Servicios Ofreces?{% endblock %}
+{% block paso_descripcion %}Agrega al menos 3 servicios para completar el onboarding{% endblock %}
+
+{% block paso_form_content %}
+<div class="alert alert-primary mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <i class="bi bi-check-circle"></i>
+            <strong>Progreso:</strong> {{ servicios_count }} de {{ servicios_requeridos }} servicios mínimos
+        </div>
+        <div>
+            {% if completado %}
+                <span class="badge bg-success fs-6">Completado</span>
+            {% else %}
+                <span class="badge bg-warning fs-6">Faltan {{ servicios_faltantes }}</span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="progress mt-2" style="height: 8px;">
+        {% widthratio servicios_count servicios_requeridos 100 as porcentaje %}
+        <div class="progress-bar bg-success"
+             role="progressbar"
+             style="width: {% if porcentaje > 100 %}100{% else %}{{ porcentaje }}{% endif %}%;">
+        </div>
+    </div>
+</div>
+
+{% if servicios %}
+<h5 class="mb-3">Servicios Actuales</h5>
+<div class="row">
+    {% for servicio in servicios %}
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="card-title mb-1">{{ servicio.nombre }}</h6>
+                        <p class="card-text small text-muted mb-2">{{ servicio.descripcion|truncatewords:15 }}</p>
+                        <div class="d-flex gap-2">
+                            <span class="badge bg-primary">${{ servicio.precio }}</span>
+                            <span class="badge bg-secondary">{{ servicio.duracion }} min</span>
+                        </div>
+                    </div>
+                    <div>
+                        <a href="{% url 'servicios:servicio_edit' servicio.id %}"
+                           class="btn btn-sm btn-outline-primary"
+                           title="Editar">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i>
+    <strong>Aún no tienes servicios registrados.</strong><br>
+    Agrega tus primeros servicios para que los clientes puedan hacer reservas.
+</div>
+{% endif %}
+
+<div class="mt-4">
+    <a href="{% url 'servicios:servicio_create' %}" class="btn btn-success btn-lg w-100">
+        <i class="bi bi-plus-circle"></i> Agregar Nuevo Servicio
+    </a>
+</div>
+
+{% if servicios_count >= 3 %}
+<div class="alert alert-success mt-4">
+    <i class="bi bi-check-circle-fill"></i>
+    <strong>¡Excelente!</strong> Ya tienes {{ servicios_count }} servicios registrados.
+    Puedes continuar al siguiente paso o agregar más servicios.
+</div>
+{% endif %}
+{% endblock %}
+
+{% block paso_consejo %}
+<strong>Tips para buenos servicios:</strong>
+<ul class="small">
+    <li>Usa nombres claros y descriptivos</li>
+    <li>Agrega descripciones detalladas (materiales, beneficios)</li>
+    <li>Define duraciones realistas (incluye preparación)</li>
+    <li>Precios competitivos según tu zona</li>
+    <li>Agrupa servicios similares (ej: Masajes, Faciales)</li>
+</ul>
+{% endblock %}
+
+{% block paso_preview %}
+<div class="card">
+    <div class="card-header bg-success text-white">
+        <i class="bi bi-list-check"></i> ¿Qué incluir en cada servicio?
+    </div>
+    <div class="card-body">
+        <ul class="list-unstyled mb-0">
+            <li class="mb-2">
+                <i class="bi bi-check2 text-success"></i>
+                <strong>Nombre:</strong> Corto y descriptivo
+            </li>
+            <li class="mb-2">
+                <i class="bi bi-check2 text-success"></i>
+                <strong>Descripción:</strong> Qué incluye el servicio
+            </li>
+            <li class="mb-2">
+                <i class="bi bi-check2 text-success"></i>
+                <strong>Precio:</strong> Costo para el cliente
+            </li>
+            <li class="mb-2">
+                <i class="bi bi-check2 text-success"></i>
+                <strong>Duración:</strong> Tiempo estimado en minutos
+            </li>
+            <li class="mb-0">
+                <i class="bi bi-check2 text-success"></i>
+                <strong>Categoría:</strong> Para organizar tu catálogo
+            </li>
+        </ul>
+    </div>
+</div>
+
+<div class="alert alert-warning mt-3">
+    <i class="bi bi-star-fill"></i>
+    <strong>Recomendación:</strong> Empieza con tus 3-5 servicios más populares.
+    Siempre podrás agregar más después.
+</div>
+{% endblock %}

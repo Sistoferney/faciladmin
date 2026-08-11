@@ -1,0 +1,53 @@
+{% extends 'negocios/onboarding/_paso_base.html' %}
+
+{% block paso_titulo %}Paso 2: Identidad Visual{% endblock %}
+{% block paso_titulo_header %}Dale Personalidad a tu Negocio{% endblock %}
+{% block paso_descripcion %}Logo, imagen de portada y colores de tu marca{% endblock %}
+
+{% block paso_form_content %}
+<div class="row">
+    <div class="col-md-6 mb-4">
+        {{ form.logo.label_tag }}
+        {{ form.logo }}
+        {% if form.logo.errors %}<div class="invalid-feedback d-block">{{ form.logo.errors }}</div>{% endif %}
+        <small class="form-text text-muted">{{ form.logo.help_text }}</small>
+        {% if negocio.logo %}
+            <img src="{{ negocio.logo.url }}" class="image-preview" alt="Logo actual">
+        {% endif %}
+    </div>
+
+    <div class="col-md-6 mb-4">
+        {{ form.imagen_portada.label_tag }}
+        {{ form.imagen_portada }}
+        {% if form.imagen_portada.errors %}<div class="invalid-feedback d-block">{{ form.imagen_portada.errors }}</div>{% endif %}
+        <small class="form-text text-muted">{{ form.imagen_portada.help_text }}</small>
+        {% if negocio.imagen_portada %}
+            <img src="{{ negocio.imagen_portada.url }}" class="image-preview" alt="Portada actual">
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        {{ form.color_primario.label_tag }}
+        {{ form.color_primario }}
+        <small class="form-text text-muted">{{ form.color_primario.help_text }}</small>
+    </div>
+
+    <div class="col-md-6 mb-4">
+        {{ form.color_secundario.label_tag }}
+        {{ form.color_secundario }}
+        <small class="form-text text-muted">{{ form.color_secundario.help_text }}</small>
+    </div>
+</div>
+{% endblock %}
+
+{% block paso_consejo %}
+<strong>Consejos para imágenes:</strong>
+<ul class="small">
+    <li>Logo: Fondo transparente (PNG)</li>
+    <li>Portada: Imagen horizontal de alta calidad</li>
+    <li>Colores: Usa los de tu marca existente</li>
+</ul>
+{% endblock %}
+{% endblock %}
