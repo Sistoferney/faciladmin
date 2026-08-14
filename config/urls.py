@@ -29,6 +29,9 @@ urlpatterns = [
     # Panel de administración
     path('admin/', admin.site.urls),
 
+    # Onboarding (vistas HTML)
+    path('negocios/', include(('apps.negocios.urls_onboarding', 'negocios'))),
+
     # API endpoints
     path('api/auth/', include('apps.authentication.urls')),
     path('api/negocios/', include('apps.negocios.urls')),
