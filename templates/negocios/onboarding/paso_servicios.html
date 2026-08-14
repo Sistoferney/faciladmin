@@ -45,7 +45,7 @@
                         </div>
                     </div>
                     <div>
-                        <a href="{% url 'servicios:servicio_edit' servicio.id %}"
+                        <a href="{% url 'public:servicio_editar' negocio.slug servicio.id %}"
                            class="btn btn-sm btn-outline-primary"
                            title="Editar">
                             <i class="bi bi-pencil"></i>
@@ -66,7 +66,7 @@
 {% endif %}
 
 <div class="mt-4">
-    <a href="{% url 'servicios:servicio_create' %}" class="btn btn-success btn-lg w-100">
+    <a href="{% url 'public:servicio_crear' negocio.slug %}" class="btn btn-success btn-lg w-100">
         <i class="bi bi-plus-circle"></i> Agregar Nuevo Servicio
     </a>
 </div>
