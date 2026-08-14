@@ -62,7 +62,7 @@ def onboarding_paso_datos_basicos(request):
             # Redirigir al siguiente paso o al dashboard
             siguiente_paso = manager.siguiente_paso()
             if siguiente_paso:
-                return redirect(f'negocios:onboarding_paso_{siguiente_paso}')
+                return redirect(reverse(f'negocios:onboarding_paso_{siguiente_paso}'))
             return redirect('negocios:onboarding_dashboard')
     else:
         form = DatosBasicosOnboardingForm(instance=negocio)
@@ -95,7 +95,7 @@ def onboarding_paso_identidad_visual(request):
 
             siguiente_paso = manager.siguiente_paso()
             if siguiente_paso:
-                return redirect(f'negocios:onboarding_paso_{siguiente_paso}')
+                return redirect(reverse(f'negocios:onboarding_paso_{siguiente_paso}'))
             return redirect('negocios:onboarding_dashboard')
     else:
         form = IdentidadVisualOnboardingForm(instance=negocio)
@@ -128,7 +128,7 @@ def onboarding_paso_ubicacion_contacto(request):
 
             siguiente_paso = manager.siguiente_paso()
             if siguiente_paso:
-                return redirect(f'negocios:onboarding_paso_{siguiente_paso}')
+                return redirect(reverse(f'negocios:onboarding_paso_{siguiente_paso}'))
             return redirect('negocios:onboarding_dashboard')
     else:
         form = UbicacionContactoOnboardingForm(instance=negocio)
@@ -161,7 +161,7 @@ def onboarding_paso_horarios(request):
 
             siguiente_paso = manager.siguiente_paso()
             if siguiente_paso:
-                return redirect(f'negocios:onboarding_paso_{siguiente_paso}')
+                return redirect(reverse(f'negocios:onboarding_paso_{siguiente_paso}'))
             return redirect('negocios:onboarding_dashboard')
     else:
         form = HorariosOnboardingForm(instance=negocio)
