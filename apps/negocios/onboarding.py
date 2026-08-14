@@ -4,6 +4,7 @@ Gestiona el proceso de configuración inicial del negocio
 """
 from django.db import models
 from django.utils import timezone
+from django.urls import reverse
 
 
 class OnboardingProgress(models.Model):
@@ -183,7 +184,8 @@ class OnboardingManager:
                 'peso': paso_config['peso'],
                 'icono': paso_config['icono'],
                 'completado': completado,
-                'requerido': paso_config['requerido']
+                'requerido': paso_config['requerido'],
+                'url': reverse(f'negocios:onboarding_paso_{paso_key}')
             })
 
         return pasos_con_estado
