@@ -12,12 +12,7 @@ def actualizar_progreso_onboarding(sender, instance, created, **kwargs):
     """
     Actualiza el progreso del onboarding cuando se modifica un negocio
     """
-    # Crear OnboardingProgress si es un negocio nuevo
-    if created:
-        OnboardingProgress.objects.create(negocio=instance)
-        return
-
-    # Actualizar progreso existente
+    # Obtener o crear OnboardingProgress
     try:
         progress = instance.onboarding_progress
     except OnboardingProgress.DoesNotExist:
