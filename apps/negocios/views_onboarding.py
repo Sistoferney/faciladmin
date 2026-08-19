@@ -24,7 +24,7 @@ def onboarding_dashboard(request):
     # Verificar que el usuario tenga un negocio
     if not hasattr(request.user, 'negocio'):
         messages.error(request, 'Primero debes crear tu negocio.')
-        return redirect('admin_panel:dashboard')
+        return redirect('core:dashboard_redirect')
 
     negocio = request.user.negocio
     manager = OnboardingManager(negocio)
@@ -217,7 +217,7 @@ def onboarding_saltar(request):
         manager.saltar_onboarding()
         messages.info(request, 'Puedes completar tu perfil desde la configuración cuando quieras.')
 
-    return redirect('admin_panel:dashboard')
+    return redirect('core:dashboard_redirect')
 
 
 @login_required

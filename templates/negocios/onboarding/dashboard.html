@@ -100,7 +100,7 @@
                         <i class="bi bi-check-circle-fill"></i>
                         <strong>¡Felicidades!</strong> Has completado la configuración inicial de tu negocio.
                     </div>
-                    <a href="{% url 'admin_panel:dashboard' %}" class="btn btn-primary btn-lg">
+                    <a href="{% url 'core:dashboard_redirect' %}" class="btn btn-primary btn-lg">
                         Ir al Panel de Control
                     </a>
                     {% elif progreso >= 100 %}
