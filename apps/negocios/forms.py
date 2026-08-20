@@ -162,7 +162,7 @@ class ConfiguracionNegocioForm(forms.ModelForm):
             }),
             'clabe': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Número de cuenta bancaria'
+                'placeholder': 'Confirma el número de cuenta'
             }),
             'titular_cuenta': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -199,7 +199,7 @@ class ConfiguracionNegocioForm(forms.ModelForm):
             'monto_abono_fijo': 'Monto Fijo de Abono ($)',
             'banco': 'Banco',
             'numero_cuenta': 'Número de Cuenta',
-            'clabe': 'Número de Cuenta',
+            'clabe': 'Confirmar Número de Cuenta',
             'titular_cuenta': 'Titular de la Cuenta',
             'esta_activo': 'Negocio Activo',
             'acepta_reservas_online': 'Acepta Reservas Online',
@@ -215,22 +215,34 @@ class ConfiguracionNegocioForm(forms.ModelForm):
             'requiere_abono': 'Marcar si deseas que los clientes paguen un abono al reservar',
             'porcentaje_abono': 'Porcentaje del servicio que se requiere como abono',
             'monto_abono_fijo': 'O define un monto fijo en lugar del porcentaje',
-            'clabe': 'Número de cuenta bancaria para recibir transferencias',
+            'clabe': 'Vuelve a escribir el número de cuenta para confirmar que esté correcto',
             'esta_activo': 'Si está desactivado, tu mini-página no será visible',
             'acepta_reservas_online': 'Si está desactivado, no se podrán hacer reservas desde la web',
         }
 
     def clean(self):
-        """Validar horarios de apertura y cierre"""
+        """Validar horarios de apertura y cierre, y confirmación de número de cuenta"""
         cleaned_data = super().clean()
         hora_apertura = cleaned_data.get('horario_apertura')
         hora_cierre = cleaned_data.get('horario_cierre')
+        numero_cuenta = cleaned_data.get('numero_cuenta')
+        clabe = cleaned_data.get('clabe')
 
+        # Validar horarios
         if hora_apertura and hora_cierre:
             if hora_cierre <= hora_apertura:
                 raise forms.ValidationError(
                     'El horario de cierre debe ser posterior al horario de apertura.'
                 )
+
+        # Validar que el número de cuenta y su confirmación coincidan
+        if numero_cuenta and clabe:
+            # Limpiar espacios en blanco
+            numero_cuenta_limpio = numero_cuenta.strip()
+            clabe_limpio = clabe.strip()
+
+            if numero_cuenta_limpio != clabe_limpio:
+                self.add_error('clabe', 'Los números de cuenta no coinciden. Por favor verifica.')
 
         return cleaned_data
 

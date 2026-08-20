@@ -529,5 +529,64 @@ window.addEventListener('beforeunload', function(e) {
 document.getElementById('configForm').addEventListener('submit', function() {
     formModificado = false;
 });
+
+// Abrir automáticamente la pestaña donde hay errores
+document.addEventListener('DOMContentLoaded', function() {
+    // Mapeo de campos a pestañas
+    const camposPorTab = {
+        'info': ['nombre', 'tipo', 'descripcion', 'telefono', 'email', 'whatsapp',
+                 'direccion', 'ciudad', 'estado', 'codigo_postal', 'es_a_domicilio'],
+        'personalizacion': ['logo', 'imagen_portada', 'color_primario', 'color_secundario'],
+        'horarios': ['horario_apertura', 'horario_cierre', 'dias_atencion'],
+        'abonos': ['requiere_abono', 'porcentaje_abono', 'monto_abono_fijo',
+                   'banco', 'numero_cuenta', 'clabe', 'titular_cuenta'],
+        'redes': ['facebook', 'instagram', 'twitter', 'esta_activo', 'acepta_reservas_online']
+    };
+
+    // Buscar campos con errores
+    const camposConError = document.querySelectorAll('.text-danger');
+
+    if (camposConError.length > 0) {
+        // Encontrar el primer campo con error
+        for (let errorDiv of camposConError) {
+            // Buscar el input/select/textarea cercano al error
+            let campo = errorDiv.previousElementSibling;
+            if (!campo || !campo.name) {
+                campo = errorDiv.parentElement.querySelector('input, select, textarea');
+            }
+
+            if (campo && campo.name) {
+                const nombreCampo = campo.name;
+
+                // Determinar en qué pestaña está el campo
+                for (let [tabId, campos] of Object.entries(camposPorTab)) {
+                    if (campos.includes(nombreCampo)) {
+                        // Activar la pestaña correspondiente
+                        const tabButton = document.getElementById(tabId + '-tab');
+                        const tabPane = document.getElementById(tabId);
+
+                        if (tabButton && tabPane) {
+                            // Desactivar todas las pestañas
+                            document.querySelectorAll('.nav-link').forEach(btn => {
+                                btn.classList.remove('active');
+                            });
+                            document.querySelectorAll('.tab-pane').forEach(pane => {
+                                pane.classList.remove('show', 'active');
+                            });
+
+                            // Activar la pestaña con error
+                            tabButton.classList.add('active');
+                            tabPane.classList.add('show', 'active');
+
+                            // Hacer scroll al campo con error
+                            campo.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                        return; // Salir después de encontrar el primer error
+                    }
+                }
+            }
+        }
+    }
+});
 </script>
 {% endblock %}

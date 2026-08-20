@@ -57,7 +57,6 @@ Gracias por tu preferencia.
 Datos para transferencia:
 🏦 Banco: {negocio.banco}
 💳 Cuenta: {negocio.numero_cuenta}
-📝 CLABE: {negocio.clabe}
 👤 Titular: {negocio.titular_cuenta}
 
 Fecha límite de pago: {cita.fecha_limite_abono.strftime('%d/%m/%Y %H:%M')}
@@ -189,7 +188,6 @@ Recordatorio de pago de abono para tu cita:
 Datos para transferencia:
 🏦 Banco: {negocio.banco}
 💳 Cuenta: {negocio.numero_cuenta}
-📝 CLABE: {negocio.clabe}
 👤 Titular: {negocio.titular_cuenta}
 
 Por favor, envía tu comprobante de pago lo antes posible.
