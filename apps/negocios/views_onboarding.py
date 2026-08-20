@@ -224,11 +224,26 @@ def onboarding_saltar(request):
 def onboarding_completar(request):
     """
     Marca el onboarding como completado manualmente
+    Solo se permite si el progreso está al 100%
     """
-    if hasattr(request.user, 'negocio'):
-        manager = OnboardingManager(request.user.negocio)
-        manager.progress.onboarding_finalizado = True
-        manager.progress.save()
-        messages.success(request, '¡Felicidades! Tu perfil está configurado.')
+    # Solo aceptar POST para seguridad
+    if request.method != 'POST':
+        return redirect('negocios:onboarding_dashboard')
 
-    return redirect('admin_panel:dashboard')
+    if not hasattr(request.user, 'negocio'):
+        messages.error(request, 'No tienes un negocio registrado.')
+        return redirect('core:dashboard_redirect')
+
+    manager = OnboardingManager(request.user.negocio)
+
+    # Validar que el progreso esté al 100%
+    if manager.progress.porcentaje_completado < 100:
+        messages.warning(request, f'Debes completar todos los pasos para finalizar. Progreso actual: {manager.progress.porcentaje_completado}%')
+        return redirect('negocios:onboarding_dashboard')
+
+    # Marcar como finalizado
+    manager.progress.onboarding_finalizado = True
+    manager.progress.save()
+    messages.success(request, '¡Felicidades! Tu perfil está 100% configurado.')
+
+    return redirect('core:dashboard_redirect')
