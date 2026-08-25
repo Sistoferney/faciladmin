@@ -5,6 +5,7 @@ RF-28, RF-33 a RF-34, RF-56 a RF-57
 from django.db import models
 from apps.clientes.models import Cliente
 from apps.citas.models import Cita
+import json
 
 
 class Notificacion(models.Model):
@@ -113,3 +114,92 @@ class Notificacion(models.Model):
 
         self.save()
         return resultado
+
+
+class ClientePushSubscription(models.Model):
+    """
+    Modelo para asociar suscripciones push con clientes
+    Permite enviar notificaciones push específicas a cada cliente
+    """
+    cliente = models.ForeignKey(
+        Cliente,
+        on_delete=models.CASCADE,
+        related_name='push_subscriptions',
+        verbose_name='Cliente'
+    )
+
+    # Información de la suscripción push (formato Web Push API)
+    endpoint = models.TextField('Endpoint', unique=True)
+    auth = models.CharField('Auth', max_length=255)
+    p256dh = models.CharField('P256dh', max_length=255)
+
+    # Metadata adicional
+    user_agent = models.TextField('User Agent', blank=True)
+    fecha_suscripcion = models.DateTimeField('Fecha de suscripción', auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField('Última actualización', auto_now=True)
+    activa = models.BooleanField('Activa', default=True)
+
+    class Meta:
+        verbose_name = 'Suscripción Push de Cliente'
+        verbose_name_plural = 'Suscripciones Push de Clientes'
+        ordering = ['-fecha_suscripcion']
+        indexes = [
+            models.Index(fields=['cliente', 'activa']),
+            models.Index(fields=['endpoint']),
+        ]
+
+    def __str__(self):
+        return f"Suscripción Push - {self.cliente.nombre} ({self.fecha_suscripcion.strftime('%Y-%m-%d')})"
+
+    @classmethod
+    def crear_desde_subscription_info(cls, cliente, subscription_data, user_agent=''):
+        """
+        Crea o actualiza una suscripción push para un cliente
+
+        Args:
+            cliente: Instancia del modelo Cliente
+            subscription_data: Dict con los datos de suscripción (endpoint, keys)
+            user_agent: String con el user agent del navegador
+
+        Returns:
+            Instancia de ClientePushSubscription
+        """
+        endpoint = subscription_data.get('endpoint')
+        keys = subscription_data.get('keys', {})
+
+        if not endpoint or not keys.get('auth') or not keys.get('p256dh'):
+            raise ValueError("Datos de suscripción incompletos")
+
+        # Buscar si ya existe una suscripción con este endpoint
+        subscription, created = cls.objects.update_or_create(
+            endpoint=endpoint,
+            defaults={
+                'cliente': cliente,
+                'auth': keys.get('auth'),
+                'p256dh': keys.get('p256dh'),
+                'user_agent': user_agent,
+                'activa': True
+            }
+        )
+
+        return subscription
+
+    def to_subscription_info(self):
+        """
+        Convierte los datos a formato compatible con django-webpush
+
+        Returns:
+            Dict con formato de subscription_info
+        """
+        return {
+            'endpoint': self.endpoint,
+            'keys': {
+                'auth': self.auth,
+                'p256dh': self.p256dh
+            }
+        }
+
+    def desactivar(self):
+        """Marca la suscripción como inactiva en lugar de eliminarla"""
+        self.activa = False
+        self.save()

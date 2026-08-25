@@ -5,7 +5,6 @@ RF-33: WhatsApp, SMS, Email, Push
 from django.conf import settings
 from django.core.mail import send_mail
 from twilio.rest import Client
-from webpush import send_user_notification
 import logging
 import json
 
@@ -85,13 +84,17 @@ class NotificacionService:
         Gratis, no requiere Twilio
         """
         try:
-            # Obtener usuario asociado al cliente (si existe)
-            # Por ahora, enviamos a todas las suscripciones almacenadas
-            from webpush.models import SubscriptionInfo
+            from .models import ClientePushSubscription
+            from pywebpush import webpush, WebPushException
 
-            # Buscar suscripciones del cliente por user_agent o datos guardados
-            # TODO: Asociar SubscriptionInfo con modelo Cliente
-            # Por ahora enviamos a todas las suscripciones activas
+            # Buscar suscripciones activas del cliente específico
+            suscripciones = ClientePushSubscription.objects.filter(
+                cliente=cliente,
+                activa=True
+            )
+
+            if not suscripciones.exists():
+                return {'success': False, 'error': 'El cliente no tiene suscripciones activas'}
 
             # Preparar payload de la notificación
             payload = {
@@ -112,30 +115,50 @@ class NotificacionService:
                     'tipo': 'recordatorio_cita'
                 }
 
-            # Intentar enviar a todas las suscripciones
-            # TODO: Filtrar por cliente específico cuando tengamos la asociación
-            suscripciones = SubscriptionInfo.objects.all()
-
-            if not suscripciones.exists():
-                return {'success': False, 'error': 'No hay suscripciones activas'}
-
+            # Enviar a todas las suscripciones activas del cliente
             enviados = 0
+            suscripciones_fallidas = []
+
             for suscripcion in suscripciones:
                 try:
-                    send_user_notification(
-                        user=suscripcion.user if hasattr(suscripcion, 'user') and suscripcion.user else None,
-                        payload=payload,
-                        ttl=1000
+                    # Convertir a formato de subscription_info
+                    subscription_info = suscripcion.to_subscription_info()
+
+                    # Enviar notificación usando pywebpush
+                    webpush(
+                        subscription_info=subscription_info,
+                        data=json.dumps(payload),
+                        vapid_private_key=settings.WEBPUSH_SETTINGS.get('VAPID_PRIVATE_KEY'),
+                        vapid_claims={
+                            'sub': f"mailto:{settings.WEBPUSH_SETTINGS.get('VAPID_ADMIN_EMAIL', 'admin@faciladmin.com')}"
+                        }
                     )
                     enviados += 1
-                except Exception as e:
+
+                except WebPushException as e:
                     logger.error(f"Error enviando push a suscripción {suscripcion.id}: {str(e)}")
+                    # Si la suscripción expiró o es inválida, marcarla como inactiva
+                    if e.response and e.response.status_code in [404, 410]:
+                        suscripcion.desactivar()
+                        logger.info(f"Suscripción {suscripcion.id} marcada como inactiva (endpoint inválido)")
+                    suscripciones_fallidas.append(suscripcion.id)
+                    continue
+                except Exception as e:
+                    logger.error(f"Error inesperado enviando push a suscripción {suscripcion.id}: {str(e)}")
+                    suscripciones_fallidas.append(suscripcion.id)
                     continue
 
             if enviados > 0:
-                return {'success': True, 'enviados': enviados}
+                result = {'success': True, 'enviados': enviados}
+                if suscripciones_fallidas:
+                    result['fallidas'] = suscripciones_fallidas
+                return result
             else:
-                return {'success': False, 'error': 'No se pudo enviar a ninguna suscripción'}
+                return {
+                    'success': False,
+                    'error': 'No se pudo enviar a ninguna suscripción',
+                    'fallidas': suscripciones_fallidas
+                }
 
         except Exception as e:
             logger.error(f"Error enviando push notification: {str(e)}")

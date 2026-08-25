@@ -5,7 +5,6 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.conf import settings
-from webpush import send_user_notification
 import json
 
 
@@ -35,23 +34,56 @@ def subscribe_push(request):
                 'error': 'No se recibió información de suscripción'
             }, status=400)
 
-        # Guardar datos adicionales del cliente si están disponibles
-        user_info = {
-            'telefono': data.get('telefono'),
-            'negocio_slug': data.get('negocio_slug'),
-            'user_agent': request.META.get('HTTP_USER_AGENT', '')
-        }
+        # Obtener información del cliente
+        telefono = data.get('telefono')
+        negocio_slug = data.get('negocio_slug')
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
 
-        # django-webpush maneja el guardado automáticamente
-        # cuando envías notificaciones a un usuario
+        # Validar que tengamos teléfono y negocio para asociar la suscripción
+        if not telefono or not negocio_slug:
+            return JsonResponse({
+                'success': False,
+                'error': 'Se requiere teléfono y negocio_slug para suscribirse'
+            }, status=400)
 
-        # Por ahora, guardamos en sesión o en modelo Cliente
-        # TODO: Asociar suscripción con modelo Cliente
+        # Buscar el cliente
+        from apps.clientes.models import Cliente
+        from apps.negocios.models import Negocio
+        from .models import ClientePushSubscription
 
-        return JsonResponse({
-            'success': True,
-            'message': 'Suscripción guardada exitosamente'
-        })
+        try:
+            negocio = Negocio.objects.get(slug=negocio_slug)
+            cliente = Cliente.objects.get(negocio=negocio, telefono=telefono)
+        except Negocio.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Negocio no encontrado'
+            }, status=404)
+        except Cliente.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Cliente no encontrado'
+            }, status=404)
+
+        # Crear o actualizar la suscripción
+        try:
+            subscription = ClientePushSubscription.crear_desde_subscription_info(
+                cliente=cliente,
+                subscription_data=subscription_info,
+                user_agent=user_agent
+            )
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Suscripción guardada exitosamente',
+                'subscription_id': subscription.id
+            })
+
+        except ValueError as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=400)
 
     except json.JSONDecodeError:
         return JsonResponse({
@@ -69,14 +101,41 @@ def subscribe_push(request):
 @require_http_methods(["POST"])
 def unsubscribe_push(request):
     """
-    Elimina la suscripción del cliente
+    Elimina (desactiva) la suscripción del cliente
     """
     try:
-        # TODO: Implementar desuscripción
+        data = json.loads(request.body)
+        endpoint = data.get('endpoint')
+
+        if not endpoint:
+            return JsonResponse({
+                'success': False,
+                'error': 'Se requiere el endpoint de la suscripción'
+            }, status=400)
+
+        from .models import ClientePushSubscription
+
+        # Buscar la suscripción por endpoint y desactivarla
+        try:
+            subscription = ClientePushSubscription.objects.get(endpoint=endpoint)
+            subscription.desactivar()
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Desuscripción exitosa'
+            })
+
+        except ClientePushSubscription.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Suscripción no encontrada'
+            }, status=404)
+
+    except json.JSONDecodeError:
         return JsonResponse({
-            'success': True,
-            'message': 'Desuscripción exitosa'
-        })
+            'success': False,
+            'error': 'Datos inválidos'
+        }, status=400)
     except Exception as e:
         return JsonResponse({
             'success': False,

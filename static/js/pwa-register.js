@@ -277,6 +277,26 @@ async function subscribeToPushNotifications() {
  */
 async function savePushSubscription(subscription) {
     try {
+        // Obtener teléfono del cliente (puede estar en localStorage o sessionStorage)
+        // después de que el cliente agendó una cita
+        const telefono = localStorage.getItem('cliente_telefono') ||
+                        sessionStorage.getItem('cliente_telefono') ||
+                        null;
+
+        // Obtener slug del negocio de la URL
+        const negocio_slug = window.location.pathname.split('/')[1] || null;
+
+        // Validar que tengamos los datos necesarios
+        if (!telefono || !negocio_slug) {
+            console.warn('[PWA] No se puede guardar suscripción: falta teléfono o negocio_slug');
+            console.warn('[PWA] Teléfono:', telefono, 'Negocio:', negocio_slug);
+
+            // Guardar suscripción en localStorage para intentar más tarde
+            localStorage.setItem('pending_push_subscription', JSON.stringify(subscription.toJSON()));
+
+            return false;
+        }
+
         const response = await fetch('/api/notificaciones/push/subscribe/', {
             method: 'POST',
             headers: {
@@ -284,7 +304,8 @@ async function savePushSubscription(subscription) {
             },
             body: JSON.stringify({
                 subscription: subscription.toJSON(),
-                negocio_slug: window.location.pathname.split('/')[1] || null
+                telefono: telefono,
+                negocio_slug: negocio_slug
             })
         });
 
@@ -293,6 +314,8 @@ async function savePushSubscription(subscription) {
         if (data.success) {
             console.log('[PWA] Suscripción guardada en servidor');
             localStorage.setItem('push_subscribed', 'true');
+            // Limpiar suscripción pendiente si existía
+            localStorage.removeItem('pending_push_subscription');
         } else {
             console.error('[PWA] Error guardando suscripción:', data.error);
         }

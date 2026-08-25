@@ -1,5 +1,47 @@
 {% extends 'minipagina/base_publica.html' %}
 
+{% block extra_js %}
+<script>
+    // Guardar teléfono del cliente en localStorage para notificaciones push
+    document.addEventListener('DOMContentLoaded', function() {
+        // Guardar teléfono del cliente
+        const clienteTelefono = '{{ cita.cliente.telefono }}';
+        if (clienteTelefono) {
+            localStorage.setItem('cliente_telefono', clienteTelefono);
+            console.log('[PWA] Teléfono del cliente guardado:', clienteTelefono);
+        }
+
+        // Solicitar permiso para notificaciones push después de 3 segundos
+        // (dar tiempo al usuario para leer la confirmación)
+        setTimeout(function() {
+            if ('Notification' in window && 'PushManager' in window) {
+                if (Notification.permission === 'default') {
+                    // Mostrar mensaje amigable antes de pedir permiso
+                    if (confirm('¿Quieres recibir notificaciones sobre tus citas? Te enviaremos recordatorios y actualizaciones importantes.')) {
+                        if (window.PWA && window.PWA.requestNotificationPermission) {
+                            window.PWA.requestNotificationPermission()
+                                .then(granted => {
+                                    if (granted) {
+                                        console.log('[PWA] Cliente suscrito a notificaciones push');
+                                    }
+                                });
+                        }
+                    }
+                } else if (Notification.permission === 'granted') {
+                    // Ya tiene permisos, suscribirse directamente
+                    if (window.PWA && window.PWA.subscribeToPushNotifications) {
+                        window.PWA.subscribeToPushNotifications()
+                            .then(() => {
+                                console.log('[PWA] Cliente suscrito a notificaciones push');
+                            });
+                    }
+                }
+            }
+        }, 3000);
+    });
+</script>
+{% endblock %}
+
 {% block content %}
 <section class="py-5">
     <div class="container">
