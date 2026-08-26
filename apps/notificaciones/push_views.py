@@ -145,6 +145,86 @@ def unsubscribe_push(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+def subscribe_admin_push(request):
+    """
+    Guarda la suscripción del usuario administrador/dueño de negocio
+    """
+    try:
+        # Verificar que el usuario esté autenticado
+        if not request.user.is_authenticated:
+            return JsonResponse({
+                'success': False,
+                'error': 'Usuario no autenticado'
+            }, status=401)
+
+        data = json.loads(request.body)
+        subscription_info = data.get('subscription')
+
+        if not subscription_info:
+            return JsonResponse({
+                'success': False,
+                'error': 'No se recibió información de suscripción'
+            }, status=400)
+
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+
+        # Obtener el negocio del usuario
+        from apps.negocios.models import Negocio
+        from .models import UsuarioPushSubscription
+
+        # Buscar el negocio asociado al usuario
+        try:
+            if hasattr(request.user, 'negocio'):
+                negocio = request.user.negocio
+            else:
+                # Si no tiene negocio directo, buscar si es dueño de algún negocio
+                negocio = Negocio.objects.filter(propietario=request.user).first()
+                if not negocio:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Usuario no tiene negocio asociado'
+                    }, status=404)
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Error buscando negocio: {str(e)}'
+            }, status=500)
+
+        # Crear o actualizar la suscripción
+        try:
+            subscription = UsuarioPushSubscription.crear_desde_subscription_info(
+                user=request.user,
+                negocio=negocio,
+                subscription_data=subscription_info,
+                user_agent=user_agent
+            )
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Suscripción de administrador guardada exitosamente',
+                'subscription_id': subscription.id
+            })
+
+        except ValueError as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=400)
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Datos inválidos'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
 def test_push_notification(request):
     """
     Envía una notificación de prueba (solo para desarrollo)

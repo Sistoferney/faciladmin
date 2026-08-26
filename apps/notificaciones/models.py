@@ -203,3 +203,107 @@ class ClientePushSubscription(models.Model):
         """Marca la suscripción como inactiva en lugar de eliminarla"""
         self.activa = False
         self.save()
+
+
+class UsuarioPushSubscription(models.Model):
+    """
+    Modelo para asociar suscripciones push con usuarios dueños de negocio
+    Permite enviar notificaciones a los administradores sobre nuevas citas, etc.
+    """
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='push_subscriptions',
+        verbose_name='Usuario'
+    )
+
+    negocio = models.ForeignKey(
+        'negocios.Negocio',
+        on_delete=models.CASCADE,
+        related_name='admin_push_subscriptions',
+        verbose_name='Negocio',
+        help_text='Negocio al que pertenece este usuario'
+    )
+
+    # Información de la suscripción push (formato Web Push API)
+    endpoint = models.TextField('Endpoint', unique=True)
+    auth = models.CharField('Auth', max_length=255)
+    p256dh = models.CharField('P256dh', max_length=255)
+
+    # Metadata adicional
+    user_agent = models.TextField('User Agent', blank=True)
+    fecha_suscripcion = models.DateTimeField('Fecha de suscripción', auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField('Última actualización', auto_now=True)
+    activa = models.BooleanField('Activa', default=True)
+
+    class Meta:
+        verbose_name = 'Suscripción Push de Usuario Admin'
+        verbose_name_plural = 'Suscripciones Push de Usuarios Admin'
+        ordering = ['-fecha_suscripcion']
+        unique_together = ('user', 'endpoint')  # Un usuario puede tener el mismo endpoint en varios dispositivos
+        indexes = [
+            models.Index(fields=['user', 'activa']),
+            models.Index(fields=['negocio', 'activa']),
+            models.Index(fields=['endpoint']),
+        ]
+
+    def __str__(self):
+        return f"Suscripción Push - {self.user.username} ({self.negocio.nombre})"
+
+    @classmethod
+    def crear_desde_subscription_info(cls, user, negocio, subscription_data, user_agent=''):
+        """
+        Crea o actualiza una suscripción push para un usuario administrador
+
+        Args:
+            user: Instancia del modelo User (dueño del negocio)
+            negocio: Instancia del modelo Negocio
+            subscription_data: Dict con los datos de suscripción (endpoint, keys)
+            user_agent: String con el user agent del navegador
+
+        Returns:
+            Instancia de UsuarioPushSubscription
+        """
+        endpoint = subscription_data.get('endpoint')
+        keys = subscription_data.get('keys', {})
+
+        if not endpoint or not keys.get('auth') or not keys.get('p256dh'):
+            raise ValueError("Datos de suscripción incompletos")
+
+        # Buscar si ya existe una suscripción con este endpoint
+        subscription, created = cls.objects.update_or_create(
+            endpoint=endpoint,
+            defaults={
+                'user': user,
+                'negocio': negocio,
+                'auth': keys.get('auth'),
+                'p256dh': keys.get('p256dh'),
+                'user_agent': user_agent,
+                'activa': True
+            }
+        )
+
+        return subscription
+
+    def to_subscription_info(self):
+        """
+        Convierte los datos a formato compatible con pywebpush
+
+        Returns:
+            Dict con formato de subscription_info
+        """
+        return {
+            'endpoint': self.endpoint,
+            'keys': {
+                'auth': self.auth,
+                'p256dh': self.p256dh
+            }
+        }
+
+    def desactivar(self):
+        """Marca la suscripción como inactiva en lugar de eliminarla"""
+        self.activa = False
+        self.save()

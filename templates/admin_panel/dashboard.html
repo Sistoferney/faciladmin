@@ -3,6 +3,36 @@
 {% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
+<!-- Banner de Instalación de PWA -->
+<div id="install-pwa-banner" class="alert alert-success alert-dismissible fade show mb-4" role="alert" style="display: none;">
+    <div class="d-flex align-items-center">
+        <i class="bi bi-download me-3" style="font-size: 2rem;"></i>
+        <div class="flex-grow-1">
+            <h5 class="alert-heading mb-1">Instala la aplicación</h5>
+            <p class="mb-2">Accede más rápido al panel desde tu dispositivo. Funciona como una app nativa.</p>
+            <button type="button" class="btn btn-success btn-sm" onclick="instalarPWAAdmin()">
+                <i class="bi bi-phone"></i> Instalar Aplicación
+            </button>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" onclick="cerrarBannerInstalacion()"></button>
+    </div>
+</div>
+
+<!-- Banner de Notificaciones Push -->
+<div id="push-notification-banner" class="alert alert-info alert-dismissible fade show mb-4" role="alert" style="display: none;">
+    <div class="d-flex align-items-center">
+        <i class="bi bi-bell-fill me-3" style="font-size: 2rem;"></i>
+        <div class="flex-grow-1">
+            <h5 class="alert-heading mb-1">Activa las notificaciones push</h5>
+            <p class="mb-2">Recibe alertas instantáneas cuando tus clientes agenden nuevas citas.</p>
+            <button type="button" class="btn btn-primary btn-sm" onclick="activarNotificacionesAdmin()">
+                <i class="bi bi-bell"></i> Activar Notificaciones
+            </button>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" onclick="cerrarBannerNotificaciones()"></button>
+    </div>
+</div>
+
 <div class="row mb-4">
     <!-- Estadísticas Principales -->
     <div class="col-md-3 mb-3">
@@ -270,4 +300,232 @@
         </a>
     </div>
 </div>
+
+{% block extra_js %}
+<script>
+// === INSTALACIÓN DE PWA ===
+let deferredPromptAdmin = null;
+
+// Capturar el evento beforeinstallprompt
+window.addEventListener('beforeinstallprompt', (e) => {
+    console.log('[PWA Admin] beforeinstallprompt disparado');
+    e.preventDefault();
+    deferredPromptAdmin = e;
+
+    // Verificar si ya fue instalada o si cerró el banner
+    const pwaInstalada = localStorage.getItem('admin_pwa_installed');
+    const bannerCerrado = localStorage.getItem('admin_install_banner_dismissed');
+
+    if (!pwaInstalada && !bannerCerrado) {
+        // Mostrar banner después de 3 segundos
+        setTimeout(() => {
+            document.getElementById('install-pwa-banner').style.display = 'block';
+        }, 3000);
+    }
+});
+
+// Función para instalar la PWA
+async function instalarPWAAdmin() {
+    if (!deferredPromptAdmin) {
+        alert('La instalación no está disponible en este momento.');
+        return;
+    }
+
+    // Mostrar el prompt
+    deferredPromptAdmin.prompt();
+
+    // Esperar la respuesta del usuario
+    const { outcome } = await deferredPromptAdmin.userChoice;
+    console.log('[PWA Admin] Resultado de instalación:', outcome);
+
+    if (outcome === 'accepted') {
+        console.log('[PWA Admin] Usuario aceptó instalar');
+        localStorage.setItem('admin_pwa_installed', 'true');
+
+        // Ocultar banner
+        document.getElementById('install-pwa-banner').style.display = 'none';
+
+        // Mostrar mensaje de éxito
+        alert('¡Aplicación instalada! Ahora puedes acceder desde el icono en tu dispositivo.');
+    } else {
+        console.log('[PWA Admin] Usuario rechazó instalar');
+    }
+
+    // Limpiar el prompt
+    deferredPromptAdmin = null;
+}
+
+function cerrarBannerInstalacion() {
+    localStorage.setItem('admin_install_banner_dismissed', 'true');
+}
+
+// Detectar cuando la app se instaló
+window.addEventListener('appinstalled', () => {
+    console.log('[PWA Admin] App instalada exitosamente');
+    localStorage.setItem('admin_pwa_installed', 'true');
+    document.getElementById('install-pwa-banner').style.display = 'none';
+});
+
+// === NOTIFICACIONES PUSH ===
+// Gestión de notificaciones push para administradores
+document.addEventListener('DOMContentLoaded', function() {
+    // Verificar si ya está suscrito
+    const pushSuscrito = localStorage.getItem('admin_push_subscribed');
+
+    // Si no está suscrito y las notificaciones están soportadas
+    if (!pushSuscrito && 'Notification' in window && 'PushManager' in window) {
+        // Verificar estado actual de permisos
+        if (Notification.permission === 'default') {
+            // Mostrar banner después de 2 segundos
+            setTimeout(() => {
+                document.getElementById('push-notification-banner').style.display = 'block';
+            }, 2000);
+        } else if (Notification.permission === 'granted') {
+            // Ya tiene permisos, suscribir automáticamente
+            suscribirAdminAutomatico();
+        }
+    }
+});
+
+async function activarNotificacionesAdmin() {
+    try {
+        // Solicitar permiso
+        const permission = await Notification.requestPermission();
+
+        if (permission === 'granted') {
+            console.log('[Admin Push] Permisos concedidos');
+
+            // Ocultar banner
+            document.getElementById('push-notification-banner').style.display = 'none';
+
+            // Suscribir a push notifications
+            await suscribirAdminPush();
+        } else {
+            console.log('[Admin Push] Permisos denegados');
+            alert('No podrás recibir notificaciones sobre nuevas citas. Puedes activarlas más tarde desde la configuración de tu navegador.');
+        }
+    } catch (error) {
+        console.error('[Admin Push] Error solicitando permisos:', error);
+        alert('Hubo un error al activar las notificaciones. Por favor, intenta nuevamente.');
+    }
+}
+
+async function suscribirAdminPush() {
+    try {
+        // Verificar soporte
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+            console.log('[Admin Push] Push notifications no soportadas');
+            return null;
+        }
+
+        // Obtener registro del Service Worker
+        const registration = await navigator.serviceWorker.ready;
+
+        // Verificar si ya está suscrito
+        let subscription = await registration.pushManager.getSubscription();
+
+        if (!subscription) {
+            // Obtener clave pública VAPID del servidor
+            const response = await fetch('/api/notificaciones/push/vapid-key/');
+            const data = await response.json();
+            const publicKey = data.publicKey;
+
+            if (!publicKey) {
+                console.error('[Admin Push] No se pudo obtener la clave VAPID');
+                return null;
+            }
+
+            // Convertir clave VAPID a formato Uint8Array
+            const applicationServerKey = urlBase64ToUint8Array(publicKey);
+
+            // Suscribirse
+            subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: applicationServerKey
+            });
+
+            console.log('[Admin Push] Suscrito a push notifications:', subscription);
+        }
+
+        // Enviar suscripción al servidor (endpoint específico para admins)
+        const saveResponse = await fetch('/api/notificaciones/push/subscribe-admin/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                subscription: subscription.toJSON()
+            })
+        });
+
+        const saveData = await saveResponse.json();
+
+        if (saveData.success) {
+            console.log('[Admin Push] Suscripción de admin guardada en servidor');
+            localStorage.setItem('admin_push_subscribed', 'true');
+
+            // Mostrar mensaje de éxito
+            const banner = document.getElementById('push-notification-banner');
+            if (banner) {
+                banner.classList.remove('alert-info');
+                banner.classList.add('alert-success');
+                banner.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-check-circle-fill me-3" style="font-size: 2rem;"></i>
+                        <div class="flex-grow-1">
+                            <h5 class="alert-heading mb-1">¡Notificaciones activadas!</h5>
+                            <p class="mb-0">Recibirás alertas cuando tus clientes agenden nuevas citas.</p>
+                        </div>
+                    </div>
+                `;
+                setTimeout(() => {
+                    banner.style.display = 'none';
+                }, 5000);
+            }
+        } else {
+            console.error('[Admin Push] Error guardando suscripción:', saveData.error);
+            alert('Hubo un error al guardar tu suscripción. Por favor, intenta nuevamente.');
+        }
+
+        return subscription;
+
+    } catch (error) {
+        console.error('[Admin Push] Error suscribiéndose a push:', error);
+        alert('Hubo un error al activar las notificaciones. Por favor, intenta nuevamente.');
+        return null;
+    }
+}
+
+async function suscribirAdminAutomatico() {
+    // Solo suscribir si no está ya marcado como suscrito
+    const pushSuscrito = localStorage.getItem('admin_push_subscribed');
+    if (!pushSuscrito) {
+        await suscribirAdminPush();
+    }
+}
+
+function cerrarBannerNotificaciones() {
+    // Marcar como que decidió no activar (por ahora)
+    localStorage.setItem('admin_push_banner_dismissed', 'true');
+}
+
+// Función helper para convertir VAPID key
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+        .replace(/\-/g, '+')
+        .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+</script>
+{% endblock %}
+
 {% endblock %}

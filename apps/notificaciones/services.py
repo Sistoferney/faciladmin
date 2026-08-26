@@ -78,23 +78,41 @@ class NotificacionService:
             logger.error(f"Error enviando email: {str(e)}")
             return {'success': False, 'error': str(e)}
 
-    def enviar_push(self, cliente, titulo, mensaje, cita=None):
+    def enviar_push(self, cliente, titulo, mensaje, cita=None, enviar_a_admin=False):
         """
         Enviar notificación push (PWA)
         Gratis, no requiere Twilio
+
+        Args:
+            cliente: Cliente que recibirá la notificación
+            titulo: Título de la notificación
+            mensaje: Cuerpo de la notificación
+            cita: Cita relacionada (opcional)
+            enviar_a_admin: Si True, también envía al dueño del negocio
         """
         try:
-            from .models import ClientePushSubscription
+            from .models import ClientePushSubscription, UsuarioPushSubscription
             from pywebpush import webpush, WebPushException
 
             # Buscar suscripciones activas del cliente específico
-            suscripciones = ClientePushSubscription.objects.filter(
+            suscripciones_cliente = ClientePushSubscription.objects.filter(
                 cliente=cliente,
                 activa=True
             )
 
-            if not suscripciones.exists():
-                return {'success': False, 'error': 'El cliente no tiene suscripciones activas'}
+            # Si se solicita, buscar también suscripciones del admin del negocio
+            suscripciones_admin = []
+            if enviar_a_admin and cita:
+                suscripciones_admin = UsuarioPushSubscription.objects.filter(
+                    negocio=cita.negocio,
+                    activa=True
+                )
+
+            # Combinar todas las suscripciones
+            total_suscripciones = list(suscripciones_cliente) + list(suscripciones_admin)
+
+            if not total_suscripciones:
+                return {'success': False, 'error': 'No hay suscripciones activas'}
 
             # Preparar payload de la notificación
             payload = {
@@ -115,11 +133,13 @@ class NotificacionService:
                     'tipo': 'recordatorio_cita'
                 }
 
-            # Enviar a todas las suscripciones activas del cliente
+            # Enviar a todas las suscripciones activas (cliente + admin si aplica)
             enviados = 0
+            enviados_cliente = 0
+            enviados_admin = 0
             suscripciones_fallidas = []
 
-            for suscripcion in suscripciones:
+            for suscripcion in total_suscripciones:
                 try:
                     # Convertir a formato de subscription_info
                     subscription_info = suscripcion.to_subscription_info()
@@ -135,6 +155,12 @@ class NotificacionService:
                     )
                     enviados += 1
 
+                    # Trackear si fue a cliente o admin
+                    if isinstance(suscripcion, ClientePushSubscription):
+                        enviados_cliente += 1
+                    elif isinstance(suscripcion, UsuarioPushSubscription):
+                        enviados_admin += 1
+
                 except WebPushException as e:
                     logger.error(f"Error enviando push a suscripción {suscripcion.id}: {str(e)}")
                     # Si la suscripción expiró o es inválida, marcarla como inactiva
@@ -149,7 +175,12 @@ class NotificacionService:
                     continue
 
             if enviados > 0:
-                result = {'success': True, 'enviados': enviados}
+                result = {
+                    'success': True,
+                    'enviados': enviados,
+                    'enviados_cliente': enviados_cliente,
+                    'enviados_admin': enviados_admin
+                }
                 if suscripciones_fallidas:
                     result['fallidas'] = suscripciones_fallidas
                 return result

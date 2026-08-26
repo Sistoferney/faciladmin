@@ -75,8 +75,43 @@ Por favor, envía tu comprobante de pago para confirmar tu cita.
             mensaje=mensaje
         )
 
-        # Enviar
+        # Enviar al cliente
         resultado = notificacion.enviar()
+
+        # También enviar notificación push al dueño del negocio
+        try:
+            from .services import NotificacionService
+            service = NotificacionService()
+
+            # Notificación para el admin/dueño
+            titulo_admin = "Nueva cita agendada"
+            mensaje_admin = f"""
+{cliente.nombre} ha agendado una cita:
+
+📅 {cita.fecha_hora.strftime('%d/%m/%Y')}
+🕐 {cita.fecha_hora.strftime('%H:%M')}
+✂️ {cita.servicio.nombre}
+💰 ${cita.servicio.precio}
+
+📞 Tel: {cliente.telefono}
+            """.strip()
+
+            # Enviar push al admin (si está suscrito)
+            resultado_admin = service.enviar_push(
+                cliente=cliente,
+                titulo=titulo_admin,
+                mensaje=mensaje_admin,
+                cita=cita,
+                enviar_a_admin=True  # ← Importante: esto envía también al admin
+            )
+
+            if resultado_admin.get('success'):
+                print(f"[Notificación Admin] Enviada: {resultado_admin.get('enviados_admin', 0)} notificaciones")
+
+        except Exception as e:
+            # Si falla el envío al admin, no afectar el flujo principal
+            print(f"[Notificación Admin] Error: {e}")
+
         return resultado
 
     except Cita.DoesNotExist:

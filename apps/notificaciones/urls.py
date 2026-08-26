@@ -16,6 +16,7 @@ urlpatterns = [
     # Push Notifications (PWA)
     path('push/vapid-key/', push_views.get_vapid_public_key, name='push_vapid_key'),
     path('push/subscribe/', push_views.subscribe_push, name='push_subscribe'),
+    path('push/subscribe-admin/', push_views.subscribe_admin_push, name='push_subscribe_admin'),
     path('push/unsubscribe/', push_views.unsubscribe_push, name='push_unsubscribe'),
     path('push/test/', push_views.test_push_notification, name='push_test'),
 

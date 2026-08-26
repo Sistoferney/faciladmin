@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Notificacion, ClientePushSubscription
+from .models import Notificacion, ClientePushSubscription, UsuarioPushSubscription
 
 
 @admin.register(Notificacion)
@@ -131,4 +131,66 @@ class ClientePushSubscriptionAdmin(admin.ModelAdmin):
     def desactivar_suscripciones(self, request, queryset):
         count = queryset.update(activa=False)
         self.message_user(request, f'{count} suscripciones desactivadas.')
+    desactivar_suscripciones.short_description = 'Desactivar suscripciones seleccionadas'
+
+
+@admin.register(UsuarioPushSubscription)
+class UsuarioPushSubscriptionAdmin(admin.ModelAdmin):
+    list_display = (
+        'user',
+        'negocio',
+        'activa_display',
+        'fecha_suscripcion',
+        'user_agent_corto'
+    )
+    list_filter = ('activa', 'fecha_suscripcion', 'negocio')
+    search_fields = ('user__username', 'user__email', 'negocio__nombre', 'endpoint')
+    readonly_fields = ('fecha_suscripcion', 'fecha_actualizacion', 'endpoint', 'auth', 'p256dh')
+    date_hierarchy = 'fecha_suscripcion'
+
+    fieldsets = (
+        ('Usuario y Negocio', {
+            'fields': ('user', 'negocio', 'activa')
+        }),
+        ('Información de Suscripción', {
+            'fields': ('endpoint', 'auth', 'p256dh')
+        }),
+        ('Metadata', {
+            'fields': ('user_agent', 'fecha_suscripcion', 'fecha_actualizacion')
+        }),
+    )
+
+    def activa_display(self, obj):
+        if obj.activa:
+            return format_html(
+                '<span style="color: #28a745; font-weight: bold;">✓ Activa</span>'
+            )
+        else:
+            return format_html(
+                '<span style="color: #dc3545; font-weight: bold;">✗ Inactiva</span>'
+            )
+    activa_display.short_description = 'Estado'
+
+    def user_agent_corto(self, obj):
+        if not obj.user_agent:
+            return '-'
+        # Mostrar solo los primeros 50 caracteres
+        ua = obj.user_agent[:50]
+        return ua + '...' if len(obj.user_agent) > 50 else ua
+    user_agent_corto.short_description = 'User Agent'
+
+    def get_queryset(self, request):
+        """Filtrar suscripciones por negocio del usuario"""
+        qs = super().get_queryset(request)
+        # Si el usuario tiene un negocio asociado, solo mostrar suscripciones de ese negocio
+        if hasattr(request.user, 'negocio'):
+            qs = qs.filter(negocio=request.user.negocio)
+        # Si no tiene negocio asociado, es superadmin del sistema y puede ver todos
+        return qs
+
+    actions = ['desactivar_suscripciones']
+
+    def desactivar_suscripciones(self, request, queryset):
+        count = queryset.update(activa=False)
+        self.message_user(request, f'{count} suscripciones de administradores desactivadas.')
     desactivar_suscripciones.short_description = 'Desactivar suscripciones seleccionadas'
