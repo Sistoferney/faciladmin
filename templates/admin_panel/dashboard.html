@@ -451,13 +451,19 @@ async function suscribirAdminPush() {
         const saveResponse = await fetch('/api/notificaciones/push/subscribe-admin/', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 subscription: subscription.toJSON()
             })
         });
+
+        // Verificar que la respuesta sea exitosa
+        if (!saveResponse.ok) {
+            const errorData = await saveResponse.json();
+            console.error('[Admin Push] Error HTTP:', saveResponse.status, errorData);
+            throw new Error(errorData.error || `Error del servidor: ${saveResponse.status}`);
+        }
 
         const saveData = await saveResponse.json();
 
@@ -485,14 +491,14 @@ async function suscribirAdminPush() {
             }
         } else {
             console.error('[Admin Push] Error guardando suscripción:', saveData.error);
-            alert('Hubo un error al guardar tu suscripción. Por favor, intenta nuevamente.');
+            throw new Error(saveData.error || 'Error desconocido al guardar suscripción');
         }
 
         return subscription;
 
     } catch (error) {
         console.error('[Admin Push] Error suscribiéndose a push:', error);
-        alert('Hubo un error al activar las notificaciones. Por favor, intenta nuevamente.');
+        alert(`Hubo un error al activar las notificaciones: ${error.message}\n\nPor favor, intenta nuevamente.`);
         return null;
     }
 }
