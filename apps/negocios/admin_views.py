@@ -818,9 +818,9 @@ def generar_qr(request, slug):
 
     negocio = get_object_or_404(Negocio, slug=slug)
 
-    # Construir URL completa de la mini-página
-    site_url = settings.SITE_URL.rstrip('/')
-    minipagina_url = f"{site_url}/{negocio.slug}/"
+    # Construir URL completa de la mini-página usando la URL real del request
+    # Esto garantiza que funcione tanto en local como en producción
+    minipagina_url = request.build_absolute_uri(f'/{negocio.slug}/')
 
     # Crear código QR con alta corrección de errores (permite logo en el centro)
     qr = qrcode.QRCode(
