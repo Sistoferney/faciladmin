@@ -75,6 +75,11 @@
                         <a class="nav-link" href="#contacto">Contacto</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="{% url 'public:mis_citas' negocio.slug %}">
+                            <i class="bi bi-calendar-check"></i> Mis Citas
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="btn btn-light ms-2" href="{% url 'public:agendar' negocio.slug %}">
                             Agendar Cita
                         </a>

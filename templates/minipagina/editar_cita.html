@@ -1,0 +1,171 @@
+{% extends 'minipagina/base_publica.html' %}
+{% load static %}
+
+{% block title %}Editar Cita - {{ negocio.nombre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .current-appointment-card {
+        background-color: #f8f9fa;
+        border-left: 4px solid #ffc107;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <!-- Breadcrumb -->
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'public:minipagina' negocio.slug %}">Inicio</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'public:mis_citas' negocio.slug %}">Mis Citas</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Editar Cita</li>
+                </ol>
+            </nav>
+
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <h1 class="display-6"><i class="bi bi-pencil-square"></i> Editar Cita</h1>
+            </div>
+
+            <!-- Cita actual -->
+            <div class="card shadow-sm mb-4 current-appointment-card">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-info-circle"></i> Cita Actual</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Servicio:</strong> {{ cita.servicio.nombre }}</p>
+                            <p class="mb-1"><strong>Fecha:</strong> {{ cita.fecha_hora|date:"d/m/Y" }}</p>
+                            <p class="mb-1"><strong>Hora:</strong> {{ cita.fecha_hora|date:"H:i" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Duración:</strong> {{ cita.duracion_minutos }} min</p>
+                            <p class="mb-1"><strong>Precio:</strong> ${{ cita.servicio.precio|floatformat:0 }}</p>
+                            <p class="mb-1"><strong>Estado:</strong> <span class="badge bg-info">{{ cita.get_estado_display }}</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Formulario de edición -->
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <h5 class="card-title mb-4">Modificar Cita</h5>
+
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>Importante:</strong> Solo puedes modificar citas con más de 24 horas de anticipación.
+                    </div>
+
+                    <form method="post" id="formEditarCita">
+                        {% csrf_token %}
+
+                        <!-- Seleccionar servicio -->
+                        <div class="mb-4">
+                            <label for="servicio" class="form-label">Servicio <span class="text-danger">*</span></label>
+                            <select class="form-select" id="servicio" name="servicio" required>
+                                {% for s in servicios %}
+                                <option value="{{ s.id }}"
+                                        data-duracion="{{ s.duracion_minutos }}"
+                                        data-precio="{{ s.precio }}"
+                                        {% if s.id == cita.servicio.id %}selected{% endif %}>
+                                    {{ s.nombre }} - ${{ s.precio|floatformat:0 }} ({{ s.duracion_minutos }} min)
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Seleccionar fecha -->
+                        <div class="mb-4">
+                            <label for="fecha" class="form-label">Nueva Fecha <span class="text-danger">*</span></label>
+                            <input type="date"
+                                   class="form-control"
+                                   id="fecha"
+                                   name="fecha"
+                                   value="{{ cita.fecha_hora|date:'Y-m-d' }}"
+                                   required>
+                            <div class="form-text">Debe ser con al menos 24 horas de anticipación</div>
+                        </div>
+
+                        <!-- Seleccionar hora -->
+                        <div class="mb-4">
+                            <label for="hora" class="form-label">Nueva Hora <span class="text-danger">*</span></label>
+                            <input type="time"
+                                   class="form-control"
+                                   id="hora"
+                                   name="hora"
+                                   value="{{ cita.fecha_hora|date:'H:i' }}"
+                                   required>
+                        </div>
+
+                        <!-- Notas -->
+                        <div class="mb-4">
+                            <label for="notas" class="form-label">Notas (Opcional)</label>
+                            <textarea class="form-control"
+                                      id="notas"
+                                      name="notas"
+                                      rows="3"
+                                      placeholder="¿Alguna solicitud especial?">{{ cita.notas_cliente }}</textarea>
+                        </div>
+
+                        <!-- Botones -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-check-circle"></i> Guardar Cambios
+                            </button>
+                            <a href="{% url 'public:mis_citas' negocio.slug %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Información adicional -->
+            <div class="alert alert-info mt-4">
+                <i class="bi bi-info-circle"></i>
+                <strong>Nota:</strong> Al modificar tu cita, el dueño del negocio recibirá una notificación con los cambios realizados.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Validar que la fecha sea al menos 24 horas en el futuro
+    const fechaInput = document.getElementById('fecha');
+    const horaInput = document.getElementById('hora');
+
+    // Establecer fecha mínima (mañana)
+    const manana = new Date();
+    manana.setDate(manana.getDate() + 1);
+    const minDate = manana.toISOString().split('T')[0];
+    fechaInput.setAttribute('min', minDate);
+
+    // Validar antes de enviar
+    document.getElementById('formEditarCita').addEventListener('submit', function(e) {
+        const fecha = fechaInput.value;
+        const hora = horaInput.value;
+
+        if (!fecha || !hora) {
+            e.preventDefault();
+            alert('Por favor completa la fecha y hora');
+            return;
+        }
+
+        // Verificar que sea al menos 24 horas en el futuro
+        const fechaHoraSeleccionada = new Date(fecha + 'T' + hora);
+        const ahora = new Date();
+        const diferenciaHoras = (fechaHoraSeleccionada - ahora) / (1000 * 60 * 60);
+
+        if (diferenciaHoras < 24) {
+            e.preventDefault();
+            alert('Debes seleccionar una fecha y hora con al menos 24 horas de anticipación.');
+            return;
+        }
+    });
+});
+</script>
+{% endblock %}

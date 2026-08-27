@@ -443,6 +443,267 @@ def manifest_minipagina(request, slug):
     return JsonResponse(manifest, content_type='application/manifest+json')
 
 
+def mis_citas(request, slug):
+    """
+    Vista para que los clientes vean sus citas agendadas
+    Requiere ingresar teléfono para identificarse
+    """
+    negocio = get_object_or_404(Negocio, slug=slug, esta_activo=True)
+
+    citas = None
+    cliente = None
+    telefono = None
+
+    if request.method == 'POST':
+        telefono = request.POST.get('telefono', '').strip()
+
+        # Validar que el teléfono no esté vacío
+        if not telefono:
+            messages.error(request, 'Por favor ingresa tu número de teléfono.')
+            return redirect('public:mis_citas', slug=slug)
+
+        # Validar formato de teléfono (mínimo 10 dígitos)
+        telefono_digitos = re.sub(r'\D', '', telefono)
+        if len(telefono_digitos) < 10:
+            messages.error(request, 'El número de teléfono debe tener al menos 10 dígitos.')
+            return redirect('public:mis_citas', slug=slug)
+
+        # Buscar cliente por teléfono en este negocio
+        try:
+            cliente = Cliente.objects.get(telefono=telefono, negocio=negocio)
+
+            # Obtener todas las citas del cliente, ordenadas por fecha (más recientes primero)
+            citas = Cita.objects.filter(
+                cliente=cliente,
+                negocio=negocio
+            ).select_related('servicio').order_by('-fecha_hora')
+
+            # Separar citas en futuras y pasadas
+            ahora = timezone.now()
+            citas_futuras = []
+            citas_pasadas = []
+
+            for cita in citas:
+                if cita.fecha_hora > ahora and cita.estado not in ['cancelada', 'completada', 'no_asistio']:
+                    citas_futuras.append(cita)
+                else:
+                    citas_pasadas.append(cita)
+
+        except Cliente.DoesNotExist:
+            messages.warning(request, f'No encontramos citas asociadas al teléfono {telefono} en {negocio.nombre}.')
+            return redirect('public:mis_citas', slug=slug)
+
+    context = {
+        'negocio': negocio,
+        'cliente': cliente,
+        'telefono': telefono,
+        'citas_futuras': citas_futuras if cliente else None,
+        'citas_pasadas': citas_pasadas if cliente else None,
+        'title': f'Mis Citas - {negocio.nombre}',
+    }
+
+    return render(request, 'minipagina/mis_citas.html', context)
+
+
+def editar_cita_cliente(request, slug, cita_id):
+    """
+    Permite al cliente editar su cita
+    Restricción: solo si falta más de 24 horas
+    """
+    negocio = get_object_or_404(Negocio, slug=slug, esta_activo=True)
+    cita = get_object_or_404(Cita, id=cita_id, negocio=negocio)
+
+    # Validar que la cita no esté cancelada o completada
+    if cita.estado in ['cancelada', 'completada', 'no_asistio']:
+        messages.error(request, 'No puedes editar una cita cancelada o completada.')
+        return redirect('public:mis_citas', slug=slug)
+
+    # Validar que falten más de 24 horas
+    ahora = timezone.now()
+    tiempo_restante = cita.fecha_hora - ahora
+    if tiempo_restante.total_seconds() < 24 * 3600:
+        horas_restantes = int(tiempo_restante.total_seconds() / 3600)
+        messages.error(request, f'Solo puedes editar citas con más de 24 horas de anticipación. Esta cita es en {horas_restantes} horas.')
+        return redirect('public:mis_citas', slug=slug)
+
+    # Obtener servicios activos del negocio
+    servicios = Servicio.objects.filter(negocio=negocio, esta_activo=True).order_by('nombre')
+
+    if request.method == 'POST':
+        try:
+            # Obtener datos del formulario
+            servicio_id = request.POST.get('servicio')
+            fecha = request.POST.get('fecha')
+            hora = request.POST.get('hora')
+            notas = request.POST.get('notas', '').strip()
+
+            # Validaciones básicas
+            if not all([servicio_id, fecha, hora]):
+                messages.error(request, 'Por favor completa todos los campos obligatorios.')
+                return redirect('public:editar_cita_cliente', slug=slug, cita_id=cita_id)
+
+            # Obtener servicio
+            servicio = Servicio.objects.get(id=servicio_id, negocio=negocio, esta_activo=True)
+
+            # Crear nueva fecha_hora
+            import pytz
+            fecha_hora_naive = datetime.strptime(f"{fecha} {hora}", "%Y-%m-%d %H:%M")
+            tz = pytz.timezone('America/Bogota')
+            nueva_fecha_hora = tz.localize(fecha_hora_naive)
+
+            # Validar que la nueva fecha sea futura y con más de 24 horas
+            tiempo_hasta_nueva_fecha = nueva_fecha_hora - ahora
+            if tiempo_hasta_nueva_fecha.total_seconds() < 24 * 3600:
+                messages.error(request, 'La nueva fecha debe ser con al menos 24 horas de anticipación.')
+                return redirect('public:editar_cita_cliente', slug=slug, cita_id=cita_id)
+
+            # Validar que no haya otra cita en ese horario (del mismo cliente)
+            citas_conflicto = Cita.objects.filter(
+                cliente=cita.cliente,
+                negocio=negocio,
+                fecha_hora=nueva_fecha_hora,
+                estado__in=['pendiente_abono', 'confirmada']
+            ).exclude(id=cita.id).exists()
+
+            if citas_conflicto:
+                messages.error(request, 'Ya tienes otra cita agendada en ese horario.')
+                return redirect('public:editar_cita_cliente', slug=slug, cita_id=cita_id)
+
+            # Guardar cambios anteriores para notificación
+            fecha_anterior = cita.fecha_hora
+            servicio_anterior = cita.servicio
+
+            # Actualizar la cita
+            cita.servicio = servicio
+            cita.fecha_hora = nueva_fecha_hora
+            cita.duracion_minutos = servicio.duracion_minutos
+            cita.notas_cliente = notas
+            cita.save()
+
+            # Enviar notificación al dueño del negocio
+            try:
+                from apps.notificaciones.services import NotificacionService
+                service = NotificacionService()
+
+                titulo_admin = "Cita modificada por cliente"
+                mensaje_admin = f"""
+{cita.cliente.nombre} ha modificado su cita:
+
+ANTES:
+📅 {fecha_anterior.strftime('%d/%m/%Y')}
+🕐 {fecha_anterior.strftime('%H:%M')}
+✂️ {servicio_anterior.nombre}
+
+AHORA:
+📅 {nueva_fecha_hora.strftime('%d/%m/%Y')}
+🕐 {nueva_fecha_hora.strftime('%H:%M')}
+✂️ {servicio.nombre}
+💰 ${servicio.precio}
+📞 Tel: {cita.cliente.telefono}
+                """.strip()
+
+                service.enviar_push(
+                    cliente=cita.cliente,
+                    titulo=titulo_admin,
+                    mensaje=mensaje_admin,
+                    cita=cita,
+                    enviar_a_admin=True
+                )
+            except Exception as e:
+                print(f"[Notificación Admin] Error al enviar notificación de edición: {e}")
+
+            messages.success(request, f'¡Cita actualizada! Nueva fecha: {nueva_fecha_hora.strftime("%d/%m/%Y a las %H:%M")}')
+            return redirect('public:mis_citas', slug=slug)
+
+        except Servicio.DoesNotExist:
+            messages.error(request, 'El servicio seleccionado no está disponible.')
+        except Exception as e:
+            messages.error(request, f'Error al editar la cita: {str(e)}')
+
+    context = {
+        'negocio': negocio,
+        'cita': cita,
+        'servicios': servicios,
+        'title': f'Editar Cita - {negocio.nombre}',
+    }
+
+    return render(request, 'minipagina/editar_cita.html', context)
+
+
+def cancelar_cita_cliente(request, slug, cita_id):
+    """
+    Permite al cliente cancelar su cita
+    Restricción: solo si falta más de 2 horas
+    """
+    negocio = get_object_or_404(Negocio, slug=slug, esta_activo=True)
+    cita = get_object_or_404(Cita, id=cita_id, negocio=negocio)
+
+    # Validar que la cita no esté ya cancelada o completada
+    if cita.estado in ['cancelada', 'completada', 'no_asistio']:
+        messages.error(request, 'Esta cita ya fue cancelada o completada.')
+        return redirect('public:mis_citas', slug=slug)
+
+    # Validar que falten más de 2 horas
+    ahora = timezone.now()
+    tiempo_restante = cita.fecha_hora - ahora
+    if tiempo_restante.total_seconds() < 2 * 3600:
+        horas_restantes = max(0, int(tiempo_restante.total_seconds() / 3600))
+        minutos_restantes = max(0, int((tiempo_restante.total_seconds() % 3600) / 60))
+        messages.error(request, f'Solo puedes cancelar citas con más de 2 horas de anticipación. Esta cita es en {horas_restantes}h {minutos_restantes}m.')
+        return redirect('public:mis_citas', slug=slug)
+
+    if request.method == 'POST':
+        # Opcional: guardar motivo de cancelación
+        motivo = request.POST.get('motivo', '').strip()
+
+        # Actualizar estado de la cita
+        cita.estado = 'cancelada'
+        if motivo:
+            cita.notas_internas = f"Cancelada por cliente. Motivo: {motivo}"
+        else:
+            cita.notas_internas = "Cancelada por cliente"
+        cita.save()
+
+        # Enviar notificación al dueño del negocio
+        try:
+            from apps.notificaciones.services import NotificacionService
+            service = NotificacionService()
+
+            titulo_admin = "Cita cancelada por cliente"
+            mensaje_admin = f"""
+{cita.cliente.nombre} ha cancelado su cita:
+
+📅 {cita.fecha_hora.strftime('%d/%m/%Y')}
+🕐 {cita.fecha_hora.strftime('%H:%M')}
+✂️ {cita.servicio.nombre}
+📞 Tel: {cita.cliente.telefono}
+            """.strip()
+
+            if motivo:
+                mensaje_admin += f"\n\n💬 Motivo: {motivo}"
+
+            service.enviar_push(
+                cliente=cita.cliente,
+                titulo=titulo_admin,
+                mensaje=mensaje_admin,
+                cita=cita,
+                enviar_a_admin=True
+            )
+        except Exception as e:
+            print(f"[Notificación Admin] Error al enviar notificación de cancelación: {e}")
+
+        messages.success(request, 'Tu cita ha sido cancelada exitosamente.')
+        return redirect('public:mis_citas', slug=slug)
+
+    context = {
+        'negocio': negocio,
+        'cita': cita,
+        'title': f'Cancelar Cita - {negocio.nombre}',
+    }
+
+    return render(request, 'minipagina/cancelar_cita.html', context)
+
+
 def manifest_admin(request, slug):
     """
     Genera el manifest.json dinámico para la PWA del panel admin (dueños)

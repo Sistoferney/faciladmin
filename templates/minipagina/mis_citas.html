@@ -1,0 +1,179 @@
+{% extends 'minipagina/base_publica.html' %}
+{% load static %}
+
+{% block title %}Mis Citas - {{ negocio.nombre }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <h1 class="display-5"><i class="bi bi-calendar-check"></i> Mis Citas</h1>
+                <p class="text-muted">Consulta, edita o cancela tus citas agendadas</p>
+            </div>
+
+            {% if not cliente %}
+            <!-- Formulario para ingresar teléfono -->
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <h5 class="card-title mb-3">Ingresa tu teléfono para ver tus citas</h5>
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="telefono" class="form-label">Número de teléfono</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+                                <input type="tel"
+                                       class="form-control form-control-lg"
+                                       id="telefono"
+                                       name="telefono"
+                                       placeholder="3001234567"
+                                       required>
+                            </div>
+                            <div class="form-text">Ingresa el teléfono que usaste para agendar tu cita</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-lg w-100">
+                            <i class="bi bi-search"></i> Ver mis citas
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Información adicional -->
+            <div class="alert alert-info mt-4">
+                <i class="bi bi-info-circle"></i>
+                <strong>¿No recuerdas tu teléfono?</strong>
+                Usa el mismo número que ingresaste al agendar tu cita.
+            </div>
+
+            {% else %}
+            <!-- Mostrar citas del cliente -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-person-circle"></i> {{ cliente.nombre }}
+                        </h5>
+                        <span class="badge bg-secondary">{{ telefono }}</span>
+                    </div>
+                    <a href="{% url 'public:mis_citas' negocio.slug %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Buscar con otro teléfono
+                    </a>
+                </div>
+            </div>
+
+            {% if citas_futuras %}
+            <!-- Citas próximas -->
+            <h4 class="mb-3"><i class="bi bi-calendar-event text-success"></i> Citas Próximas</h4>
+            {% for cita in citas_futuras %}
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h5 class="card-title mb-1">{{ cita.servicio.nombre }}</h5>
+                            <p class="text-muted mb-2">
+                                <i class="bi bi-calendar3"></i> {{ cita.fecha_hora|date:"d/m/Y" }} -
+                                <i class="bi bi-clock"></i> {{ cita.fecha_hora|date:"H:i" }}
+                            </p>
+                            <p class="mb-2">
+                                <span class="badge
+                                    {% if cita.estado == 'confirmada' %}bg-success
+                                    {% elif cita.estado == 'pendiente_abono' %}bg-warning
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ cita.get_estado_display }}
+                                </span>
+                                <span class="text-muted ms-2">
+                                    <i class="bi bi-clock-history"></i> {{ cita.duracion_minutos }} min
+                                </span>
+                                <span class="text-muted ms-2">
+                                    <i class="bi bi-currency-dollar"></i> {{ cita.servicio.precio|floatformat:0 }}
+                                </span>
+                            </p>
+                            {% if cita.notas_cliente %}
+                            <p class="mb-0"><small><i class="bi bi-chat-left-text"></i> {{ cita.notas_cliente }}</small></p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                            <a href="{% url 'public:editar_cita_cliente' negocio.slug cita.id %}"
+                               class="btn btn-outline-primary btn-sm mb-2 w-100">
+                                <i class="bi bi-pencil"></i> Editar
+                            </a>
+                            <a href="{% url 'public:cancelar_cita_cliente' negocio.slug cita.id %}"
+                               class="btn btn-outline-danger btn-sm w-100">
+                                <i class="bi bi-x-circle"></i> Cancelar
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            {% endif %}
+
+            {% if citas_pasadas %}
+            <!-- Citas pasadas/completadas -->
+            <h4 class="mb-3 mt-5"><i class="bi bi-clock-history text-secondary"></i> Historial de Citas</h4>
+            {% for cita in citas_pasadas %}
+            <div class="card shadow-sm mb-3 opacity-75">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-12">
+                            <h6 class="card-title mb-1">{{ cita.servicio.nombre }}</h6>
+                            <p class="text-muted small mb-1">
+                                <i class="bi bi-calendar3"></i> {{ cita.fecha_hora|date:"d/m/Y" }} -
+                                <i class="bi bi-clock"></i> {{ cita.fecha_hora|date:"H:i" }}
+                            </p>
+                            <span class="badge
+                                {% if cita.estado == 'completada' %}bg-success
+                                {% elif cita.estado == 'cancelada' %}bg-danger
+                                {% elif cita.estado == 'no_asistio' %}bg-dark
+                                {% else %}bg-secondary{% endif %}">
+                                {{ cita.get_estado_display }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            {% endif %}
+
+            {% if not citas_futuras and not citas_pasadas %}
+            <!-- No hay citas -->
+            <div class="alert alert-warning text-center">
+                <i class="bi bi-calendar-x fs-1 d-block mb-3"></i>
+                <h5>No tienes citas registradas</h5>
+                <p class="mb-3">¿Quieres agendar una nueva cita?</p>
+                <a href="{% url 'public:agendar' negocio.slug %}" class="btn btn-primary">
+                    <i class="bi bi-calendar-plus"></i> Agendar Cita
+                </a>
+            </div>
+            {% endif %}
+
+            {% endif %}
+
+            <!-- Botón de agendar nueva cita -->
+            {% if cliente and citas_futuras or citas_pasadas %}
+            <div class="text-center mt-4">
+                <a href="{% url 'public:agendar' negocio.slug %}" class="btn btn-primary btn-lg">
+                    <i class="bi bi-calendar-plus"></i> Agendar Nueva Cita
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Script para auto-completar teléfono desde localStorage -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-completar teléfono si está en localStorage
+    const telefonoInput = document.getElementById('telefono');
+    if (telefonoInput) {
+        const telefonoGuardado = localStorage.getItem('cliente_telefono');
+        if (telefonoGuardado) {
+            telefonoInput.value = telefonoGuardado;
+        }
+    }
+});
+</script>
+{% endblock %}
