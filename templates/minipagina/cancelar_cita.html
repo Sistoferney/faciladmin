@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- Botón flotante de WhatsApp -->
 {% if negocio.whatsapp %}
-<a href="https://wa.me/{{ negocio.whatsapp|cut:'+' }}?text=Hola%20{{ negocio.nombre|urlencode }},%20tengo%20una%20consulta%20sobre%20la%20cancelación%20de%20mi%20cita"
+<a href="https://wa.me/{{ negocio.whatsapp|cut:'+' |cut:' ' |cut:'-' |cut:'(' |cut:')' }}?text=Hola%20{{ negocio.nombre|urlencode }},%20tengo%20una%20consulta%20sobre%20la%20cancelación%20de%20mi%20cita"
    target="_blank"
    class="btn btn-success btn-lg rounded-circle shadow-lg position-fixed"
    style="bottom: 20px; right: 20px; width: 60px; height: 60px; z-index: 1000; display: flex; align-items: center; justify-content: center;"
