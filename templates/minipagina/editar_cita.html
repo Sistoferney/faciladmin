@@ -179,4 +179,15 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
+<!-- Botón flotante de WhatsApp -->
+{% if negocio.whatsapp %}
+<a href="https://wa.me/{{ negocio.whatsapp|cut:'+' }}?text=Hola%20{{ negocio.nombre|urlencode }},%20necesito%20ayuda%20para%20editar%20mi%20cita"
+   target="_blank"
+   class="btn btn-success btn-lg rounded-circle shadow-lg position-fixed"
+   style="bottom: 20px; right: 20px; width: 60px; height: 60px; z-index: 1000; display: flex; align-items: center; justify-content: center;"
+   title="Contactar por WhatsApp">
+    <i class="bi bi-whatsapp" style="font-size: 1.8rem;"></i>
+</a>
+{% endif %}
 {% endblock %}
