@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Activar Cuenta - FacilAdmin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .activacion-container {
+        max-width: 500px;
+        margin: 50px auto;
+    }
+    .bienvenida-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 10px 10px 0 0;
+        text-align: center;
+    }
+    .bienvenida-header h2 {
+        margin-bottom: 10px;
+    }
+    .cupon-badge {
+        background: #28a745;
+        color: white;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+    .cupon-badge .big-number {
+        font-size: 2rem;
+        font-weight: bold;
+    }
+    .password-strength {
+        height: 5px;
+        margin-top: 5px;
+        border-radius: 3px;
+        background: #e9ecef;
+        transition: all 0.3s;
+    }
+    .password-strength.weak {
+        width: 33%;
+        background: #dc3545;
+    }
+    .password-strength.medium {
+        width: 66%;
+        background: #ffc107;
+    }
+    .password-strength.strong {
+        width: 100%;
+        background: #28a745;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="activacion-container">
+        <div class="card shadow">
+            <div class="bienvenida-header">
+                <h2>¡Hola {{ registro.nombre }}! 👋</h2>
+                <p class="mb-0">Estás a un paso de activar tu cuenta</p>
+            </div>
+
+            <div class="card-body p-4">
+                <div class="alert alert-info">
+                    ✨ <strong>120 días gratis</strong> te esperan
+                </div>
+
+                <h4 class="mb-4">Completa tu registro</h4>
+
+                <form method="post" id="activacionForm">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="nombre_negocio" class="form-label">
+                            Nombre de tu Negocio <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="nombre_negocio"
+                               name="nombre_negocio" required
+                               placeholder="Ej: Spa Relajante, Peluquería Elegante">
+                        <small class="text-muted">
+                            Podrás cambiar esto después en la configuración
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password" class="form-label">
+                            Contraseña <span class="text-danger">*</span>
+                        </label>
+                        <input type="password" class="form-control" id="password"
+                               name="password" required minlength="8"
+                               placeholder="Mínimo 8 caracteres">
+                        <div class="password-strength" id="passwordStrength"></div>
+                        <small class="text-muted" id="passwordHelp">
+                            Mínimo 8 caracteres
+                        </small>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="password_confirm" class="form-label">
+                            Confirmar Contraseña <span class="text-danger">*</span>
+                        </label>
+                        <input type="password" class="form-control" id="password_confirm"
+                               name="password_confirm" required minlength="8"
+                               placeholder="Repite tu contraseña">
+                        <small class="text-muted" id="matchHelp"></small>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg w-100" id="submitBtn">
+                        ✨ Activar Mi Cuenta
+                    </button>
+                </form>
+
+                <div class="mt-4 p-3 bg-light rounded">
+                    <h6>📧 Tus datos:</h6>
+                    <ul class="list-unstyled mb-0">
+                        <li><strong>Email:</strong> {{ registro.email }}</li>
+                        <li><strong>Teléfono:</strong> {{ registro.telefono }}</li>
+                        {% if cupon_info %}
+                        <li><strong>Cupón:</strong> {{ cupon_info.codigo }} 🎁</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-3">
+            <small class="text-muted">
+                Al activar tu cuenta, aceptas nuestros
+                <a href="/terminos" target="_blank">términos y condiciones</a>
+            </small>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Validación de contraseña en tiempo real
+const passwordInput = document.getElementById('password');
+const passwordConfirm = document.getElementById('password_confirm');
+const passwordStrength = document.getElementById('passwordStrength');
+const passwordHelp = document.getElementById('passwordHelp');
+const matchHelp = document.getElementById('matchHelp');
+const submitBtn = document.getElementById('submitBtn');
+
+passwordInput.addEventListener('input', function() {
+    const password = this.value;
+    const length = password.length;
+
+    // Evaluar fortaleza
+    if (length === 0) {
+        passwordStrength.className = 'password-strength';
+        passwordHelp.textContent = 'Mínimo 8 caracteres';
+        passwordHelp.className = 'text-muted';
+    } else if (length < 8) {
+        passwordStrength.className = 'password-strength weak';
+        passwordHelp.textContent = 'Muy corta (mínimo 8 caracteres)';
+        passwordHelp.className = 'text-danger';
+    } else if (length < 12) {
+        passwordStrength.className = 'password-strength medium';
+        passwordHelp.textContent = 'Contraseña aceptable';
+        passwordHelp.className = 'text-warning';
+    } else {
+        passwordStrength.className = 'password-strength strong';
+        passwordHelp.textContent = 'Contraseña fuerte ✓';
+        passwordHelp.className = 'text-success';
+    }
+
+    checkPasswordMatch();
+});
+
+passwordConfirm.addEventListener('input', checkPasswordMatch);
+
+function checkPasswordMatch() {
+    const password = passwordInput.value;
+    const confirm = passwordConfirm.value;
+
+    if (confirm.length === 0) {
+        matchHelp.textContent = '';
+        return;
+    }
+
+    if (password === confirm) {
+        matchHelp.textContent = '✓ Las contraseñas coinciden';
+        matchHelp.className = 'text-success';
+    } else {
+        matchHelp.textContent = '✗ Las contraseñas no coinciden';
+        matchHelp.className = 'text-danger';
+    }
+}
+
+// Validación del formulario
+document.getElementById('activacionForm').addEventListener('submit', function(e) {
+    const nombreNegocio = document.getElementById('nombre_negocio').value.trim();
+    const password = passwordInput.value;
+    const confirm = passwordConfirm.value;
+
+    if (!nombreNegocio) {
+        e.preventDefault();
+        alert('Por favor ingresa el nombre de tu negocio');
+        return false;
+    }
+
+    if (password.length < 8) {
+        e.preventDefault();
+        alert('La contraseña debe tener al menos 8 caracteres');
+        return false;
+    }
+
+    if (password !== confirm) {
+        e.preventDefault();
+        alert('Las contraseñas no coinciden');
+        return false;
+    }
+
+    // Deshabilitar botón para evitar doble envío
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Activando...';
+});
+</script>
+{% endblock %}

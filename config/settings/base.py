@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'apps.fidelizacion',
     'apps.promociones',
     'apps.reportes',
+    'apps.suscripciones',
     'apps.core',
 ]
 

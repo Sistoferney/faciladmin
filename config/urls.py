@@ -44,6 +44,9 @@ urlpatterns = [
     path('api/promociones/', include('apps.promociones.urls')),
     path('api/reportes/', include('apps.reportes.urls')),
 
+    # Suscripciones (registro público)
+    path('', include('apps.suscripciones.urls')),
+
     # Mini páginas públicas de cada negocio (debe ir al final)
     path('', include('apps.negocios.public_urls')),
 ]

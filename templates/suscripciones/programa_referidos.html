@@ -1,0 +1,244 @@
+{% extends 'base.html' %}
+
+{% block title %}Programa de Referidos - FacilAdmin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .referidos-container {
+        max-width: 900px;
+        margin: 40px auto;
+        padding: 20px;
+    }
+    .card-header-custom {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 10px 10px 0 0;
+    }
+    .referido-card {
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 15px;
+        transition: all 0.3s;
+    }
+    .referido-card.completado {
+        border-color: #28a745;
+        background-color: #f8fff9;
+    }
+    .referido-card.vacio {
+        border-color: #ffc107;
+        border-style: dashed;
+    }
+    .badge-progress {
+        font-size: 1.1rem;
+        padding: 10px 20px;
+    }
+    .cupon-section {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 30px;
+        text-align: center;
+    }
+    .btn-generar-cupon {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        padding: 15px 40px;
+        font-size: 1.1rem;
+        border-radius: 50px;
+        transition: transform 0.2s;
+    }
+    .btn-generar-cupon:hover {
+        transform: scale(1.05);
+        color: white;
+    }
+    .btn-generar-cupon:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+        transform: none;
+    }
+    .phone-input {
+        border: 2px solid #dee2e6;
+        border-radius: 10px;
+        padding: 12px;
+        font-size: 1rem;
+    }
+    .phone-input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="referidos-container">
+    <div class="card shadow-lg">
+        <div class="card-header-custom">
+            <h2 class="mb-0">Programa de Referidos</h2>
+            <p class="mb-0">Refiere 3 negocios y recibe 1 mes gratis cada mes</p>
+        </div>
+
+        <div class="card-body p-4">
+            {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            <!-- Progreso -->
+            <div class="text-center mb-4">
+                <h4>Tu Progreso</h4>
+                <h1 class="display-4">
+                    <span class="badge {% if programa.cumple_requisitos %}bg-success{% else %}bg-warning{% endif %} badge-progress">
+                        {{ programa.referidos_activos }}/3 referidos
+                    </span>
+                </h1>
+                {% if programa.total_cupones_generados > 0 %}
+                <p class="text-muted mt-2">
+                    Total de cupones generados: <strong>{{ programa.total_cupones_generados }}</strong>
+                </p>
+                {% endif %}
+            </div>
+
+            <hr>
+
+            <!-- Instrucciones -->
+            <div class="alert alert-info">
+                <h5>Cómo funciona:</h5>
+                <ol class="mb-0">
+                    <li>Ingresa los números telefónicos de 3 negocios registrados en FacilAdmin</li>
+                    <li>Cada número solo puede usarse una vez (no puede estar referido por otro admin)</li>
+                    <li>Cuando completes 3 referidos activos, podrás generar tu cupón mensual</li>
+                    <li>Cada mes que tus 3 referidos sigan activos, recibirás un nuevo cupón</li>
+                </ol>
+            </div>
+
+            <!-- Lista de Referidos -->
+            <h5 class="mt-4 mb-3">Tus Referidos</h5>
+
+            {% for ref in referidos %}
+            <div class="referido-card {% if ref.negocio %}completado{% else %}vacio{% endif %}">
+                <div class="row align-items-center">
+                    <div class="col-md-1">
+                        <h3 class="text-muted mb-0">#{{ ref.numero }}</h3>
+                    </div>
+                    <div class="col-md-7">
+                        {% if ref.negocio %}
+                            <h5 class="mb-1">{{ ref.negocio.nombre }}</h5>
+                            <p class="text-muted mb-0">
+                                <i class="bi bi-telephone"></i> {{ ref.negocio.telefono }}
+                            </p>
+                            {% if ref.activo %}
+                                <span class="badge bg-success">Activo</span>
+                            {% else %}
+                                <span class="badge bg-danger">Inactivo</span>
+                            {% endif %}
+                        {% else %}
+                            <p class="text-muted mb-0">Slot disponible</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        {% if not ref.negocio %}
+                        <form method="post" class="agregar-referido-form">
+                            {% csrf_token %}
+                            <div class="input-group">
+                                <input type="tel" name="telefono" class="form-control phone-input"
+                                       placeholder="+57 300 123 4567" required>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-plus-circle"></i> Agregar
+                                </button>
+                            </div>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+
+            <!-- Sección de Cupón -->
+            <div class="cupon-section">
+                {% if programa.cumple_requisitos %}
+                    <h4 class="text-success">¡Felicidades! Cumples los requisitos</h4>
+                    <p class="text-muted">Tienes {{ programa.referidos_activos }} referidos activos</p>
+
+                    {% if puede_generar_cupon %}
+                        <form method="post" action="{% url 'suscripciones:generar_cupon_referidos' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-generar-cupon">
+                                Generar Mi Cupón Mensual
+                            </button>
+                        </form>
+                        <small class="text-muted d-block mt-2">
+                            Recibirás el cupón por email y podrás canjearlo en cualquier momento
+                        </small>
+                    {% else %}
+                        <button type="button" class="btn btn-generar-cupon" disabled>
+                            {{ mensaje_cupon }}
+                        </button>
+                        {% if programa.fecha_ultimo_cupon %}
+                        <small class="text-muted d-block mt-2">
+                            Último cupón generado: {{ programa.fecha_ultimo_cupon|date:"d/m/Y" }}
+                        </small>
+                        {% endif %}
+                    {% endif %}
+                {% else %}
+                    <h5 class="text-warning">Te faltan {{ 3|add:programa.referidos_activos|add:"-3"|abs }} referido(s) activo(s)</h5>
+                    <p class="text-muted">Completa tus 3 referidos para desbloquear los cupones mensuales</p>
+                {% endif %}
+            </div>
+
+            <!-- Enlace para canjear cupones -->
+            <div class="text-center mt-4">
+                <a href="{% url 'suscripciones:canjear_cupon' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-gift"></i> ¿Ya tienes un cupón? Canjéalo aquí
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('.agregar-referido-form').forEach(form => {
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const button = this.querySelector('button[type="submit"]');
+        const originalText = button.innerHTML;
+
+        button.disabled = true;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Verificando...';
+
+        fetch('{% url "suscripciones:agregar_referido" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.mensaje);
+                window.location.reload();
+            } else {
+                alert('Error: ' + data.error);
+                button.disabled = false;
+                button.innerHTML = originalText;
+            }
+        })
+        .catch(error => {
+            alert('Error al procesar la solicitud');
+            button.disabled = false;
+            button.innerHTML = originalText;
+        });
+    });
+});
+</script>
+{% endblock %}

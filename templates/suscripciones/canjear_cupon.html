@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+
+{% block title %}Canjear Cupón - FacilAdmin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .canje-container {
+        max-width: 600px;
+        margin: 60px auto;
+        padding: 20px;
+    }
+    .card-header-cupon {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+        border-radius: 15px 15px 0 0;
+    }
+    .card-header-cupon h2 {
+        margin: 0;
+        font-size: 2rem;
+    }
+    .cupon-input {
+        font-size: 1.5rem;
+        text-align: center;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        border: 3px solid #dee2e6;
+        border-radius: 10px;
+        padding: 20px;
+    }
+    .cupon-input:focus {
+        border-color: #f5576c;
+        box-shadow: 0 0 0 0.3rem rgba(245, 87, 108, 0.25);
+    }
+    .btn-canjear {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        border: none;
+        color: white;
+        padding: 15px;
+        font-size: 1.2rem;
+        border-radius: 50px;
+        width: 100%;
+        transition: transform 0.2s;
+    }
+    .btn-canjear:hover {
+        transform: scale(1.02);
+        color: white;
+    }
+    .beneficio-card {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="canje-container">
+    <div class="card shadow-lg">
+        <div class="card-header-cupon">
+            <h2>Canjear Cupón</h2>
+            <p class="mb-0">Ingresa tu código para activar 30 días gratis</p>
+        </div>
+
+        <div class="card-body p-4">
+            {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="mb-4">
+                    <label for="codigo_cupon" class="form-label">Código del Cupón</label>
+                    <input type="text" class="form-control cupon-input" id="codigo_cupon"
+                           name="codigo_cupon" placeholder="REF-12345-ABCD" required
+                           maxlength="50" autocomplete="off">
+                    <small class="text-muted">
+                        Ingresa el código exactamente como aparece en tu email o notificación
+                    </small>
+                </div>
+
+                <button type="submit" class="btn btn-canjear">
+                    Canjear Cupón
+                </button>
+            </form>
+
+            <div class="beneficio-card">
+                <h5 class="text-center mb-3">¿Qué obtienes?</h5>
+                <ul class="mb-0">
+                    <li><strong>30 días adicionales</strong> en tu suscripción</li>
+                    <li>Extensión automática de tu fecha de vencimiento</li>
+                    <li>Acceso completo a todas las funciones</li>
+                    <li>Sin necesidad de pago inmediato</li>
+                </ul>
+            </div>
+
+            <hr class="my-4">
+
+            <div class="text-center">
+                <p class="text-muted mb-2">¿No tienes un cupón?</p>
+                <a href="{% url 'suscripciones:programa_referidos' %}" class="btn btn-outline-primary">
+                    Únete al Programa de Referidos
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-uppercase y formato del código
+document.getElementById('codigo_cupon').addEventListener('input', function(e) {
+    e.target.value = e.target.value.toUpperCase();
+});
+</script>
+{% endblock %}

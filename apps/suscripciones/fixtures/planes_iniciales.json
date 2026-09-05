@@ -1,0 +1,36 @@
+[
+    {
+        "model": "suscripciones.plansuscripcion",
+        "pk": 1,
+        "fields": {
+            "nombre": "Trial Gratuito",
+            "tipo": "trial",
+            "precio": "0.00",
+            "duracion_dias": 120,
+            "descripcion": "Prueba gratis por 4 meses con acceso completo a todas las funciones. Sin restricciones, sin tarjeta de crédito.",
+            "activo": true,
+            "max_citas_mes": null,
+            "max_servicios": null,
+            "max_clientes": null,
+            "push_notifications": true,
+            "soporte_prioritario": false
+        }
+    },
+    {
+        "model": "suscripciones.plansuscripcion",
+        "pk": 2,
+        "fields": {
+            "nombre": "Premium Mensual",
+            "tipo": "mensual",
+            "precio": "29900.00",
+            "duracion_dias": 30,
+            "descripcion": "Por menos de mil pesos diarios organizarás tu negocio. Acceso completo a todas las funciones de FacilAdmin.",
+            "activo": true,
+            "max_citas_mes": null,
+            "max_servicios": null,
+            "max_clientes": null,
+            "push_notifications": true,
+            "soporte_prioritario": false
+        }
+    }
+]

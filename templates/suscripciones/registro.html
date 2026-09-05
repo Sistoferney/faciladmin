@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Registro - FacilAdmin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .registro-container {
+        max-width: 500px;
+        margin: 50px auto;
+    }
+    .trial-badge {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    .trial-badge h2 {
+        font-size: 2rem;
+        margin-bottom: 10px;
+    }
+    .trial-badge p {
+        margin-bottom: 0;
+        opacity: 0.95;
+    }
+    .cupon-toggle {
+        text-align: center;
+        margin: 15px 0;
+    }
+    .cupon-toggle a {
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 500;
+    }
+    .cupon-toggle a:hover {
+        text-decoration: underline;
+    }
+    #campo-cupon {
+        margin-top: 15px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid #667eea;
+    }
+    .feature-list {
+        list-style: none;
+        padding: 0;
+    }
+    .feature-list li {
+        padding: 8px 0;
+        padding-left: 25px;
+        position: relative;
+    }
+    .feature-list li:before {
+        content: "✓";
+        position: absolute;
+        left: 0;
+        color: #28a745;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="registro-container">
+        <div class="trial-badge">
+            <h2>🎉 ¡120 Días Gratis!</h2>
+            <p>Acceso completo sin restricciones<br>Sin tarjeta de crédito</p>
+        </div>
+
+        <div class="card shadow">
+            <div class="card-body p-4">
+                <h3 class="card-title text-center mb-4">Crea tu cuenta gratis</h3>
+
+                <form method="post" id="registroForm">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="nombre" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="nombre" name="nombre" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="apellido" class="form-label">Apellido</label>
+                        <input type="text" class="form-control" id="apellido" name="apellido" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="telefono" class="form-label">Teléfono</label>
+                        <input type="tel" class="form-control" id="telefono" name="telefono"
+                               placeholder="+57 300 123 4567" required>
+                        <small class="text-muted">Incluye código de país</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                        <small class="text-muted">Te enviaremos un enlace de activación</small>
+                    </div>
+
+                    <div class="form-check mb-3 mt-3">
+                        <input class="form-check-input" type="checkbox" id="terminos" required>
+                        <label class="form-check-label" for="terminos">
+                            Acepto los <a href="/terminos" target="_blank">términos y condiciones</a>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                        Crear Cuenta Gratis
+                    </button>
+                </form>
+
+                <div class="text-center mt-3">
+                    <small class="text-muted">
+                        ¿Ya tienes cuenta? <a href="{% url 'login' %}">Iniciar sesión</a>
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features destacadas -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h5 class="card-title">¿Qué obtienes?</h5>
+                <ul class="feature-list">
+                    <li>120 días completamente gratis</li>
+                    <li>Gestión ilimitada de citas</li>
+                    <li>Clientes y servicios ilimitados</li>
+                    <li>Notificaciones push</li>
+                    <li>Página web personalizada</li>
+                    <li>Código QR para reservas</li>
+                    <li>Soporte técnico incluido</li>
+                </ul>
+                <p class="text-muted small mb-0 mt-3">
+                    <strong>Después del trial:</strong> Solo $29.900/mes (menos de $1.000 por día)
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Validación del formulario
+document.getElementById('registroForm').addEventListener('submit', function(e) {
+    const telefono = document.getElementById('telefono').value;
+    const email = document.getElementById('email').value;
+
+    // Validar formato de teléfono (básico)
+    if (telefono.length < 10) {
+        e.preventDefault();
+        alert('Por favor ingresa un número de teléfono válido');
+        return false;
+    }
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        e.preventDefault();
+        alert('Por favor ingresa un email válido');
+        return false;
+    }
+});
+</script>
+{% endblock %}

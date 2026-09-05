@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Verifica tu Email - FacilAdmin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pendiente-container {
+        max-width: 600px;
+        margin: 80px auto;
+        text-align: center;
+    }
+    .email-icon {
+        font-size: 80px;
+        color: #667eea;
+        margin-bottom: 30px;
+    }
+    .check-steps {
+        text-align: left;
+        margin: 30px auto;
+        max-width: 400px;
+    }
+    .check-steps li {
+        padding: 10px 0;
+        font-size: 1.1rem;
+    }
+    .spam-warning {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 15px;
+        border-radius: 5px;
+        margin-top: 30px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="pendiente-container">
+        <div class="email-icon">📧</div>
+
+        <h1 class="mb-3">¡Revisa tu email!</h1>
+        <p class="lead text-muted">
+            Te enviamos un enlace de activación a tu correo electrónico.
+        </p>
+
+        <div class="card shadow-sm mt-4">
+            <div class="card-body p-4">
+                <h5 class="card-title">Pasos siguientes:</h5>
+                <ol class="check-steps">
+                    <li>Abre tu bandeja de entrada</li>
+                    <li>Busca el email de FacilAdmin</li>
+                    <li>Haz clic en el enlace de activación</li>
+                    <li>Completa tu registro (2 campos más)</li>
+                    <li>¡Empieza a usar FacilAdmin gratis! 🎉</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="spam-warning">
+            <strong>⚠️ ¿No ves el email?</strong>
+            <p class="mb-0 mt-2">
+                Revisa tu carpeta de SPAM o correo no deseado.<br>
+                El email puede tardar hasta 5 minutos en llegar.
+            </p>
+        </div>
+
+        <div class="mt-4">
+            <p class="text-muted">
+                <small>
+                    El enlace de activación expira en 24 horas.<br>
+                    Si no lo recibes, puedes <a href="{% url 'suscripciones:registro_negocio' %}">intentar registrarte nuevamente</a>.
+                </small>
+            </p>
+        </div>
+
+        <div class="mt-5">
+            <a href="/" class="btn btn-outline-primary">
+                Volver al inicio
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Agregar animación al ícono
+const emailIcon = document.querySelector('.email-icon');
+setInterval(() => {
+    emailIcon.style.transform = 'scale(1.1)';
+    setTimeout(() => {
+        emailIcon.style.transform = 'scale(1)';
+    }, 200);
+}, 2000);
+
+emailIcon.style.transition = 'transform 0.2s ease';
+</script>
+{% endblock %}
