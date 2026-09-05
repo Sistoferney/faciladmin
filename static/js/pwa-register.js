@@ -358,11 +358,74 @@ window.addEventListener('appinstalled', () => {
     // gtag('event', 'pwa_installed');
 });
 
+/**
+ * Limpia el badge de notificaciones
+ */
+async function clearNotificationBadge() {
+    try {
+        if ('clearAppBadge' in navigator) {
+            await navigator.clearAppBadge();
+            console.log('[PWA] Badge limpiado desde el cliente');
+        }
+
+        // También enviar mensaje al service worker para limpiar el contador interno
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({
+                type: 'CLEAR_BADGE'
+            });
+        }
+    } catch (error) {
+        console.error('[PWA] Error limpiando badge:', error);
+    }
+}
+
+/**
+ * Actualiza el badge a un número específico
+ */
+async function setNotificationBadge(count) {
+    try {
+        if ('setAppBadge' in navigator) {
+            if (count > 0) {
+                await navigator.setAppBadge(count);
+                console.log('[PWA] Badge actualizado a:', count);
+            } else {
+                await navigator.clearAppBadge();
+                console.log('[PWA] Badge limpiado');
+            }
+        }
+
+        // También enviar mensaje al service worker
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({
+                type: 'SET_BADGE',
+                count: count
+            });
+        }
+    } catch (error) {
+        console.error('[PWA] Error actualizando badge:', error);
+    }
+}
+
+/**
+ * Limpiar badge cuando el usuario abre la app
+ */
+if (isPWAInstalled()) {
+    window.addEventListener('focus', () => {
+        // Cuando el usuario enfoca la app, limpiar el badge después de un delay
+        // (para dar tiempo a que vean las notificaciones)
+        setTimeout(() => {
+            clearNotificationBadge();
+        }, 2000); // 2 segundos
+    });
+}
+
 // Exportar funciones para uso global
 window.PWA = {
     promptInstall,
     isPWAInstalled,
     requestNotificationPermission,
     subscribeToPushNotifications,
-    hideInstallBanner
+    hideInstallBanner,
+    clearNotificationBadge,
+    setNotificationBadge
 };

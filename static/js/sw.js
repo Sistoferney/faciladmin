@@ -97,6 +97,16 @@ self.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'SKIP_WAITING') {
         self.skipWaiting();
     }
+
+    // Manejar mensajes de badge
+    if (event.data && event.data.type === 'CLEAR_BADGE') {
+        clearBadge();
+    }
+
+    if (event.data && event.data.type === 'SET_BADGE') {
+        const count = event.data.count || 0;
+        saveBadgeCount(count);
+    }
 });
 
 // Push Notifications
@@ -129,16 +139,22 @@ self.addEventListener('push', (event) => {
         };
 
         event.waitUntil(
-            self.registration.showNotification(title, options)
+            Promise.all([
+                self.registration.showNotification(title, options),
+                incrementBadge()
+            ])
         );
     } catch (error) {
         console.error('[SW] Error procesando push:', error);
         // Mostrar notificación genérica en caso de error
         event.waitUntil(
-            self.registration.showNotification('Nueva notificación', {
-                body: 'Tienes una nueva actualización',
-                icon: '/static/images/faciladmin-logo.png'
-            })
+            Promise.all([
+                self.registration.showNotification('Nueva notificación', {
+                    body: 'Tienes una nueva actualización',
+                    icon: '/static/images/faciladmin-logo.png'
+                }),
+                incrementBadge()
+            ])
         );
     }
 });
@@ -150,19 +166,166 @@ self.addEventListener('notificationclick', (event) => {
     const urlToOpen = event.notification.data.url || '/';
 
     event.waitUntil(
-        clients.matchAll({ type: 'window', includeUncontrolled: true })
-            .then((clientList) => {
-                // Si ya hay una ventana abierta, enfocarla
-                for (let i = 0; i < clientList.length; i++) {
-                    const client = clientList[i];
-                    if (client.url === urlToOpen && 'focus' in client) {
-                        return client.focus();
+        Promise.all([
+            decrementBadge(),
+            clients.matchAll({ type: 'window', includeUncontrolled: true })
+                .then((clientList) => {
+                    // Si ya hay una ventana abierta, enfocarla
+                    for (let i = 0; i < clientList.length; i++) {
+                        const client = clientList[i];
+                        if (client.url === urlToOpen && 'focus' in client) {
+                            return client.focus();
+                        }
                     }
-                }
-                // Si no, abrir nueva ventana
-                if (clients.openWindow) {
-                    return clients.openWindow(urlToOpen);
-                }
-            })
+                    // Si no, abrir nueva ventana
+                    if (clients.openWindow) {
+                        return clients.openWindow(urlToOpen);
+                    }
+                })
+        ])
     );
 });
+
+// ============================================
+// Badge API - Contador de notificaciones
+// ============================================
+
+/**
+ * Incrementa el contador de badge en 1
+ */
+async function incrementBadge() {
+    try {
+        if ('setAppBadge' in navigator) {
+            // Obtener el count actual del IndexedDB o usar 0
+            const currentBadge = await getBadgeCount();
+            const newBadge = currentBadge + 1;
+
+            // Actualizar el badge
+            await navigator.setAppBadge(newBadge);
+
+            // Guardar el nuevo count
+            await saveBadgeCount(newBadge);
+
+            console.log('[SW] Badge incrementado a:', newBadge);
+        } else {
+            console.log('[SW] Badge API no soportada');
+        }
+    } catch (error) {
+        console.error('[SW] Error incrementando badge:', error);
+    }
+}
+
+/**
+ * Decrementa el contador de badge en 1
+ */
+async function decrementBadge() {
+    try {
+        if ('clearAppBadge' in navigator) {
+            const currentBadge = await getBadgeCount();
+            const newBadge = Math.max(0, currentBadge - 1);
+
+            if (newBadge === 0) {
+                // Si llegó a 0, limpiar el badge
+                await navigator.clearAppBadge();
+            } else {
+                // Si todavía hay notificaciones, actualizar el número
+                await navigator.setAppBadge(newBadge);
+            }
+
+            // Guardar el nuevo count
+            await saveBadgeCount(newBadge);
+
+            console.log('[SW] Badge decrementado a:', newBadge);
+        }
+    } catch (error) {
+        console.error('[SW] Error decrementando badge:', error);
+    }
+}
+
+/**
+ * Limpia el badge completamente
+ */
+async function clearBadge() {
+    try {
+        if ('clearAppBadge' in navigator) {
+            await navigator.clearAppBadge();
+            await saveBadgeCount(0);
+            console.log('[SW] Badge limpiado');
+        }
+    } catch (error) {
+        console.error('[SW] Error limpiando badge:', error);
+    }
+}
+
+/**
+ * Obtiene el count actual del badge desde IndexedDB
+ */
+async function getBadgeCount() {
+    try {
+        const db = await openBadgeDB();
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction(['badge'], 'readonly');
+            const store = transaction.objectStore('badge');
+            const request = store.get('count');
+
+            request.onsuccess = () => {
+                resolve(request.result ? request.result.value : 0);
+            };
+
+            request.onerror = () => {
+                reject(request.error);
+            };
+        });
+    } catch (error) {
+        console.error('[SW] Error obteniendo badge count:', error);
+        return 0;
+    }
+}
+
+/**
+ * Guarda el count del badge en IndexedDB
+ */
+async function saveBadgeCount(count) {
+    try {
+        const db = await openBadgeDB();
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction(['badge'], 'readwrite');
+            const store = transaction.objectStore('badge');
+            const request = store.put({ id: 'count', value: count });
+
+            request.onsuccess = () => {
+                resolve();
+            };
+
+            request.onerror = () => {
+                reject(request.error);
+            };
+        });
+    } catch (error) {
+        console.error('[SW] Error guardando badge count:', error);
+    }
+}
+
+/**
+ * Abre la base de datos IndexedDB para el badge
+ */
+function openBadgeDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open('FacilAdminBadge', 1);
+
+        request.onerror = () => {
+            reject(request.error);
+        };
+
+        request.onsuccess = () => {
+            resolve(request.result);
+        };
+
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains('badge')) {
+                db.createObjectStore('badge', { keyPath: 'id' });
+            }
+        };
+    });
+}
