@@ -52,6 +52,7 @@ urlpatterns = [
 
     # API para disponibilidad
     path('<slug:slug>/api/disponibilidad/', public_views.disponibilidad_api, name='disponibilidad_api'),
+    path('<slug:slug>/api/fechas-disponibles/', public_views.fechas_disponibles_api, name='fechas_disponibles_api'),
     path('<slug:slug>/api/buscar-cliente/', public_views.buscar_cliente_api, name='buscar_cliente_api'),
 
     # PWA Manifests

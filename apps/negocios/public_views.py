@@ -308,6 +308,122 @@ def disponibilidad_api(request, slug):
         return JsonResponse({'error': str(e)}, status=500)
 
 
+@ratelimit(key='ip', rate='60/m', block=True)
+def fechas_disponibles_api(request, slug):
+    """
+    API para obtener fechas con disponibilidad en un mes
+    Retorna lista de fechas que tienen al menos un horario disponible
+    Rate limit: 60 consultas por minuto por IP
+    """
+    import pytz
+
+    negocio = get_object_or_404(Negocio, slug=slug, esta_activo=True)
+
+    servicio_id = request.GET.get('servicio')
+    year = request.GET.get('year')
+    month = request.GET.get('month')
+
+    if not all([servicio_id, year, month]):
+        return JsonResponse({'error': 'Faltan parámetros (servicio, year, month)'}, status=400)
+
+    try:
+        servicio = Servicio.objects.get(id=servicio_id, negocio=negocio)
+        year = int(year)
+        month = int(month)
+
+        # Obtener primer y último día del mes
+        primer_dia = datetime(year, month, 1).date()
+        if month == 12:
+            ultimo_dia = datetime(year + 1, 1, 1).date() - timedelta(days=1)
+        else:
+            ultimo_dia = datetime(year, month + 1, 1).date() - timedelta(days=1)
+
+        # Obtener horarios del negocio
+        hora_apertura = negocio.horario_apertura if negocio.horario_apertura else datetime.strptime('09:00', '%H:%M').time()
+        hora_cierre = negocio.horario_cierre if negocio.horario_cierre else datetime.strptime('19:00', '%H:%M').time()
+
+        fechas_con_disponibilidad = []
+        fecha_actual = timezone.now().date()
+        tz = pytz.timezone('America/Bogota')
+
+        # Iterar cada día del mes
+        fecha = primer_dia
+        while fecha <= ultimo_dia:
+            # Saltar fechas pasadas
+            if fecha < fecha_actual:
+                fecha += timedelta(days=1)
+                continue
+
+            # Verificar si hay al menos un horario disponible en este día
+            tiene_disponibilidad = False
+            hora_inicio = hora_apertura.hour
+            hora_fin = hora_cierre.hour
+
+            for hora in range(hora_inicio, hora_fin):
+                if tiene_disponibilidad:
+                    break
+
+                for minuto in [0, 30]:
+                    # No agregar el último slot si pasa del horario de cierre
+                    if hora == hora_fin - 1 and minuto == 30:
+                        if hora_cierre.minute == 0:
+                            continue
+
+                    hora_str = f"{hora:02d}:{minuto:02d}"
+                    fecha_hora_naive = datetime.combine(fecha, datetime.strptime(hora_str, '%H:%M').time())
+                    fecha_hora = tz.localize(fecha_hora_naive)
+
+                    # Validar que sea en el futuro
+                    if fecha_hora <= timezone.now():
+                        continue
+
+                    # Verificar si ya hay cita en ese horario
+                    fin_slot = fecha_hora + timedelta(minutes=servicio.duracion_minutos)
+
+                    # Validar que no termine después del cierre
+                    hora_cierre_dt = datetime.combine(fecha, hora_cierre)
+                    if timezone.is_aware(fecha_hora):
+                        hora_cierre_dt = tz.localize(hora_cierre_dt)
+                    if fin_slot > hora_cierre_dt:
+                        continue
+
+                    # Buscar citas que se traslapen
+                    citas_traslapadas = Cita.objects.filter(
+                        negocio=negocio,
+                        estado__in=['pendiente_abono', 'confirmada']
+                    ).filter(
+                        fecha_hora__lt=fin_slot
+                    ).filter(
+                        fecha_hora__gte=fecha_hora - timedelta(minutes=120)
+                    )
+
+                    # Verificar si hay traslape real
+                    disponible = True
+                    for cita in citas_traslapadas:
+                        cita_fin = cita.fecha_hora + timedelta(minutes=cita.duracion_minutos)
+                        if not (fin_slot <= cita.fecha_hora or fecha_hora >= cita_fin):
+                            disponible = False
+                            break
+
+                    if disponible:
+                        tiene_disponibilidad = True
+                        break
+
+            if tiene_disponibilidad:
+                fechas_con_disponibilidad.append(fecha.isoformat())
+
+            fecha += timedelta(days=1)
+
+        return JsonResponse({'fechas': fechas_con_disponibilidad})
+
+    except Servicio.DoesNotExist:
+        return JsonResponse({'error': 'Servicio no encontrado'}, status=404)
+    except ValueError as e:
+        return JsonResponse({'error': 'Parámetros inválidos'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
 @ratelimit(key='ip', rate='30/m', block=True)
 def buscar_cliente_api(request, slug):
     """

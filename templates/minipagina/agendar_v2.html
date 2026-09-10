@@ -697,6 +697,7 @@
         let selectedDate = null;
         let selectedTime = null;
         let currentMonth = new Date();
+        let fechasDisponibles = []; // Almacena las fechas con disponibilidad
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
@@ -720,8 +721,33 @@
                         requiresContact: this.dataset.requiresContact === 'true'
                     };
                     document.getElementById('selectedService').value = selectedService.id;
+
+                    // Cargar fechas disponibles cuando se selecciona un servicio
+                    loadFechasDisponibles();
                 });
             });
+        }
+
+        // Cargar fechas disponibles del mes
+        function loadFechasDisponibles() {
+            if (!selectedService) return;
+
+            const year = currentMonth.getFullYear();
+            const month = currentMonth.getMonth() + 1; // JavaScript months are 0-indexed
+
+            fetch(`/{{ negocio.slug }}/api/fechas-disponibles/?servicio=${selectedService.id}&year=${year}&month=${month}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.fechas) {
+                        fechasDisponibles = data.fechas;
+                        renderCalendar(); // Re-renderizar el calendario con las fechas disponibles
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading available dates:', error);
+                    fechasDisponibles = [];
+                    renderCalendar();
+                });
         }
 
         // Calendar
@@ -756,12 +782,15 @@
                 const isPast = date < today.setHours(0, 0, 0, 0);
                 const isToday = date.toDateString() === new Date().toDateString();
 
+                // Verificar si la fecha tiene disponibilidad (solo si hay un servicio seleccionado)
+                const sinDisponibilidad = selectedService && fechasDisponibles.length > 0 && !fechasDisponibles.includes(dateStr);
+
                 let classes = 'calendar-day';
-                if (isPast) classes += ' disabled';
+                if (isPast || sinDisponibilidad) classes += ' disabled';
                 if (isToday) classes += ' today';
                 if (selectedDate === dateStr) classes += ' selected';
 
-                calendarHTML += `<div class="${classes}" data-date="${dateStr}" ${isPast ? '' : 'onclick="selectDate(this)"'}>${day}</div>`;
+                calendarHTML += `<div class="${classes}" data-date="${dateStr}" ${(isPast || sinDisponibilidad) ? '' : 'onclick="selectDate(this)"'}>${day}</div>`;
             }
 
             calendar.innerHTML = calendarHTML;
@@ -775,8 +804,8 @@
             selectedDate = element.dataset.date;
             document.getElementById('selectedDate').value = selectedDate;
 
-            // Load time slots
-            loadTimeSlots();
+            // Auto-avanzar al paso 4 (selección de hora)
+            goToStep(4);
         }
 
         // Time Slots
@@ -839,12 +868,12 @@
 
             document.getElementById('prevMonth').addEventListener('click', function() {
                 currentMonth.setMonth(currentMonth.getMonth() - 1);
-                renderCalendar();
+                loadFechasDisponibles(); // Cargar fechas disponibles del nuevo mes
             });
 
             document.getElementById('nextMonth').addEventListener('click', function() {
                 currentMonth.setMonth(currentMonth.getMonth() + 1);
-                renderCalendar();
+                loadFechasDisponibles(); // Cargar fechas disponibles del nuevo mes
             });
         }
 
