@@ -286,9 +286,38 @@ async function savePushSubscription(subscription) {
         // Obtener slug del negocio de la URL
         const negocio_slug = window.location.pathname.split('/')[1] || null;
 
-        // Validar que tengamos los datos necesarios
+        // Detectar si es un administrador (está en /admin/)
+        const esAdmin = window.location.pathname.includes('/admin/');
+
+        // Para administradores, no necesitamos teléfono de cliente
+        if (esAdmin && negocio_slug) {
+            console.log('[PWA] Guardando suscripción para administrador');
+
+            const response = await fetch('/api/notificaciones/push/subscribe-admin/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    subscription: subscription.toJSON()
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                console.log('[PWA] Suscripción de admin guardada en servidor');
+                localStorage.setItem('push_subscribed', 'true');
+            } else {
+                console.error('[PWA] Error guardando suscripción de admin:', data.error);
+            }
+
+            return data.success;
+        }
+
+        // Para clientes, validar que tengamos teléfono y negocio
         if (!telefono || !negocio_slug) {
-            console.warn('[PWA] No se puede guardar suscripción: falta teléfono o negocio_slug');
+            console.warn('[PWA] No se puede guardar suscripción de cliente: falta teléfono o negocio_slug');
             console.warn('[PWA] Teléfono:', telefono, 'Negocio:', negocio_slug);
 
             // Guardar suscripción en localStorage para intentar más tarde
@@ -353,6 +382,14 @@ window.addEventListener('appinstalled', () => {
     console.log('[PWA] App instalada exitosamente');
     hideInstallBanner();
     localStorage.setItem('pwa_installed', 'true');
+
+    // Solicitar permisos de notificación después de instalar
+    // Dar un pequeño delay para mejor UX
+    setTimeout(() => {
+        if ('Notification' in window && 'PushManager' in window) {
+            requestNotificationPermission();
+        }
+    }, 1000); // 1 segundo de delay
 
     // Opcional: Enviar analytics
     // gtag('event', 'pwa_installed');

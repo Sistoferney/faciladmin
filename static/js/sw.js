@@ -1,6 +1,7 @@
 /**
  * Service Worker para PWA de FacilAdmin
  * Maneja caché, actualizaciones y funcionalidad offline
+ * Versión optimizada para notificaciones en segundo plano
  */
 
 const CACHE_NAME = 'faciladmin-v1';
@@ -12,6 +13,32 @@ const CACHE_ASSETS = [
     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js',
     'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css',
 ];
+
+// Keep-alive: Mantener el Service Worker activo
+// Esto ayuda a que las notificaciones lleguen más rápido
+let keepAliveInterval = null;
+
+function startKeepAlive() {
+    if (keepAliveInterval) return;
+
+    // Enviar un mensaje cada 20 segundos para mantener el SW activo
+    keepAliveInterval = setInterval(() => {
+        self.clients.matchAll({ includeUncontrolled: true, type: 'window' })
+            .then((clients) => {
+                if (clients.length > 0) {
+                    // Hay clientes activos, mantener el SW despierto
+                    console.log('[SW] Keep-alive ping');
+                }
+            });
+    }, 20000); // 20 segundos
+}
+
+function stopKeepAlive() {
+    if (keepAliveInterval) {
+        clearInterval(keepAliveInterval);
+        keepAliveInterval = null;
+    }
+}
 
 // Instalar Service Worker y cachear assets
 self.addEventListener('install', (event) => {
@@ -42,7 +69,12 @@ self.addEventListener('activate', (event) => {
                     }
                 })
             );
-        }).then(() => self.clients.claim())
+        }).then(() => {
+            // Iniciar keep-alive cuando se activa el SW
+            startKeepAlive();
+            console.log('[SW] Keep-alive iniciado');
+            return self.clients.claim();
+        })
     );
 });
 
@@ -113,8 +145,23 @@ self.addEventListener('message', (event) => {
 self.addEventListener('push', (event) => {
     console.log('[SW] Push recibido:', event);
 
+    // Reiniciar keep-alive si estaba detenido
+    startKeepAlive();
+
     if (!event.data) {
         console.log('[SW] Push sin datos');
+        // Mostrar notificación genérica aunque no haya datos
+        event.waitUntil(
+            Promise.all([
+                self.registration.showNotification('FacilAdmin', {
+                    body: 'Tienes una nueva notificación',
+                    icon: '/static/images/faciladmin-logo.png',
+                    badge: '/static/images/faciladmin-logo.png',
+                    vibrate: [200, 100, 200]
+                }),
+                incrementBadge()
+            ])
+        );
         return;
     }
 
@@ -135,13 +182,20 @@ self.addEventListener('push', (event) => {
                 citaId: data.citaId || null,
                 tipo: data.tipo || 'general'
             },
-            actions: data.actions || []
+            actions: data.actions || [],
+            // Agregar timestamp para que cada notificación sea única
+            timestamp: Date.now()
         };
 
         event.waitUntil(
             Promise.all([
                 self.registration.showNotification(title, options),
-                incrementBadge()
+                incrementBadge(),
+                // Notificar a los clientes activos que llegó una notificación
+                notifyClients({
+                    type: 'PUSH_RECEIVED',
+                    data: data
+                })
             ])
         );
     } catch (error) {
@@ -151,13 +205,28 @@ self.addEventListener('push', (event) => {
             Promise.all([
                 self.registration.showNotification('Nueva notificación', {
                     body: 'Tienes una nueva actualización',
-                    icon: '/static/images/faciladmin-logo.png'
+                    icon: '/static/images/faciladmin-logo.png',
+                    timestamp: Date.now()
                 }),
                 incrementBadge()
             ])
         );
     }
 });
+
+/**
+ * Notifica a todos los clientes activos
+ */
+async function notifyClients(message) {
+    try {
+        const clients = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
+        clients.forEach(client => {
+            client.postMessage(message);
+        });
+    } catch (error) {
+        console.error('[SW] Error notificando a clientes:', error);
+    }
+}
 
 // Manejar click en notificaciones
 self.addEventListener('notificationclick', (event) => {
