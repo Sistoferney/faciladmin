@@ -27,12 +27,24 @@ function registerServiceWorker() {
             // Manejar actualizaciones del SW
             registration.addEventListener('updatefound', () => {
                 const newWorker = registration.installing;
+                console.log('[PWA] Nueva versión detectada');
+
                 newWorker.addEventListener('statechange', () => {
                     if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                         // Hay una nueva versión disponible
-                        if (confirm('Hay una nueva versión disponible. ¿Recargar para actualizar?')) {
+                        console.log('[PWA] Nueva versión lista para instalar');
+
+                        // Mostrar notificación más amigable
+                        const mensaje = 'Nueva actualización disponible con mejoras y correcciones. ¿Actualizar ahora?';
+
+                        if (confirm(mensaje)) {
+                            console.log('[PWA] Usuario aceptó actualización');
                             newWorker.postMessage({ type: 'SKIP_WAITING' });
                             window.location.reload();
+                        } else {
+                            console.log('[PWA] Usuario pospuso actualización');
+                            // Mostrar banner persistente (opcional)
+                            showUpdateBanner();
                         }
                     }
                 });
@@ -154,6 +166,60 @@ function hideInstallBanner() {
 
     // Guardar preferencia para no mostrar más
     localStorage.setItem('pwa_banner_dismissed', 'true');
+}
+
+/**
+ * Muestra un banner persistente de actualización disponible
+ */
+function showUpdateBanner() {
+    // Verificar si ya existe el banner
+    if (document.getElementById('update-banner')) {
+        return;
+    }
+
+    // Crear banner de actualización
+    const banner = document.createElement('div');
+    banner.id = 'update-banner';
+    banner.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px 25px;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        max-width: 90%;
+    `;
+
+    banner.innerHTML = `
+        <span>🎉 Nueva actualización disponible</span>
+        <button onclick="window.location.reload()" style="
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+        ">Actualizar</button>
+        <button onclick="this.parentElement.remove()" style="
+            background: transparent;
+            color: white;
+            border: 1px solid white;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        ">Después</button>
+    `;
+
+    document.body.appendChild(banner);
 }
 
 /**
