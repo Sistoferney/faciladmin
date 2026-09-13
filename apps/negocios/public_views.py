@@ -165,6 +165,35 @@ def agendar_cita(request, slug):
                     fecha_limite=cita.fecha_limite_abono
                 )
 
+            # Enviar notificación push al administrador del negocio
+            try:
+                from apps.notificaciones.services import NotificacionService
+                service = NotificacionService()
+
+                titulo_admin = "Nueva cita agendada"
+                mensaje_admin = f"""
+{cliente.nombre} ha agendado una cita:
+
+📅 {fecha_hora.strftime('%d/%m/%Y')}
+🕐 {fecha_hora.strftime('%H:%M')}
+✂️ {servicio.nombre}
+💰 ${servicio.precio}
+📞 Tel: {cliente.telefono}
+                """.strip()
+
+                if notas:
+                    mensaje_admin += f"\n\n📝 Notas: {notas}"
+
+                service.enviar_push(
+                    cliente=cliente,
+                    titulo=titulo_admin,
+                    mensaje=mensaje_admin,
+                    cita=cita,
+                    enviar_a_admin=True
+                )
+            except Exception as e:
+                print(f"[Notificación Admin] Error al enviar notificación de nueva cita: {e}")
+
             # Mensaje de éxito
             if servicio.requiere_pago_abono:
                 messages.success(
@@ -239,9 +268,22 @@ def disponibilidad_api(request, slug):
         if fecha_obj < timezone.now().date():
             return JsonResponse({'horarios': []})
 
-        # Obtener horarios del negocio (usar valores por defecto si no están configurados)
-        hora_apertura = negocio.horario_apertura if negocio.horario_apertura else datetime.strptime('09:00', '%H:%M').time()
-        hora_cierre = negocio.horario_cierre if negocio.horario_cierre else datetime.strptime('19:00', '%H:%M').time()
+        # Verificar si el negocio trabaja en este día de la semana
+        dia_semana = fecha_obj.weekday()  # 0=Lunes, 6=Domingo
+
+        # Verificar con ConfiguracionHorario si existe
+        config_dia = negocio.configuraciones_horario.filter(dia_semana=dia_semana).first()
+        if config_dia:
+            # Hay configuración específica para este día
+            if not config_dia.esta_abierto:
+                return JsonResponse({'horarios': []})  # Día cerrado, sin horarios
+            # Usar horarios específicos del día
+            hora_apertura = config_dia.hora_apertura
+            hora_cierre = config_dia.hora_cierre
+        else:
+            # No hay configuración específica, usar horarios generales
+            hora_apertura = negocio.horario_apertura if negocio.horario_apertura else datetime.strptime('09:00', '%H:%M').time()
+            hora_cierre = negocio.horario_cierre if negocio.horario_cierre else datetime.strptime('19:00', '%H:%M').time()
 
         # Generar horarios disponibles cada 30 minutos
         horarios = []
@@ -354,10 +396,30 @@ def fechas_disponibles_api(request, slug):
                 fecha += timedelta(days=1)
                 continue
 
+            # Verificar si el negocio trabaja en este día de la semana
+            dia_semana = fecha.weekday()  # 0=Lunes, 6=Domingo
+
+            # Opción 1: Verificar con ConfiguracionHorario si existe
+            config_dia = negocio.configuraciones_horario.filter(dia_semana=dia_semana).first()
+            if config_dia:
+                # Hay configuración específica para este día
+                if not config_dia.esta_abierto:
+                    fecha += timedelta(days=1)
+                    continue
+                # Usar horarios específicos del día
+                hora_apertura_dia = config_dia.hora_apertura
+                hora_cierre_dia = config_dia.hora_cierre
+            else:
+                # No hay configuración específica, usar validación genérica
+                # Por defecto, si no hay config, asumir que domingo (6) está cerrado
+                # a menos que se especifique lo contrario
+                hora_apertura_dia = hora_apertura
+                hora_cierre_dia = hora_cierre
+
             # Verificar si hay al menos un horario disponible en este día
             tiene_disponibilidad = False
-            hora_inicio = hora_apertura.hour
-            hora_fin = hora_cierre.hour
+            hora_inicio = hora_apertura_dia.hour
+            hora_fin = hora_cierre_dia.hour
 
             for hora in range(hora_inicio, hora_fin):
                 if tiene_disponibilidad:
