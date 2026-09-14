@@ -148,17 +148,15 @@ def unsubscribe_push(request):
 def subscribe_admin_push(request):
     """
     Guarda la suscripción del usuario administrador/dueño de negocio
+
+    Acepta dos formas de autenticación:
+    1. Usuario autenticado (session login)
+    2. Negocio slug en el body (para PWA instaladas sin sesión)
     """
     try:
-        # Verificar que el usuario esté autenticado
-        if not request.user.is_authenticated:
-            return JsonResponse({
-                'success': False,
-                'error': 'Usuario no autenticado'
-            }, status=401)
-
         data = json.loads(request.body)
         subscription_info = data.get('subscription')
+        negocio_slug = data.get('negocio_slug')
 
         if not subscription_info:
             return JsonResponse({
@@ -168,32 +166,54 @@ def subscribe_admin_push(request):
 
         user_agent = request.META.get('HTTP_USER_AGENT', '')
 
-        # Obtener el negocio del usuario
         from apps.negocios.models import Negocio
         from .models import UsuarioPushSubscription
 
-        # Buscar el negocio asociado al usuario
-        try:
-            if hasattr(request.user, 'negocio'):
-                negocio = request.user.negocio
-            else:
-                # Si no tiene negocio directo, buscar si es dueño de algún negocio
-                negocio = Negocio.objects.filter(propietario=request.user).first()
+        negocio = None
+        user = None
+
+        # Opción 1: Usuario autenticado (panel de admin en navegador)
+        if request.user.is_authenticated:
+            user = request.user
+            try:
+                if hasattr(request.user, 'negocio'):
+                    negocio = request.user.negocio
+                else:
+                    # Buscar si es administrador de algún negocio
+                    negocio = Negocio.objects.filter(administrador=request.user).first()
+
                 if not negocio:
                     return JsonResponse({
                         'success': False,
                         'error': 'Usuario no tiene negocio asociado'
                     }, status=404)
-        except Exception as e:
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Error buscando negocio del usuario: {str(e)}'
+                }, status=500)
+
+        # Opción 2: Negocio identificado por slug (PWA instalada sin sesión)
+        elif negocio_slug:
+            try:
+                negocio = Negocio.objects.get(slug=negocio_slug)
+                user = negocio.administrador  # Usar el admin del negocio
+            except Negocio.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Negocio no encontrado: {negocio_slug}'
+                }, status=404)
+
+        else:
             return JsonResponse({
                 'success': False,
-                'error': f'Error buscando negocio: {str(e)}'
-            }, status=500)
+                'error': 'Se requiere autenticación o negocio_slug'
+            }, status=401)
 
         # Crear o actualizar la suscripción
         try:
             subscription = UsuarioPushSubscription.crear_desde_subscription_info(
-                user=request.user,
+                user=user,
                 negocio=negocio,
                 subscription_data=subscription_info,
                 user_agent=user_agent
@@ -202,7 +222,8 @@ def subscribe_admin_push(request):
             return JsonResponse({
                 'success': True,
                 'message': 'Suscripción de administrador guardada exitosamente',
-                'subscription_id': subscription.id
+                'subscription_id': subscription.id,
+                'negocio': negocio.nombre
             })
 
         except ValueError as e:

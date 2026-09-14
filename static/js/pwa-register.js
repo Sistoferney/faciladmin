@@ -358,6 +358,7 @@ async function savePushSubscription(subscription) {
         // Para administradores, no necesitamos teléfono de cliente
         if (esAdmin && negocio_slug) {
             console.log('[PWA] Guardando suscripción para administrador');
+            console.log('[PWA] Negocio slug:', negocio_slug);
 
             const response = await fetch('/api/notificaciones/push/subscribe-admin/', {
                 method: 'POST',
@@ -365,7 +366,8 @@ async function savePushSubscription(subscription) {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    subscription: subscription.toJSON()
+                    subscription: subscription.toJSON(),
+                    negocio_slug: negocio_slug  // Enviar slug del negocio
                 })
             });
 
@@ -373,7 +375,9 @@ async function savePushSubscription(subscription) {
 
             if (data.success) {
                 console.log('[PWA] Suscripción de admin guardada en servidor');
+                console.log('[PWA] Negocio:', data.negocio);
                 localStorage.setItem('push_subscribed', 'true');
+                localStorage.setItem('push_negocio', negocio_slug);
             } else {
                 console.error('[PWA] Error guardando suscripción de admin:', data.error);
             }
