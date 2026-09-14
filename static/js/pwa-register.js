@@ -522,6 +522,231 @@ if (isPWAInstalled()) {
     });
 }
 
+/**
+ * Obtiene el estado actual de los permisos de notificación
+ */
+function getNotificationStatus() {
+    if (!('Notification' in window)) {
+        return {
+            supported: false,
+            permission: 'not-supported',
+            message: 'Las notificaciones no están soportadas en este navegador'
+        };
+    }
+
+    if (!('PushManager' in window)) {
+        return {
+            supported: false,
+            permission: 'not-supported',
+            message: 'Las notificaciones push no están soportadas'
+        };
+    }
+
+    const permission = Notification.permission;
+    const messages = {
+        'granted': 'Notificaciones activadas ✓',
+        'denied': 'Notificaciones bloqueadas ✗',
+        'default': 'Notificaciones pendientes de activar'
+    };
+
+    return {
+        supported: true,
+        permission: permission,
+        message: messages[permission] || 'Estado desconocido',
+        canRequest: permission === 'default'
+    };
+}
+
+/**
+ * Muestra un indicador visual del estado de las notificaciones
+ */
+function showNotificationStatusIndicator() {
+    // Evitar duplicados
+    if (document.getElementById('notification-status-indicator')) {
+        return;
+    }
+
+    const status = getNotificationStatus();
+
+    // No mostrar si no está soportado
+    if (!status.supported) {
+        return;
+    }
+
+    // Crear contenedor del indicador
+    const indicator = document.createElement('div');
+    indicator.id = 'notification-status-indicator';
+    indicator.style.cssText = `
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: ${status.permission === 'granted' ? '#28a745' : status.permission === 'denied' ? '#dc3545' : '#ffc107'};
+        color: white;
+        padding: 10px 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        z-index: 9999;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: ${status.canRequest ? 'pointer' : 'default'};
+        transition: all 0.3s ease;
+    `;
+
+    // Icono según el estado
+    const icon = status.permission === 'granted' ? '🔔' :
+                 status.permission === 'denied' ? '🔕' : '🔔';
+
+    indicator.innerHTML = `
+        <span style="font-size: 18px;">${icon}</span>
+        <span id="notification-status-text">${status.message}</span>
+        ${status.canRequest ? '<button id="enable-notifications-btn" style="background: white; color: #333; border: none; padding: 5px 12px; border-radius: 5px; font-weight: bold; margin-left: 5px; cursor: pointer;">Activar</button>' : ''}
+        <button id="close-notification-indicator" style="background: transparent; border: none; color: white; font-size: 18px; cursor: pointer; padding: 0; margin-left: 5px;">&times;</button>
+    `;
+
+    document.body.appendChild(indicator);
+
+    // Si se puede solicitar permisos, agregar evento al botón
+    if (status.canRequest) {
+        const enableBtn = document.getElementById('enable-notifications-btn');
+        if (enableBtn) {
+            enableBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const granted = await requestNotificationPermission();
+                if (granted) {
+                    updateNotificationStatusIndicator();
+                }
+            });
+        }
+    }
+
+    // Botón de cerrar
+    const closeBtn = document.getElementById('close-notification-indicator');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            indicator.remove();
+        });
+    }
+
+    // Auto-ocultar después de 10 segundos si está activado
+    if (status.permission === 'granted') {
+        setTimeout(() => {
+            if (indicator && indicator.parentElement) {
+                indicator.style.opacity = '0';
+                setTimeout(() => indicator.remove(), 300);
+            }
+        }, 10000);
+    }
+}
+
+/**
+ * Actualiza el indicador de estado de notificaciones
+ */
+function updateNotificationStatusIndicator() {
+    const indicator = document.getElementById('notification-status-indicator');
+    if (indicator) {
+        indicator.remove();
+    }
+    showNotificationStatusIndicator();
+}
+
+/**
+ * Diagnóstico completo de notificaciones (para consola)
+ */
+async function diagnosticarNotificaciones() {
+    console.group('🔍 DIAGNÓSTICO DE NOTIFICACIONES');
+
+    // 1. Soporte del navegador
+    console.log('1️⃣ Soporte del navegador:');
+    console.log('   - Notification API:', 'Notification' in window ? '✓ Soportado' : '✗ No soportado');
+    console.log('   - Push API:', 'PushManager' in window ? '✓ Soportado' : '✗ No soportado');
+    console.log('   - Service Worker:', 'serviceWorker' in navigator ? '✓ Soportado' : '✗ No soportado');
+
+    // 2. Permisos
+    console.log('\n2️⃣ Estado de permisos:');
+    if ('Notification' in window) {
+        console.log('   - Notification.permission:', Notification.permission);
+        const status = getNotificationStatus();
+        console.log('   - Estado:', status.message);
+    }
+
+    // 3. Service Worker
+    console.log('\n3️⃣ Service Worker:');
+    if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) {
+            console.log('   - Registrado:', '✓ Sí');
+            console.log('   - Scope:', registration.scope);
+            console.log('   - Estado:', registration.active ? 'Activo' : 'Inactivo');
+        } else {
+            console.log('   - Registrado:', '✗ No');
+        }
+    }
+
+    // 4. Suscripción Push
+    console.log('\n4️⃣ Suscripción Push:');
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            const subscription = await registration.pushManager.getSubscription();
+
+            if (subscription) {
+                console.log('   - Suscrito:', '✓ Sí');
+                console.log('   - Endpoint:', subscription.endpoint);
+                console.log('   - Guardado en servidor:', localStorage.getItem('push_subscribed') === 'true' ? '✓' : '✗');
+            } else {
+                console.log('   - Suscrito:', '✗ No');
+            }
+        } catch (error) {
+            console.log('   - Error verificando suscripción:', error.message);
+        }
+    }
+
+    // 5. PWA instalada
+    console.log('\n5️⃣ PWA:');
+    console.log('   - Instalada:', isPWAInstalled() ? '✓ Sí (modo standalone)' : '✗ No (navegador)');
+    console.log('   - localStorage pwa_installed:', localStorage.getItem('pwa_installed'));
+
+    // 6. Datos del contexto
+    console.log('\n6️⃣ Contexto:');
+    const negocio_slug = window.location.pathname.split('/')[1] || 'N/A';
+    const esAdmin = window.location.pathname.includes('/admin/');
+    console.log('   - Negocio slug:', negocio_slug);
+    console.log('   - Es admin:', esAdmin ? '✓ Sí' : '✗ No');
+
+    // 7. Recomendaciones
+    console.log('\n7️⃣ Recomendaciones:');
+    const status = getNotificationStatus();
+    if (!status.supported) {
+        console.warn('   ⚠️ Este navegador no soporta notificaciones push');
+    } else if (status.permission === 'denied') {
+        console.warn('   ⚠️ Los permisos fueron denegados. El usuario debe habilitarlos manualmente desde la configuración del navegador');
+    } else if (status.permission === 'default') {
+        console.log('   💡 Llama a window.PWA.requestNotificationPermission() para solicitar permisos');
+    } else if (status.permission === 'granted') {
+        console.log('   ✓ Todo configurado correctamente');
+    }
+
+    console.groupEnd();
+}
+
+/**
+ * Mostrar indicador al cargar la página si es PWA instalada
+ */
+window.addEventListener('load', () => {
+    // Solo mostrar si la PWA está instalada o si estamos en admin
+    const esAdmin = window.location.pathname.includes('/admin/');
+
+    if (isPWAInstalled() || esAdmin) {
+        // Esperar un poco para que el DOM esté listo
+        setTimeout(() => {
+            showNotificationStatusIndicator();
+        }, 1500);
+    }
+});
+
 // Exportar funciones para uso global
 window.PWA = {
     promptInstall,
@@ -530,5 +755,8 @@ window.PWA = {
     subscribeToPushNotifications,
     hideInstallBanner,
     clearNotificationBadge,
-    setNotificationBadge
+    setNotificationBadge,
+    getNotificationStatus,
+    showNotificationStatusIndicator,
+    diagnosticarNotificaciones
 };
