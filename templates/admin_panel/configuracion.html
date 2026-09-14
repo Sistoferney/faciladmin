@@ -319,12 +319,55 @@
                             {% endif %}
                         </div>
 
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label">{{ form.dias_atencion.label }}</label>
-                            {{ form.dias_atencion }}
-                            {% if form.dias_atencion.errors %}
-                                <div class="text-danger small">{{ form.dias_atencion.errors }}</div>
-                            {% endif %}
+                        <div class="col-12 mb-3">
+                            <label class="form-label d-block mb-2">
+                                <i class="bi bi-calendar-week"></i> Días Laborables
+                            </label>
+                            <div class="d-flex flex-wrap gap-3">
+                                <div class="form-check">
+                                    {{ form.dia_lunes }}
+                                    <label class="form-check-label" for="{{ form.dia_lunes.id_for_label }}">
+                                        {{ form.dia_lunes.label }}
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    {{ form.dia_martes }}
+                                    <label class="form-check-label" for="{{ form.dia_martes.id_for_label }}">
+                                        {{ form.dia_martes.label }}
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    {{ form.dia_miercoles }}
+                                    <label class="form-check-label" for="{{ form.dia_miercoles.id_for_label }}">
+                                        {{ form.dia_miercoles.label }}
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    {{ form.dia_jueves }}
+                                    <label class="form-check-label" for="{{ form.dia_jueves.id_for_label }}">
+                                        {{ form.dia_jueves.label }}
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    {{ form.dia_viernes }}
+                                    <label class="form-check-label" for="{{ form.dia_viernes.id_for_label }}">
+                                        {{ form.dia_viernes.label }}
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    {{ form.dia_sabado }}
+                                    <label class="form-check-label" for="{{ form.dia_sabado.id_for_label }}">
+                                        {{ form.dia_sabado.label }}
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    {{ form.dia_domingo }}
+                                    <label class="form-check-label" for="{{ form.dia_domingo.id_for_label }}">
+                                        {{ form.dia_domingo.label }}
+                                    </label>
+                                </div>
+                            </div>
+                            <small class="text-muted">Selecciona los días en los que atiendes. El calendario solo mostrará estos días.</small>
                         </div>
                     </div>
 
@@ -537,7 +580,7 @@ document.addEventListener('DOMContentLoaded', function() {
         'info': ['nombre', 'tipo', 'descripcion', 'telefono', 'email', 'whatsapp',
                  'direccion', 'ciudad', 'estado', 'codigo_postal', 'es_a_domicilio'],
         'personalizacion': ['logo', 'imagen_portada', 'color_primario', 'color_secundario'],
-        'horarios': ['horario_apertura', 'horario_cierre', 'dias_atencion'],
+        'horarios': ['horario_apertura', 'horario_cierre', 'dia_lunes', 'dia_martes', 'dia_miercoles', 'dia_jueves', 'dia_viernes', 'dia_sabado', 'dia_domingo'],
         'abonos': ['requiere_abono', 'porcentaje_abono', 'monto_abono_fijo',
                    'banco', 'numero_cuenta', 'clabe', 'titular_cuenta'],
         'redes': ['facebook', 'instagram', 'twitter', 'esta_activo', 'acepta_reservas_online']

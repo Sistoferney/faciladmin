@@ -10,6 +10,15 @@ class ConfiguracionNegocioForm(forms.ModelForm):
     """
     Formulario para que el admin del negocio configure su mini-página
     """
+    # Checkboxes para días laborables
+    dia_lunes = forms.BooleanField(required=False, label='Lunes')
+    dia_martes = forms.BooleanField(required=False, label='Martes')
+    dia_miercoles = forms.BooleanField(required=False, label='Miércoles')
+    dia_jueves = forms.BooleanField(required=False, label='Jueves')
+    dia_viernes = forms.BooleanField(required=False, label='Viernes')
+    dia_sabado = forms.BooleanField(required=False, label='Sábado')
+    dia_domingo = forms.BooleanField(required=False, label='Domingo')
+
     class Meta:
         model = Negocio
         fields = [
@@ -33,7 +42,6 @@ class ConfiguracionNegocioForm(forms.ModelForm):
             # Horarios
             'horario_apertura',
             'horario_cierre',
-            'dias_atencion',
 
             # Personalización
             'logo',
@@ -107,10 +115,6 @@ class ConfiguracionNegocioForm(forms.ModelForm):
             'horario_cierre': forms.TimeInput(attrs={
                 'class': 'form-control',
                 'type': 'time'
-            }),
-            'dias_atencion': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Ej: Lunes a Sábado'
             }),
             'logo': forms.FileInput(attrs={
                 'class': 'form-control',
@@ -186,7 +190,6 @@ class ConfiguracionNegocioForm(forms.ModelForm):
             'es_a_domicilio': 'Servicio a Domicilio',
             'horario_apertura': 'Hora de Apertura',
             'horario_cierre': 'Hora de Cierre',
-            'dias_atencion': 'Días de Atención',
             'logo': 'Logo (500x500 px recomendado)',
             'imagen_portada': 'Imagen de Portada (1920x600 px recomendado)',
             'color_primario': 'Color Primario',
@@ -219,6 +222,75 @@ class ConfiguracionNegocioForm(forms.ModelForm):
             'esta_activo': 'Si está desactivado, tu mini-página no será visible',
             'acepta_reservas_online': 'Si está desactivado, no se podrán hacer reservas desde la web',
         }
+
+    def __init__(self, *args, **kwargs):
+        """Cargar estado actual de días laborables desde ConfiguracionHorario"""
+        super().__init__(*args, **kwargs)
+
+        if self.instance and self.instance.pk:
+            from .models import ConfiguracionHorario
+
+            # Mapeo de días
+            dias_map = {
+                0: 'dia_lunes',
+                1: 'dia_martes',
+                2: 'dia_miercoles',
+                3: 'dia_jueves',
+                4: 'dia_viernes',
+                5: 'dia_sabado',
+                6: 'dia_domingo',
+            }
+
+            # Cargar configuraciones existentes
+            for dia_num, field_name in dias_map.items():
+                config = ConfiguracionHorario.objects.filter(
+                    negocio=self.instance,
+                    dia_semana=dia_num
+                ).first()
+
+                if config:
+                    # Si existe configuración, usar su valor
+                    self.fields[field_name].initial = config.esta_abierto
+                else:
+                    # Si no existe, por defecto todos abiertos excepto domingo
+                    self.fields[field_name].initial = (dia_num != 6)
+
+    def save(self, commit=True):
+        """Guardar negocio y crear/actualizar ConfiguracionHorario"""
+        instance = super().save(commit=commit)
+
+        if commit:
+            from .models import ConfiguracionHorario
+            from datetime import time
+
+            # Mapeo de días
+            dias_map = {
+                0: self.cleaned_data.get('dia_lunes', True),
+                1: self.cleaned_data.get('dia_martes', True),
+                2: self.cleaned_data.get('dia_miercoles', True),
+                3: self.cleaned_data.get('dia_jueves', True),
+                4: self.cleaned_data.get('dia_viernes', True),
+                5: self.cleaned_data.get('dia_sabado', True),
+                6: self.cleaned_data.get('dia_domingo', False),
+            }
+
+            # Obtener horarios del negocio
+            hora_apertura = instance.horario_apertura or time(9, 0)
+            hora_cierre = instance.horario_cierre or time(19, 0)
+
+            # Crear o actualizar configuración para cada día
+            for dia_num, esta_abierto in dias_map.items():
+                ConfiguracionHorario.objects.update_or_create(
+                    negocio=instance,
+                    dia_semana=dia_num,
+                    defaults={
+                        'esta_abierto': esta_abierto,
+                        'hora_apertura': hora_apertura,
+                        'hora_cierre': hora_cierre,
+                    }
+                )
+
+        return instance
 
     def clean(self):
         """Validar horarios de apertura y cierre, y confirmación de número de cuenta"""
