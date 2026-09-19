@@ -4,7 +4,7 @@
  * Versión optimizada para notificaciones en segundo plano
  */
 
-const CACHE_NAME = 'faciladmin-v3';
+const CACHE_NAME = 'faciladmin-v4';
 const CACHE_ASSETS = [
     '/',
     '/static/css/main.css',

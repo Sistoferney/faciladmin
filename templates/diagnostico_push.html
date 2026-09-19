@@ -264,9 +264,33 @@
             html += '<div class="section">';
             html += '<h2>5. Contexto de la Aplicación</h2>';
 
-            const negocioSlug = window.location.pathname.split('/')[1] || 'N/A';
-            const esAdmin = window.location.pathname.includes('/admin/');
+            // Detectar contexto desde múltiples fuentes
+            const urlParams = new URLSearchParams(window.location.search);
+            let negocioSlug = urlParams.get('slug'); // Desde parámetros de URL
+            let esAdmin = urlParams.get('admin') === 'true';
+
+            // Si no hay parámetros, intentar desde el referrer
+            if (!negocioSlug && document.referrer) {
+                const referrerPath = new URL(document.referrer).pathname;
+                negocioSlug = referrerPath.split('/')[1];
+                esAdmin = referrerPath.includes('/admin/');
+            }
+
+            // Si aún no hay, intentar desde localStorage (usado en pwa-register.js)
+            if (!negocioSlug) {
+                negocioSlug = localStorage.getItem('push_negocio');
+            }
+
+            // También leer el contexto de admin desde localStorage si no se detectó
+            if (!esAdmin) {
+                esAdmin = localStorage.getItem('push_es_admin') === 'true';
+            }
+
+            // Detectar si es PWA instalada
             const esPWA = window.matchMedia('(display-mode: standalone)').matches;
+
+            // Si no se pudo detectar, usar N/A
+            negocioSlug = negocioSlug || 'N/A';
 
             html += `<div class="info-line">
                 <span class="label">Negocio (slug):</span>

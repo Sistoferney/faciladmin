@@ -378,6 +378,7 @@ async function savePushSubscription(subscription) {
                 console.log('[PWA] Negocio:', data.negocio);
                 localStorage.setItem('push_subscribed', 'true');
                 localStorage.setItem('push_negocio', negocio_slug);
+                localStorage.setItem('push_es_admin', 'true');
             } else {
                 console.error('[PWA] Error guardando suscripción de admin:', data.error);
             }
