@@ -603,10 +603,15 @@ function showNotificationStatusIndicator() {
     const icon = status.permission === 'granted' ? '🔔' :
                  status.permission === 'denied' ? '🔕' : '🔔';
 
+    // Si están bloqueadas, mostrar botón de ayuda
+    const helpButton = status.permission === 'denied' ?
+        '<button id="help-notifications-btn" style="background: white; color: #dc3545; border: none; padding: 5px 12px; border-radius: 5px; font-weight: bold; margin-left: 5px; cursor: pointer;">¿Cómo activar?</button>' : '';
+
     indicator.innerHTML = `
         <span style="font-size: 18px;">${icon}</span>
         <span id="notification-status-text">${status.message}</span>
         ${status.canRequest ? '<button id="enable-notifications-btn" style="background: white; color: #333; border: none; padding: 5px 12px; border-radius: 5px; font-weight: bold; margin-left: 5px; cursor: pointer;">Activar</button>' : ''}
+        ${helpButton}
         <button id="close-notification-indicator" style="background: transparent; border: none; color: white; font-size: 18px; cursor: pointer; padding: 0; margin-left: 5px;">&times;</button>
     `;
 
@@ -622,6 +627,17 @@ function showNotificationStatusIndicator() {
                 if (granted) {
                     updateNotificationStatusIndicator();
                 }
+            });
+        }
+    }
+
+    // Si están bloqueadas, agregar evento al botón de ayuda
+    if (status.permission === 'denied') {
+        const helpBtn = document.getElementById('help-notifications-btn');
+        if (helpBtn) {
+            helpBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showUnblockInstructions();
             });
         }
     }
@@ -734,6 +750,143 @@ async function diagnosticarNotificaciones() {
     }
 
     console.groupEnd();
+}
+
+/**
+ * Muestra instrucciones para desbloquear notificaciones
+ */
+function showUnblockInstructions() {
+    // Eliminar modal existente si hay uno
+    const existingModal = document.getElementById('unblock-instructions-modal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+    // Crear overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'unblock-instructions-modal';
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    `;
+
+    // Crear modal
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        max-width: 500px;
+        width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    `;
+
+    modal.innerHTML = `
+        <div style="margin-bottom: 20px;">
+            <h3 style="margin: 0 0 10px 0; color: #333; font-size: 20px;">
+                🔔 Cómo activar las notificaciones
+            </h3>
+            <p style="margin: 0; color: #666; font-size: 14px;">
+                Las notificaciones están bloqueadas. Sigue estos pasos para activarlas:
+            </p>
+        </div>
+
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+            <h4 style="margin: 0 0 10px 0; color: #667eea; font-size: 16px;">
+                📱 Paso 1: Abrir configuración
+            </h4>
+            <ol style="margin: 0; padding-left: 20px; color: #555; font-size: 14px; line-height: 1.6;">
+                <li>Toca el menú de Chrome (⋮) arriba a la derecha</li>
+                <li>Selecciona <strong>"Configuración"</strong></li>
+                <li>Ve a <strong>"Configuración del sitio"</strong></li>
+            </ol>
+        </div>
+
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+            <h4 style="margin: 0 0 10px 0; color: #667eea; font-size: 16px;">
+                🔓 Paso 2: Desbloquear
+            </h4>
+            <ol style="margin: 0; padding-left: 20px; color: #555; font-size: 14px; line-height: 1.6;">
+                <li>Busca <strong>"Notificaciones"</strong></li>
+                <li>Encuentra <strong>"faciladmin.app"</strong> en la lista</li>
+                <li>Cámbialo de <strong>"Bloqueado"</strong> a <strong>"Permitir"</strong></li>
+            </ol>
+        </div>
+
+        <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #28a745;">
+            <p style="margin: 0; color: #2e7d32; font-size: 13px; line-height: 1.5;">
+                💡 <strong>Atajo rápido:</strong> También puedes ir directamente a<br>
+                <code style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 3px; font-size: 12px;">chrome://settings/content/siteDetails?site=https://faciladmin.app</code>
+            </p>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <button id="retry-notifications-btn" style="flex: 1; background: #667eea; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px;">
+                🔄 Ya lo activé, reintentar
+            </button>
+            <button id="close-instructions-btn" style="background: #f0f0f0; color: #666; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-size: 15px;">
+                Cerrar
+            </button>
+        </div>
+
+        <div style="margin-top: 15px; padding: 10px; background: #fff3cd; border-radius: 6px;">
+            <p style="margin: 0; font-size: 12px; color: #856404; line-height: 1.4;">
+                <strong>Nota:</strong> Si los permisos siguen bloqueados después de cambiar la configuración,
+                desinstala la app y vuelve a instalarla desde el panel de admin.
+            </p>
+        </div>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    // Evento para reintentar
+    document.getElementById('retry-notifications-btn').addEventListener('click', async () => {
+        overlay.remove();
+
+        // Verificar el estado actual
+        const newStatus = getNotificationStatus();
+
+        if (newStatus.permission === 'granted') {
+            // Si ya está concedido, intentar suscribirse
+            await subscribeToPushNotifications();
+            updateNotificationStatusIndicator();
+            alert('✓ ¡Notificaciones activadas correctamente!');
+        } else if (newStatus.permission === 'default') {
+            // Si ahora está en default, solicitar permiso
+            const granted = await requestNotificationPermission();
+            if (granted) {
+                updateNotificationStatusIndicator();
+                alert('✓ ¡Notificaciones activadas correctamente!');
+            }
+        } else {
+            // Sigue bloqueado
+            alert('⚠️ Los permisos siguen bloqueados.\n\nAsegúrate de cambiar "faciladmin.app" a "Permitir" en la configuración de Chrome.');
+        }
+    });
+
+    // Evento para cerrar
+    document.getElementById('close-instructions-btn').addEventListener('click', () => {
+        overlay.remove();
+    });
+
+    // Cerrar al hacer clic fuera del modal
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            overlay.remove();
+        }
+    });
 }
 
 /**
