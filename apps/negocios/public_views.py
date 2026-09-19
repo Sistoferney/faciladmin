@@ -580,6 +580,7 @@ def manifest_minipagina(request, slug):
     site_url = request.build_absolute_uri('/').rstrip('/')
 
     manifest = {
+        "id": f"/{slug}/?pwa=cliente",  # ID único para mini-página del cliente
         "name": f"{negocio.nombre}",
         "short_name": negocio.nombre[:12] if len(negocio.nombre) > 12 else negocio.nombre,
         "description": negocio.descripcion or f"Agenda tu cita en {negocio.nombre}",
@@ -892,6 +893,7 @@ def manifest_admin(request, slug):
     site_url = request.build_absolute_uri('/').rstrip('/')
 
     manifest = {
+        "id": f"/{slug}/admin/?pwa=admin",  # ID único para panel de admin
         "name": f"{negocio.nombre} - Admin",
         "short_name": f"{negocio.nombre[:8]} Admin",
         "description": f"Panel de administración de {negocio.nombre}",
