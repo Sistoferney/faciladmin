@@ -10,6 +10,7 @@ app_name = 'public'
 urlpatterns = [
     # Diagnóstico de notificaciones push
     path('diagnostico-push/', public_views.diagnostico_push, name='diagnostico_push'),
+    path('diagnostico-push-servidor/', public_views.diagnostico_push_servidor, name='diagnostico_push_servidor'),
 
     # Panel de administración del negocio
     path('<slug:slug>/admin/', admin_views.dashboard_admin, name='admin_dashboard'),

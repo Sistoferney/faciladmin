@@ -935,8 +935,159 @@ def manifest_admin(request, slug):
 
 def diagnostico_push(request):
     """
-    Página de diagnóstico de notificaciones push
+    Página de diagnóstico de notificaciones push (cliente)
     Muestra el estado completo del sistema de notificaciones
     """
     from django.shortcuts import render
     return render(request, 'diagnostico_push.html')
+
+
+def diagnostico_push_servidor(request):
+    """
+    Diagnóstico del servidor - Muestra suscripciones en la BD
+    """
+    from django.http import HttpResponse
+    from apps.notificaciones.models import UsuarioPushSubscription, ClientePushSubscription
+    from apps.negocios.models import Negocio
+
+    html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Diagnóstico Servidor - Push Notifications</title>
+        <style>
+            body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+            .container { max-width: 900px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
+            h1 { color: #333; border-bottom: 3px solid #667eea; padding-bottom: 10px; }
+            h2 { color: #667eea; margin-top: 30px; }
+            .section { background: #f9f9f9; padding: 15px; margin: 15px 0; border-radius: 8px; border-left: 4px solid #667eea; }
+            .ok { color: #28a745; font-weight: bold; }
+            .error { color: #dc3545; font-weight: bold; }
+            .warning { color: #ffc107; font-weight: bold; }
+            table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+            th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+            th { background: #667eea; color: white; }
+            .code { background: #2d2d2d; color: #f8f8f2; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px; overflow-x: auto; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🔍 Diagnóstico del Servidor - Push Notifications</h1>
+    """
+
+    # 1. Suscripciones de Admin
+    html += "<h2>1. Suscripciones de Administradores</h2>"
+    total_admin = UsuarioPushSubscription.objects.count()
+    activas_admin = UsuarioPushSubscription.objects.filter(activa=True).count()
+
+    html += f"<div class='section'>"
+    html += f"<p><strong>Total suscripciones:</strong> {total_admin}</p>"
+    html += f"<p><strong>Suscripciones activas:</strong> <span class='{'ok' if activas_admin > 0 else 'error'}'>{activas_admin}</span></p>"
+
+    if total_admin > 0:
+        html += "<table>"
+        html += "<tr><th>ID</th><th>Usuario</th><th>Negocio</th><th>Estado</th><th>Creada</th><th>Endpoint</th></tr>"
+        for sub in UsuarioPushSubscription.objects.all():
+            estado = "ACTIVA" if sub.activa else "INACTIVA"
+            estado_class = "ok" if sub.activa else "error"
+            html += f"<tr>"
+            html += f"<td>{sub.id}</td>"
+            html += f"<td>{sub.user.username}</td>"
+            html += f"<td>{sub.negocio.nombre} ({sub.negocio.slug})</td>"
+            html += f"<td class='{estado_class}'>{estado}</td>"
+            html += f"<td>{sub.fecha_creacion.strftime('%Y-%m-%d %H:%M')}</td>"
+            html += f"<td style='font-size: 10px;'>{sub.endpoint[:40]}...</td>"
+            html += f"</tr>"
+        html += "</table>"
+    else:
+        html += "<p class='error'>⚠️ NO HAY SUSCRIPCIONES DE ADMIN</p>"
+        html += "<p>Ningún administrador se ha suscrito a las notificaciones push.</p>"
+
+    html += "</div>"
+
+    # 2. Suscripciones de Clientes
+    html += "<h2>2. Suscripciones de Clientes</h2>"
+    total_cliente = ClientePushSubscription.objects.count()
+    activas_cliente = ClientePushSubscription.objects.filter(activa=True).count()
+
+    html += f"<div class='section'>"
+    html += f"<p><strong>Total suscripciones:</strong> {total_cliente}</p>"
+    html += f"<p><strong>Suscripciones activas:</strong> {activas_cliente}</p>"
+    html += "</div>"
+
+    # 3. Negocios
+    html += "<h2>3. Negocios</h2>"
+    negocios = Negocio.objects.all()
+
+    html += f"<div class='section'>"
+    html += f"<p><strong>Total negocios:</strong> {negocios.count()}</p>"
+
+    if negocios.exists():
+        html += "<table>"
+        html += "<tr><th>Negocio</th><th>Slug</th><th>Admin</th><th>Subs Admin</th></tr>"
+        for negocio in negocios:
+            subs_count = UsuarioPushSubscription.objects.filter(negocio=negocio, activa=True).count()
+            html += f"<tr>"
+            html += f"<td>{negocio.nombre}</td>"
+            html += f"<td>{negocio.slug}</td>"
+            html += f"<td>{negocio.administrador.username if negocio.administrador else 'Sin admin'}</td>"
+            html += f"<td class='{'ok' if subs_count > 0 else 'error'}'>{subs_count}</td>"
+            html += f"</tr>"
+        html += "</table>"
+
+    html += "</div>"
+
+    # 4. Diagnóstico
+    html += "<h2>4. Diagnóstico</h2>"
+    html += "<div class='section'>"
+
+    if activas_admin == 0:
+        html += "<p class='error'><strong>⚠️ PROBLEMA ENCONTRADO</strong></p>"
+        html += "<p>No hay suscripciones de admin activas en la base de datos.</p>"
+        html += "<p><strong>Posibles causas:</strong></p>"
+        html += "<ul>"
+        html += "<li>El admin nunca activó las notificaciones en la PWA</li>"
+        html += "<li>La API de suscripción falló al guardar</li>"
+        html += "<li>Los permisos del navegador fueron bloqueados</li>"
+        html += "<li>Error en el código JavaScript de suscripción</li>"
+        html += "</ul>"
+        html += "<p><strong>Solución:</strong></p>"
+        html += "<ol>"
+        html += "<li>Abre la PWA de admin ('Spa Ilusion Admin')</li>"
+        html += "<li>Ve a 'Diagnóstico de Notificaciones'</li>"
+        html += "<li>Verifica que 'Guardado en servidor' diga ✓ Sí</li>"
+        html += "<li>Si dice ✗ No, haz clic en 'Activar Notificaciones'</li>"
+        html += "</ol>"
+    else:
+        html += f"<p class='ok'><strong>✓ Hay {activas_admin} suscripción(es) activa(s)</strong></p>"
+        html += "<p>Las notificaciones deberían estar funcionando.</p>"
+        html += "<p><strong>Si no llegan las notificaciones, verifica:</strong></p>"
+        html += "<ul>"
+        html += "<li>Que Celery esté ejecutándose (para tareas asíncronas)</li>"
+        html += "<li>Los logs cuando se crea una cita</li>"
+        html += "<li>Que las VAPID keys estén configuradas correctamente</li>"
+        html += "</ul>"
+
+    html += "</div>"
+
+    # 5. Instrucciones
+    html += "<h2>5. Cómo probar</h2>"
+    html += "<div class='section'>"
+    html += "<p>Para probar el envío de notificaciones:</p>"
+    html += "<ol>"
+    html += "<li>Ve a la mini-página del negocio</li>"
+    html += "<li>Agenda una nueva cita como cliente</li>"
+    html += "<li>Revisa si llega la notificación al admin</li>"
+    html += "<li>Revisa los logs de Railway para ver si hubo errores</li>"
+    html += "</ol>"
+    html += "</div>"
+
+    html += """
+        </div>
+    </body>
+    </html>
+    """
+
+    return HttpResponse(html)
