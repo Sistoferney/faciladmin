@@ -930,3 +930,11 @@ def manifest_admin(request, slug):
         ]
 
     return JsonResponse(manifest, content_type='application/manifest+json')
+
+def diagnostico_push(request):
+    """
+    Página de diagnóstico de notificaciones push
+    Muestra el estado completo del sistema de notificaciones
+    """
+    from django.shortcuts import render
+    return render(request, 'diagnostico_push.html')

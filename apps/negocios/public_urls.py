@@ -8,6 +8,9 @@ from . import public_views, admin_views
 app_name = 'public'
 
 urlpatterns = [
+    # Diagnóstico de notificaciones push
+    path('diagnostico-push/', public_views.diagnostico_push, name='diagnostico_push'),
+
     # Panel de administración del negocio
     path('<slug:slug>/admin/', admin_views.dashboard_admin, name='admin_dashboard'),
 

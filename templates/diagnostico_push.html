@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnóstico Push - FacilAdmin</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+            margin: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        .section h2 {
+            font-size: 18px;
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+        .info-line {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .info-line:last-child {
+            border-bottom: none;
+        }
+        .label {
+            font-weight: 600;
+            color: #555;
+        }
+        .value {
+            color: #333;
+        }
+        .status-ok {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .status-error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .status-warning {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button:active {
+            background: #5568d3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Diagnóstico de Notificaciones Push</h1>
+
+        <div id="loading" class="loading">
+            <p>Iniciando diagnóstico...</p>
+        </div>
+
+        <div id="results" style="display: none;">
+            <!-- Resultados se mostrarán aquí -->
+        </div>
+
+        <button id="btnTest" style="display: none;">🧪 Enviar Notificación de Prueba</button>
+        <button id="btnSubscribe" style="display: none;">🔔 Suscribirme Ahora</button>
+        <button id="btnReload" onclick="location.reload()">🔄 Actualizar Diagnóstico</button>
+    </div>
+
+    <script>
+        async function diagnosticar() {
+            const resultsDiv = document.getElementById('results');
+            const loadingDiv = document.getElementById('loading');
+            const btnTest = document.getElementById('btnTest');
+            const btnSubscribe = document.getElementById('btnSubscribe');
+
+            let html = '';
+
+            // 1. Soporte del navegador
+            html += '<div class="section">';
+            html += '<h2>1. Soporte del Navegador</h2>';
+
+            const hasNotification = 'Notification' in window;
+            const hasPushManager = 'PushManager' in window;
+            const hasServiceWorker = 'serviceWorker' in navigator;
+
+            html += `<div class="info-line">
+                <span class="label">Notification API:</span>
+                <span class="value ${hasNotification ? 'status-ok' : 'status-error'}">${hasNotification ? '✓ Soportado' : '✗ No soportado'}</span>
+            </div>`;
+            html += `<div class="info-line">
+                <span class="label">Push Manager:</span>
+                <span class="value ${hasPushManager ? 'status-ok' : 'status-error'}">${hasPushManager ? '✓ Soportado' : '✗ No soportado'}</span>
+            </div>`;
+            html += `<div class="info-line">
+                <span class="label">Service Worker:</span>
+                <span class="value ${hasServiceWorker ? 'status-ok' : 'status-error'}">${hasServiceWorker ? '✓ Soportado' : '✗ No soportado'}</span>
+            </div>`;
+            html += '</div>';
+
+            // 2. Permisos
+            html += '<div class="section">';
+            html += '<h2>2. Estado de Permisos</h2>';
+
+            if (hasNotification) {
+                const permission = Notification.permission;
+                let permissionStatus = '';
+                let permissionClass = '';
+
+                if (permission === 'granted') {
+                    permissionStatus = '✓ Concedidos';
+                    permissionClass = 'status-ok';
+                } else if (permission === 'denied') {
+                    permissionStatus = '✗ Bloqueados';
+                    permissionClass = 'status-error';
+                } else {
+                    permissionStatus = '⚠ Pendientes';
+                    permissionClass = 'status-warning';
+                }
+
+                html += `<div class="info-line">
+                    <span class="label">Notification.permission:</span>
+                    <span class="value ${permissionClass}">${permissionStatus}</span>
+                </div>`;
+            }
+            html += '</div>';
+
+            // 3. Service Worker
+            html += '<div class="section">';
+            html += '<h2>3. Service Worker</h2>';
+
+            if (hasServiceWorker) {
+                try {
+                    const registration = await navigator.serviceWorker.getRegistration();
+                    if (registration) {
+                        html += `<div class="info-line">
+                            <span class="label">Estado:</span>
+                            <span class="value status-ok">✓ Registrado</span>
+                        </div>`;
+                        html += `<div class="info-line">
+                            <span class="label">Scope:</span>
+                            <span class="value">${registration.scope}</span>
+                        </div>`;
+                        html += `<div class="info-line">
+                            <span class="label">Activo:</span>
+                            <span class="value ${registration.active ? 'status-ok' : 'status-error'}">${registration.active ? '✓ Sí' : '✗ No'}</span>
+                        </div>`;
+                    } else {
+                        html += `<div class="info-line">
+                            <span class="label">Estado:</span>
+                            <span class="value status-error">✗ No registrado</span>
+                        </div>`;
+                    }
+                } catch (error) {
+                    html += `<div class="info-line">
+                        <span class="label">Error:</span>
+                        <span class="value status-error">${error.message}</span>
+                    </div>`;
+                }
+            }
+            html += '</div>';
+
+            // 4. Suscripción Push
+            html += '<div class="section">';
+            html += '<h2>4. Suscripción Push</h2>';
+
+            if (hasServiceWorker && hasPushManager) {
+                try {
+                    const registration = await navigator.serviceWorker.ready;
+                    const subscription = await registration.pushManager.getSubscription();
+
+                    if (subscription) {
+                        html += `<div class="info-line">
+                            <span class="label">Suscrito:</span>
+                            <span class="value status-ok">✓ Sí</span>
+                        </div>`;
+                        html += `<div class="info-line">
+                            <span class="label">Endpoint:</span>
+                            <span class="value" style="font-size: 11px; word-break: break-all;">${subscription.endpoint.substring(0, 60)}...</span>
+                        </div>`;
+
+                        const savedInServer = localStorage.getItem('push_subscribed') === 'true';
+                        html += `<div class="info-line">
+                            <span class="label">Guardado en servidor:</span>
+                            <span class="value ${savedInServer ? 'status-ok' : 'status-error'}">${savedInServer ? '✓ Sí' : '✗ No'}</span>
+                        </div>`;
+
+                        // Mostrar botón de prueba si está guardado
+                        if (savedInServer) {
+                            btnTest.style.display = 'block';
+                        }
+                    } else {
+                        html += `<div class="info-line">
+                            <span class="label">Suscrito:</span>
+                            <span class="value status-error">✗ No</span>
+                        </div>`;
+
+                        // Mostrar botón de suscripción
+                        if (Notification.permission === 'granted') {
+                            btnSubscribe.style.display = 'block';
+                        }
+                    }
+                } catch (error) {
+                    html += `<div class="info-line">
+                        <span class="label">Error:</span>
+                        <span class="value status-error">${error.message}</span>
+                    </div>`;
+                }
+            }
+            html += '</div>';
+
+            // 5. Contexto
+            html += '<div class="section">';
+            html += '<h2>5. Contexto de la Aplicación</h2>';
+
+            const negocioSlug = window.location.pathname.split('/')[1] || 'N/A';
+            const esAdmin = window.location.pathname.includes('/admin/');
+            const esPWA = window.matchMedia('(display-mode: standalone)').matches;
+
+            html += `<div class="info-line">
+                <span class="label">Negocio (slug):</span>
+                <span class="value">${negocioSlug}</span>
+            </div>`;
+            html += `<div class="info-line">
+                <span class="label">Es administrador:</span>
+                <span class="value">${esAdmin ? '✓ Sí' : '✗ No'}</span>
+            </div>`;
+            html += `<div class="info-line">
+                <span class="label">PWA instalada:</span>
+                <span class="value ${esPWA ? 'status-ok' : 'status-warning'}">${esPWA ? '✓ Sí (standalone)' : '✗ No (navegador)'}</span>
+            </div>`;
+            html += '</div>';
+
+            // Mostrar resultados
+            resultsDiv.innerHTML = html;
+            loadingDiv.style.display = 'none';
+            resultsDiv.style.display = 'block';
+        }
+
+        // Botón de prueba
+        document.getElementById('btnTest').addEventListener('click', async () => {
+            const btn = document.getElementById('btnTest');
+            btn.disabled = true;
+            btn.textContent = 'Enviando...';
+
+            try {
+                const response = await fetch('/api/notificaciones/push/test/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✓ Notificación de prueba enviada!\n\nRevisa tu dispositivo.');
+                } else {
+                    alert('✗ Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('✗ Error al enviar: ' + error.message);
+            }
+
+            btn.disabled = false;
+            btn.textContent = '🧪 Enviar Notificación de Prueba';
+        });
+
+        // Botón de suscripción
+        document.getElementById('btnSubscribe').addEventListener('click', async () => {
+            const btn = document.getElementById('btnSubscribe');
+            btn.disabled = true;
+            btn.textContent = 'Suscribiendo...';
+
+            if (window.PWA && window.PWA.requestNotificationPermission) {
+                const granted = await window.PWA.requestNotificationPermission();
+                if (granted) {
+                    alert('✓ Suscripción completada!\n\nActualiza la página para ver el estado.');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    alert('✗ No se pudo completar la suscripción.');
+                    btn.disabled = false;
+                    btn.textContent = '🔔 Suscribirme Ahora';
+                }
+            } else {
+                alert('✗ Error: PWA no disponible');
+                btn.disabled = false;
+                btn.textContent = '🔔 Suscribirme Ahora';
+            }
+        });
+
+        // Ejecutar diagnóstico al cargar
+        diagnosticar();
+    </script>
+</body>
+</html>
