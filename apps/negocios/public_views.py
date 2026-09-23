@@ -984,7 +984,8 @@ def diagnostico_push_servidor(request):
 
     html += f"<div class='section'>"
     html += f"<p><strong>Total suscripciones:</strong> {total_admin}</p>"
-    html += f"<p><strong>Suscripciones activas:</strong> <span class='{'ok' if activas_admin > 0 else 'error'}'>{activas_admin}</span></p>"
+    status_class = 'ok' if activas_admin > 0 else 'error'
+    html += f"<p><strong>Suscripciones activas:</strong> <span class='{status_class}'>{activas_admin}</span></p>"
 
     if total_admin > 0:
         html += "<table>"
@@ -1029,11 +1030,12 @@ def diagnostico_push_servidor(request):
         html += "<tr><th>Negocio</th><th>Slug</th><th>Admin</th><th>Subs Admin</th></tr>"
         for negocio in negocios:
             subs_count = UsuarioPushSubscription.objects.filter(negocio=negocio, activa=True).count()
+            subs_class = 'ok' if subs_count > 0 else 'error'
             html += f"<tr>"
             html += f"<td>{negocio.nombre}</td>"
             html += f"<td>{negocio.slug}</td>"
             html += f"<td>{negocio.administrador.username if negocio.administrador else 'Sin admin'}</td>"
-            html += f"<td class='{'ok' if subs_count > 0 else 'error'}'>{subs_count}</td>"
+            html += f"<td class='{subs_class}'>{subs_count}</td>"
             html += f"</tr>"
         html += "</table>"
 
