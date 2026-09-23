@@ -87,15 +87,17 @@ EMAIL_BACKEND = config(
 # Resend API Configuration
 RESEND_API_KEY = config('RESEND_API_KEY', default='')
 
-# Celery - Usar Redis en producción
-USE_CELERY_EAGER = config('USE_CELERY_EAGER', default=False, cast=bool)
+# Celery - Usar Redis en producción (si está disponible)
+# Si no hay Redis, usar modo EAGER (ejecutar tareas síncronamente)
+REDIS_URL = config('REDIS_URL', default=None)
 
-if not USE_CELERY_EAGER:
-    # Railway proporciona REDIS_URL automáticamente si agregas Redis
-    CELERY_BROKER_URL = config('REDIS_URL', default='redis://localhost:6379/0')
-    CELERY_RESULT_BACKEND = config('REDIS_URL', default='redis://localhost:6379/0')
+if REDIS_URL:
+    # Redis está disponible, usar Celery normal
+    CELERY_BROKER_URL = REDIS_URL
+    CELERY_RESULT_BACKEND = REDIS_URL
+    CELERY_TASK_ALWAYS_EAGER = False
 else:
-    # Modo eager para producción sin Redis (no recomendado pero funcional)
+    # No hay Redis, usar modo EAGER (ejecutar tareas inmediatamente)
     CELERY_TASK_ALWAYS_EAGER = True
     CELERY_TASK_EAGER_PROPAGATES = True
     CELERY_BROKER_URL = 'memory://'
