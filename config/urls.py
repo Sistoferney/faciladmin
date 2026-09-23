@@ -17,6 +17,9 @@ urlpatterns = [
     # Service Worker (debe ir primero para tener scope en toda la app)
     path('sw.js', core_views.service_worker, name='service_worker'),
 
+    # Robots.txt (bloquear indexación en buscadores)
+    path('robots.txt', core_views.robots_txt, name='robots_txt'),
+
     # Landing page y páginas principales
     path('', include('apps.core.urls')),
 

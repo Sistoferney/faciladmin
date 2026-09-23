@@ -140,6 +140,41 @@ def service_worker(request):
         return HttpResponse('Service Worker not found', status=404)
 
 
+def robots_txt(request):
+    """
+    Sirve el archivo robots.txt para controlar indexación de buscadores
+    """
+    from django.http import HttpResponse
+
+    content = """# robots.txt - FacilAdmin
+# Bloquear indexación mientras está en desarrollo
+
+User-agent: *
+Disallow: /
+
+# Bloquear específicamente a los principales buscadores
+User-agent: Googlebot
+Disallow: /
+
+User-agent: Bingbot
+Disallow: /
+
+User-agent: Slurp
+Disallow: /
+
+User-agent: DuckDuckBot
+Disallow: /
+
+User-agent: Baiduspider
+Disallow: /
+
+User-agent: YandexBot
+Disallow: /
+"""
+
+    return HttpResponse(content, content_type='text/plain')
+
+
 def health_check(request):
     """
     Endpoint de health check para monitoreo de Railway/servicios externos
@@ -148,6 +183,7 @@ def health_check(request):
     from django.http import JsonResponse
     from django.db import connection
     from django.conf import settings
+    from django.utils import timezone
     import logging
 
     logger = logging.getLogger(__name__)
