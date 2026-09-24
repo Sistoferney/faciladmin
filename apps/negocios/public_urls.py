@@ -11,6 +11,7 @@ urlpatterns = [
     # Diagnóstico de notificaciones push
     path('diagnostico-push/', public_views.diagnostico_push, name='diagnostico_push'),
     path('diagnostico-push-servidor/', public_views.diagnostico_push_servidor, name='diagnostico_push_servidor'),
+    path('diagnostico-vapid-config/', public_views.diagnostico_vapid_config, name='diagnostico_vapid_config'),
 
     # Panel de administración del negocio
     path('<slug:slug>/admin/', admin_views.dashboard_admin, name='admin_dashboard'),

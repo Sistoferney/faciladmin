@@ -933,6 +933,38 @@ def manifest_admin(request, slug):
 
     return JsonResponse(manifest, content_type='application/manifest+json')
 
+def diagnostico_vapid_config(request):
+    """
+    Diagnóstico de configuración VAPID
+    Muestra información básica de las VAPID keys sin exponer datos sensibles
+    """
+    from django.http import JsonResponse
+    from django.conf import settings
+    import os
+
+    vapid_settings = settings.WEBPUSH_SETTINGS
+
+    # Verificar si las variables están en el entorno
+    env_has_public = bool(os.environ.get('VAPID_PUBLIC_KEY'))
+    env_has_private = bool(os.environ.get('VAPID_PRIVATE_KEY'))
+    env_has_private_b64 = bool(os.environ.get('VAPID_PRIVATE_KEY_B64'))
+
+    return JsonResponse({
+        # Variables de entorno
+        'env_VAPID_PUBLIC_KEY': 'configured' if env_has_public else 'missing',
+        'env_VAPID_PRIVATE_KEY': 'configured' if env_has_private else 'missing',
+        'env_VAPID_PRIVATE_KEY_B64': 'configured' if env_has_private_b64 else 'missing',
+
+        # Settings cargados
+        'settings_public_key_present': bool(vapid_settings.get('VAPID_PUBLIC_KEY')),
+        'settings_public_key_length': len(vapid_settings.get('VAPID_PUBLIC_KEY', '')),
+        'settings_private_key_present': bool(vapid_settings.get('VAPID_PRIVATE_KEY')),
+        'settings_private_key_length': len(vapid_settings.get('VAPID_PRIVATE_KEY', '')),
+        'settings_private_key_format': 'PEM' if vapid_settings.get('VAPID_PRIVATE_KEY', '').startswith('-----BEGIN') else 'unknown',
+        'settings_admin_email': vapid_settings.get('VAPID_ADMIN_EMAIL'),
+    })
+
+
 def diagnostico_push(request):
     """
     Página de diagnóstico de notificaciones push (cliente)
