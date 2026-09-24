@@ -172,8 +172,19 @@ def subscribe_admin_push(request):
         negocio = None
         user = None
 
-        # Opción 1: Usuario autenticado (panel de admin en navegador)
-        if request.user.is_authenticated:
+        # Opción 1: Negocio identificado por slug (PRIORIDAD - funciona siempre)
+        if negocio_slug:
+            try:
+                negocio = Negocio.objects.get(slug=negocio_slug)
+                user = negocio.administrador  # Usar el admin del negocio
+            except Negocio.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Negocio no encontrado: {negocio_slug}'
+                }, status=404)
+
+        # Opción 2: Usuario autenticado sin slug (fallback)
+        elif request.user.is_authenticated:
             user = request.user
             try:
                 if hasattr(request.user, 'negocio'):
@@ -192,17 +203,6 @@ def subscribe_admin_push(request):
                     'success': False,
                     'error': f'Error buscando negocio del usuario: {str(e)}'
                 }, status=500)
-
-        # Opción 2: Negocio identificado por slug (PWA instalada sin sesión)
-        elif negocio_slug:
-            try:
-                negocio = Negocio.objects.get(slug=negocio_slug)
-                user = negocio.administrador  # Usar el admin del negocio
-            except Negocio.DoesNotExist:
-                return JsonResponse({
-                    'success': False,
-                    'error': f'Negocio no encontrado: {negocio_slug}'
-                }, status=404)
 
         else:
             return JsonResponse({
