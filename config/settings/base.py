@@ -166,9 +166,10 @@ import base64
 
 _vapid_private_b64 = config('VAPID_PRIVATE_KEY_B64', default='').strip()
 if _vapid_private_b64:
-    # Decodificar desde base64 (strip para eliminar espacios)
+    # Decodificar desde base64
+    # IMPORTANTE: NO hacer .strip() en la key PEM, los saltos de línea son parte del formato
     try:
-        _vapid_private = base64.b64decode(_vapid_private_b64).decode('utf-8').strip()
+        _vapid_private = base64.b64decode(_vapid_private_b64).decode('utf-8')
     except Exception as e:
         import logging
         logger = logging.getLogger(__name__)
@@ -176,7 +177,7 @@ if _vapid_private_b64:
         _vapid_private = ''
 else:
     # Formato legacy: convertir \\n literal a saltos de línea reales
-    _vapid_private = config('VAPID_PRIVATE_KEY', default='').strip()
+    _vapid_private = config('VAPID_PRIVATE_KEY', default='')
     if _vapid_private and '\\n' in _vapid_private:
         _vapid_private = _vapid_private.replace('\\n', '\n')
 
