@@ -144,11 +144,19 @@ class NotificacionService:
                     # Convertir a formato de subscription_info
                     subscription_info = suscripcion.to_subscription_info()
 
+                    # Crear objeto Vapid desde la key PEM
+                    # IMPORTANTE: No usar vapid_private_key como string porque
+                    # Vapid.from_string() NO soporta formato PEM, solo RAW y DER
+                    from py_vapid import Vapid
+                    vapid = Vapid.from_pem(
+                        settings.WEBPUSH_SETTINGS.get('VAPID_PRIVATE_KEY').encode('utf-8')
+                    )
+
                     # Enviar notificación usando pywebpush
                     webpush(
                         subscription_info=subscription_info,
                         data=json.dumps(payload),
-                        vapid_private_key=settings.WEBPUSH_SETTINGS.get('VAPID_PRIVATE_KEY'),
+                        vapid_private_key=vapid,
                         vapid_claims={
                             'sub': f"mailto:{settings.WEBPUSH_SETTINGS.get('VAPID_ADMIN_EMAIL', 'admin@faciladmin.com')}"
                         }
