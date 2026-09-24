@@ -935,34 +935,169 @@ def manifest_admin(request, slug):
 
 def diagnostico_vapid_config(request):
     """
-    Diagnóstico de configuración VAPID
-    Muestra información básica de las VAPID keys sin exponer datos sensibles
+    Diagnóstico COMPLETO de configuración VAPID
+    Verifica keys, suscripciones y intenta enviar notificación de prueba
     """
-    from django.http import JsonResponse
+    from django.http import JsonResponse, HttpResponse
     from django.conf import settings
     import os
+    import json
+    import traceback
 
-    vapid_settings = settings.WEBPUSH_SETTINGS
+    diagnostico = {
+        'paso1_variables_entorno': {},
+        'paso2_settings_cargados': {},
+        'paso3_validacion_key': {},
+        'paso4_suscripciones': {},
+        'paso5_test_envio': {}
+    }
 
-    # Verificar si las variables están en el entorno
+    # PASO 1: Variables de entorno
     env_has_public = bool(os.environ.get('VAPID_PUBLIC_KEY'))
     env_has_private = bool(os.environ.get('VAPID_PRIVATE_KEY'))
     env_has_private_b64 = bool(os.environ.get('VAPID_PRIVATE_KEY_B64'))
 
-    return JsonResponse({
-        # Variables de entorno
-        'env_VAPID_PUBLIC_KEY': 'configured' if env_has_public else 'missing',
-        'env_VAPID_PRIVATE_KEY': 'configured' if env_has_private else 'missing',
-        'env_VAPID_PRIVATE_KEY_B64': 'configured' if env_has_private_b64 else 'missing',
+    diagnostico['paso1_variables_entorno'] = {
+        'VAPID_PUBLIC_KEY': 'configured' if env_has_public else 'missing',
+        'VAPID_PRIVATE_KEY': 'configured' if env_has_private else 'missing',
+        'VAPID_PRIVATE_KEY_B64': 'configured' if env_has_private_b64 else 'missing',
+    }
 
-        # Settings cargados
-        'settings_public_key_present': bool(vapid_settings.get('VAPID_PUBLIC_KEY')),
-        'settings_public_key_length': len(vapid_settings.get('VAPID_PUBLIC_KEY', '')),
-        'settings_private_key_present': bool(vapid_settings.get('VAPID_PRIVATE_KEY')),
-        'settings_private_key_length': len(vapid_settings.get('VAPID_PRIVATE_KEY', '')),
-        'settings_private_key_format': 'PEM' if vapid_settings.get('VAPID_PRIVATE_KEY', '').startswith('-----BEGIN') else 'unknown',
-        'settings_admin_email': vapid_settings.get('VAPID_ADMIN_EMAIL'),
-    })
+    # PASO 2: Settings cargados
+    vapid_settings = settings.WEBPUSH_SETTINGS
+    private_key = vapid_settings.get('VAPID_PRIVATE_KEY', '')
+
+    diagnostico['paso2_settings_cargados'] = {
+        'public_key_present': bool(vapid_settings.get('VAPID_PUBLIC_KEY')),
+        'public_key_length': len(vapid_settings.get('VAPID_PUBLIC_KEY', '')),
+        'private_key_present': bool(private_key),
+        'private_key_length': len(private_key),
+        'private_key_format': 'PEM' if private_key.startswith('-----BEGIN') else 'unknown',
+        'private_key_first_50_chars': private_key[:50] if private_key else '',
+        'admin_email': vapid_settings.get('VAPID_ADMIN_EMAIL'),
+    }
+
+    # PASO 3: Validar que la key se puede cargar con cryptography
+    try:
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.backends import default_backend
+
+        if private_key:
+            private_key_obj = serialization.load_pem_private_key(
+                private_key.encode('utf-8'),
+                password=None,
+                backend=default_backend()
+            )
+            diagnostico['paso3_validacion_key'] = {
+                'status': 'OK',
+                'mensaje': 'VAPID key se carga correctamente con cryptography'
+            }
+        else:
+            diagnostico['paso3_validacion_key'] = {
+                'status': 'ERROR',
+                'mensaje': 'No hay VAPID private key configurada'
+            }
+    except Exception as e:
+        diagnostico['paso3_validacion_key'] = {
+            'status': 'ERROR',
+            'mensaje': str(e),
+            'traceback': traceback.format_exc()
+        }
+
+    # PASO 4: Verificar suscripciones
+    try:
+        from apps.notificaciones.models import UsuarioPushSubscription
+
+        total_suscripciones = UsuarioPushSubscription.objects.count()
+        suscripciones_activas = UsuarioPushSubscription.objects.filter(activa=True).count()
+
+        diagnostico['paso4_suscripciones'] = {
+            'total': total_suscripciones,
+            'activas': suscripciones_activas,
+        }
+
+        # Mostrar detalles de una suscripción activa (si existe)
+        if suscripciones_activas > 0:
+            suscripcion = UsuarioPushSubscription.objects.filter(activa=True).first()
+            diagnostico['paso4_suscripciones']['ejemplo'] = {
+                'endpoint': suscripcion.endpoint[:50] + '...',
+                'auth_length': len(suscripcion.auth),
+                'p256dh_length': len(suscripcion.p256dh),
+                'user': str(suscripcion.user),
+                'negocio': str(suscripcion.negocio),
+            }
+    except Exception as e:
+        diagnostico['paso4_suscripciones'] = {
+            'status': 'ERROR',
+            'mensaje': str(e)
+        }
+
+    # PASO 5: Intentar envío de prueba
+    try:
+        from apps.notificaciones.models import UsuarioPushSubscription
+        from pywebpush import webpush, WebPushException
+
+        suscripciones_activas = UsuarioPushSubscription.objects.filter(activa=True)
+
+        if suscripciones_activas.count() > 0:
+            suscripcion = suscripciones_activas.first()
+            subscription_info = suscripcion.to_subscription_info()
+
+            # Intentar enviar notificación de prueba
+            try:
+                payload = json.dumps({
+                    'head': 'Test de diagnostico',
+                    'body': 'Verificando configuracion VAPID',
+                    'icon': '/static/images/faciladmin-logo.png',
+                })
+
+                response = webpush(
+                    subscription_info=subscription_info,
+                    data=payload,
+                    vapid_private_key=private_key,
+                    vapid_claims={
+                        'sub': f"mailto:{vapid_settings.get('VAPID_ADMIN_EMAIL', 'admin@faciladmin.com')}"
+                    }
+                )
+
+                diagnostico['paso5_test_envio'] = {
+                    'status': 'OK',
+                    'mensaje': 'Notificacion de prueba enviada exitosamente',
+                    'response_status': response.status_code if hasattr(response, 'status_code') else 'unknown'
+                }
+            except WebPushException as e:
+                diagnostico['paso5_test_envio'] = {
+                    'status': 'ERROR_WEBPUSH',
+                    'mensaje': str(e),
+                    'response_status': e.response.status_code if hasattr(e, 'response') and e.response else 'N/A',
+                    'traceback': traceback.format_exc()
+                }
+            except Exception as e:
+                diagnostico['paso5_test_envio'] = {
+                    'status': 'ERROR',
+                    'mensaje': str(e),
+                    'type': type(e).__name__,
+                    'traceback': traceback.format_exc()
+                }
+        else:
+            diagnostico['paso5_test_envio'] = {
+                'status': 'SKIP',
+                'mensaje': 'No hay suscripciones activas para probar'
+            }
+    except Exception as e:
+        diagnostico['paso5_test_envio'] = {
+            'status': 'ERROR',
+            'mensaje': str(e),
+            'traceback': traceback.format_exc()
+        }
+
+    # Retornar HTML formateado para mejor legibilidad
+    html = "<html><head><style>body{font-family:monospace;padding:20px;}pre{background:#f5f5f5;padding:10px;border-radius:5px;}</style></head><body>"
+    html += "<h1>Diagnostico VAPID - FacilAdmin</h1>"
+    html += "<pre>" + json.dumps(diagnostico, indent=2, ensure_ascii=False) + "</pre>"
+    html += "</body></html>"
+
+    return HttpResponse(html)
 
 
 def diagnostico_push(request):

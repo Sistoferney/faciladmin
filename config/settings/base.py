@@ -164,20 +164,26 @@ TWILIO_WHATSAPP_NUMBER = config('TWILIO_WHATSAPP_NUMBER', default='')
 # 2. VAPID_PRIVATE_KEY: Private key en formato PEM con \\n literal (legacy)
 import base64
 
-_vapid_private_b64 = config('VAPID_PRIVATE_KEY_B64', default='')
+_vapid_private_b64 = config('VAPID_PRIVATE_KEY_B64', default='').strip()
 if _vapid_private_b64:
-    # Decodificar desde base64
-    _vapid_private = base64.b64decode(_vapid_private_b64).decode('utf-8')
+    # Decodificar desde base64 (strip para eliminar espacios)
+    try:
+        _vapid_private = base64.b64decode(_vapid_private_b64).decode('utf-8').strip()
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error decodificando VAPID_PRIVATE_KEY_B64: {e}")
+        _vapid_private = ''
 else:
     # Formato legacy: convertir \\n literal a saltos de línea reales
-    _vapid_private = config('VAPID_PRIVATE_KEY', default='')
+    _vapid_private = config('VAPID_PRIVATE_KEY', default='').strip()
     if _vapid_private and '\\n' in _vapid_private:
         _vapid_private = _vapid_private.replace('\\n', '\n')
 
 WEBPUSH_SETTINGS = {
-    "VAPID_PUBLIC_KEY": config('VAPID_PUBLIC_KEY', default=''),
+    "VAPID_PUBLIC_KEY": config('VAPID_PUBLIC_KEY', default='').strip(),
     "VAPID_PRIVATE_KEY": _vapid_private,
-    "VAPID_ADMIN_EMAIL": config('VAPID_ADMIN_EMAIL', default='admin@faciladmin.com')
+    "VAPID_ADMIN_EMAIL": config('VAPID_ADMIN_EMAIL', default='admin@faciladmin.com').strip()
 }
 
 # Celery Configuration (base)
