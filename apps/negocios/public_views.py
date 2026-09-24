@@ -1045,6 +1045,17 @@ def diagnostico_vapid_config(request):
 
             # Intentar enviar notificación de prueba
             try:
+                # Diagnóstico detallado de la key antes de enviar
+                diagnostico['paso5_test_envio']['debug_key'] = {
+                    'type': str(type(private_key)),
+                    'length': len(private_key),
+                    'first_20_chars': repr(private_key[:20]),
+                    'first_20_bytes_hex': private_key[:20].encode('utf-8').hex(),
+                    'starts_with_begin': private_key.startswith('-----BEGIN'),
+                    'has_newlines': '\\n' in private_key,
+                    'line_count': private_key.count('\\n'),
+                }
+
                 payload = json.dumps({
                     'head': 'Test de diagnostico',
                     'body': 'Verificando configuracion VAPID',
