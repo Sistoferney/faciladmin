@@ -159,11 +159,20 @@ TWILIO_PHONE_NUMBER = config('TWILIO_PHONE_NUMBER', default='')
 TWILIO_WHATSAPP_NUMBER = config('TWILIO_WHATSAPP_NUMBER', default='')
 
 # Web Push Notifications (PWA)
-# Las VAPID keys pueden venir con \\n literal desde variables de entorno
-# Necesitamos convertirlos a saltos de línea reales
-_vapid_private = config('VAPID_PRIVATE_KEY', default='')
-if _vapid_private and '\\n' in _vapid_private:
-    _vapid_private = _vapid_private.replace('\\n', '\n')
+# Soporta dos formatos:
+# 1. VAPID_PRIVATE_KEY_B64: Private key codificada en base64 (recomendado para Railway)
+# 2. VAPID_PRIVATE_KEY: Private key en formato PEM con \\n literal (legacy)
+import base64
+
+_vapid_private_b64 = config('VAPID_PRIVATE_KEY_B64', default='')
+if _vapid_private_b64:
+    # Decodificar desde base64
+    _vapid_private = base64.b64decode(_vapid_private_b64).decode('utf-8')
+else:
+    # Formato legacy: convertir \\n literal a saltos de línea reales
+    _vapid_private = config('VAPID_PRIVATE_KEY', default='')
+    if _vapid_private and '\\n' in _vapid_private:
+        _vapid_private = _vapid_private.replace('\\n', '\n')
 
 WEBPUSH_SETTINGS = {
     "VAPID_PUBLIC_KEY": config('VAPID_PUBLIC_KEY', default=''),
