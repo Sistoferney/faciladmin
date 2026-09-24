@@ -159,9 +159,15 @@ TWILIO_PHONE_NUMBER = config('TWILIO_PHONE_NUMBER', default='')
 TWILIO_WHATSAPP_NUMBER = config('TWILIO_WHATSAPP_NUMBER', default='')
 
 # Web Push Notifications (PWA)
+# Las VAPID keys pueden venir con \\n literal desde variables de entorno
+# Necesitamos convertirlos a saltos de línea reales
+_vapid_private = config('VAPID_PRIVATE_KEY', default='')
+if _vapid_private and '\\n' in _vapid_private:
+    _vapid_private = _vapid_private.replace('\\n', '\n')
+
 WEBPUSH_SETTINGS = {
     "VAPID_PUBLIC_KEY": config('VAPID_PUBLIC_KEY', default=''),
-    "VAPID_PRIVATE_KEY": config('VAPID_PRIVATE_KEY', default=''),
+    "VAPID_PRIVATE_KEY": _vapid_private,
     "VAPID_ADMIN_EMAIL": config('VAPID_ADMIN_EMAIL', default='admin@faciladmin.com')
 }
 
