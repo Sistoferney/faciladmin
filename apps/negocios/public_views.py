@@ -1265,3 +1265,83 @@ def diagnostico_push_servidor(request):
     """
 
     return HttpResponse(html)
+
+
+def test_enviar_push_admin(request):
+    """
+    Endpoint de prueba para enviar una notificación push a todos los admins suscritos
+    """
+    from django.http import JsonResponse
+    from apps.notificaciones.models import UsuarioPushSubscription
+    from pywebpush import webpush, WebPushException
+    from py_vapid import Vapid
+    from django.conf import settings
+    import json
+
+    # Obtener todas las suscripciones activas de administradores
+    suscripciones = UsuarioPushSubscription.objects.filter(activa=True)
+
+    if not suscripciones.exists():
+        return JsonResponse({
+            'success': False,
+            'error': 'No hay suscripciones activas de administradores',
+            'total': 0
+        })
+
+    # Preparar payload de prueba
+    payload = {
+        'head': 'Prueba de notificacion',
+        'body': 'Si ves esto, las notificaciones push estan funcionando correctamente!',
+        'icon': '/static/images/faciladmin-logo.png',
+        'url': '/',
+        'tag': 'test-notification',
+        'requireInteraction': True,
+        'vibrate': [200, 100, 200]
+    }
+
+    # Crear objeto Vapid desde la key PEM
+    private_key = settings.WEBPUSH_SETTINGS.get('VAPID_PRIVATE_KEY')
+    vapid = Vapid.from_pem(private_key.encode('utf-8'))
+
+    # Enviar a todas las suscripciones
+    enviados = 0
+    fallidos = []
+
+    for suscripcion in suscripciones:
+        try:
+            subscription_info = suscripcion.to_subscription_info()
+
+            response = webpush(
+                subscription_info=subscription_info,
+                data=json.dumps(payload),
+                vapid_private_key=vapid,
+                vapid_claims={
+                    'sub': f"mailto:{settings.WEBPUSH_SETTINGS.get('VAPID_ADMIN_EMAIL', 'admin@faciladmin.com')}"
+                }
+            )
+
+            enviados += 1
+
+        except WebPushException as e:
+            # Si la suscripción expiró, marcarla como inactiva
+            if e.response and e.response.status_code in [404, 410]:
+                suscripcion.desactivar()
+            fallidos.append({
+                'id': suscripcion.id,
+                'user': str(suscripcion.user),
+                'error': str(e)
+            })
+        except Exception as e:
+            fallidos.append({
+                'id': suscripcion.id,
+                'user': str(suscripcion.user),
+                'error': str(e)
+            })
+
+    return JsonResponse({
+        'success': enviados > 0,
+        'total_suscripciones': suscripciones.count(),
+        'enviados': enviados,
+        'fallidos': len(fallidos),
+        'detalles_fallidos': fallidos
+    })
