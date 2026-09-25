@@ -94,22 +94,22 @@ class NotificacionService:
             from .models import ClientePushSubscription, UsuarioPushSubscription
             from pywebpush import webpush, WebPushException
 
-            # Buscar suscripciones activas del cliente específico
-            suscripciones_cliente = ClientePushSubscription.objects.filter(
-                cliente=cliente,
-                activa=True
-            )
+            # IMPORTANTE: enviar_a_admin es EXCLUYENTE, no aditivo
+            # Si enviar_a_admin=True, SOLO envía al admin (NO al cliente)
+            # Si enviar_a_admin=False, SOLO envía al cliente (NO al admin)
 
-            # Si se solicita, buscar también suscripciones del admin del negocio
-            suscripciones_admin = []
             if enviar_a_admin and cita:
-                suscripciones_admin = UsuarioPushSubscription.objects.filter(
+                # Solo enviar al admin del negocio
+                total_suscripciones = UsuarioPushSubscription.objects.filter(
                     negocio=cita.negocio,
                     activa=True
                 )
-
-            # Combinar todas las suscripciones
-            total_suscripciones = list(suscripciones_cliente) + list(suscripciones_admin)
+            else:
+                # Solo enviar al cliente
+                total_suscripciones = ClientePushSubscription.objects.filter(
+                    cliente=cliente,
+                    activa=True
+                )
 
             if not total_suscripciones:
                 return {'success': False, 'error': 'No hay suscripciones activas'}
@@ -133,7 +133,7 @@ class NotificacionService:
                     'tipo': 'recordatorio_cita'
                 }
 
-            # Enviar a todas las suscripciones activas (cliente + admin si aplica)
+            # Enviar a las suscripciones activas (cliente O admin, nunca ambos)
             enviados = 0
             enviados_cliente = 0
             enviados_admin = 0
@@ -172,7 +172,8 @@ class NotificacionService:
                 except WebPushException as e:
                     logger.error(f"Error enviando push a suscripción {suscripcion.id}: {str(e)}")
                     # Si la suscripción expiró o es inválida, marcarla como inactiva
-                    if e.response and e.response.status_code in [404, 410]:
+                    # IMPORTANTE: Verificar que e.response no sea None antes de acceder a status_code
+                    if hasattr(e, 'response') and e.response is not None and e.response.status_code in [404, 410]:
                         suscripcion.desactivar()
                         logger.info(f"Suscripción {suscripcion.id} marcada como inactiva (endpoint inválido)")
                     suscripciones_fallidas.append(suscripcion.id)

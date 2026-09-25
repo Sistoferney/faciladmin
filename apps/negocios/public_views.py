@@ -165,34 +165,9 @@ def agendar_cita(request, slug):
                     fecha_limite=cita.fecha_limite_abono
                 )
 
-            # Enviar notificación push al administrador del negocio
-            try:
-                from apps.notificaciones.services import NotificacionService
-                service = NotificacionService()
-
-                titulo_admin = "Nueva cita agendada"
-                mensaje_admin = f"""
-{cliente.nombre} ha agendado una cita:
-
-📅 {fecha_hora.strftime('%d/%m/%Y')}
-🕐 {fecha_hora.strftime('%H:%M')}
-✂️ {servicio.nombre}
-💰 ${servicio.precio}
-📞 Tel: {cliente.telefono}
-                """.strip()
-
-                if notas:
-                    mensaje_admin += f"\n\n📝 Notas: {notas}"
-
-                service.enviar_push(
-                    cliente=cliente,
-                    titulo=titulo_admin,
-                    mensaje=mensaje_admin,
-                    cita=cita,
-                    enviar_a_admin=True
-                )
-            except Exception as e:
-                print(f"[Notificación Admin] Error al enviar notificación de nueva cita: {e}")
+            # NOTA: La notificación al admin se envía automáticamente desde la señal post_save
+            # en apps/citas/signals.py → enviar_confirmacion_cita()
+            # No duplicar la llamada aquí
 
             # Mensaje de éxito
             if servicio.requiere_pago_abono:

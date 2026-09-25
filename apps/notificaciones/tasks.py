@@ -122,15 +122,19 @@ Por favor, envía tu comprobante de pago para confirmar tu cita.
 def enviar_recordatorios_citas():
     """
     RF-28: Enviar recordatorios de citas 24h antes
+
+    Se ejecuta diariamente a las 10:00 AM y envía recordatorios a TODAS
+    las citas del día siguiente que aún no han recibido recordatorio.
     """
-    manana = timezone.now() + timedelta(hours=24)
-    inicio_ventana = manana - timedelta(hours=1)
-    fin_ventana = manana + timedelta(hours=1)
+    # Definir el rango: desde las 00:00 hasta las 23:59 de mañana
+    hoy = timezone.now()
+    inicio_manana = (hoy + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    fin_manana = (hoy + timedelta(days=1)).replace(hour=23, minute=59, second=59, microsecond=999999)
 
     citas = Cita.objects.filter(
         estado='confirmada',
-        fecha_hora__gte=inicio_ventana,
-        fecha_hora__lte=fin_ventana,
+        fecha_hora__gte=inicio_manana,
+        fecha_hora__lte=fin_manana,
         recordatorio_enviado=False
     )
 
@@ -141,18 +145,25 @@ def enviar_recordatorios_citas():
 
         # Determinar canal (prioridad: Push > WhatsApp > SMS > Email)
         # Push es GRATIS y no requiere configuración de Twilio
-        canal = 'push'  # Intentar push primero (gratis, funciona con PWA instalada)
+        # IMPORTANTE: Verificar que el cliente tenga suscripción push activa
+        from apps.notificaciones.models import ClientePushSubscription
 
-        # Fallback si push falla
-        if not canal:
-            if cliente.acepta_whatsapp:
-                canal = 'whatsapp'
-            elif cliente.acepta_sms:
-                canal = 'sms'
-            elif cliente.acepta_email and cliente.email:
-                canal = 'email'
-            else:
-                continue
+        tiene_push = ClientePushSubscription.objects.filter(
+            cliente=cliente,
+            activa=True
+        ).exists()
+
+        if tiene_push:
+            canal = 'push'
+        elif cliente.acepta_whatsapp:
+            canal = 'whatsapp'
+        elif cliente.acepta_sms:
+            canal = 'sms'
+        elif cliente.acepta_email and cliente.email:
+            canal = 'email'
+        else:
+            # Si no tiene ningún canal, saltar esta cita
+            continue
 
         mensaje = f"""
 ¡Hola {cliente.nombre}!

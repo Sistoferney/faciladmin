@@ -149,11 +149,17 @@ def subscribe_admin_push(request):
     """
     Guarda la suscripción del usuario administrador/dueño de negocio
 
-    Acepta dos formas de autenticación:
-    1. Usuario autenticado (session login)
-    2. Negocio slug en el body (para PWA instaladas sin sesión)
+    IMPORTANTE: Requiere autenticación obligatoria para prevenir que
+    usuarios no autorizados reciban notificaciones privadas de clientes.
     """
     try:
+        # VALIDACIÓN DE SEGURIDAD: Usuario debe estar autenticado
+        if not request.user.is_authenticated:
+            return JsonResponse({
+                'success': False,
+                'error': 'Autenticación requerida'
+            }, status=401)
+
         data = json.loads(request.body)
         subscription_info = data.get('subscription')
         negocio_slug = data.get('negocio_slug')
@@ -170,22 +176,28 @@ def subscribe_admin_push(request):
         from .models import UsuarioPushSubscription
 
         negocio = None
-        user = None
+        user = request.user
 
-        # Opción 1: Negocio identificado por slug (PRIORIDAD - funciona siempre)
+        # Opción 1: Negocio identificado por slug
         if negocio_slug:
             try:
                 negocio = Negocio.objects.get(slug=negocio_slug)
-                user = negocio.administrador  # Usar el admin del negocio
+
+                # VALIDACIÓN DE SEGURIDAD: Verificar que el usuario sea el admin del negocio
+                if negocio.administrador != request.user:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'No tienes permisos para suscribirte a este negocio'
+                    }, status=403)
+
             except Negocio.DoesNotExist:
                 return JsonResponse({
                     'success': False,
                     'error': f'Negocio no encontrado: {negocio_slug}'
                 }, status=404)
 
-        # Opción 2: Usuario autenticado sin slug (fallback)
-        elif request.user.is_authenticated:
-            user = request.user
+        # Opción 2: Buscar negocio del usuario autenticado
+        else:
             try:
                 if hasattr(request.user, 'negocio'):
                     negocio = request.user.negocio
@@ -203,12 +215,6 @@ def subscribe_admin_push(request):
                     'success': False,
                     'error': f'Error buscando negocio del usuario: {str(e)}'
                 }, status=500)
-
-        else:
-            return JsonResponse({
-                'success': False,
-                'error': 'Se requiere autenticación o negocio_slug'
-            }, status=401)
 
         # Crear o actualizar la suscripción
         try:

@@ -36,6 +36,8 @@ def verificar_abonos_pendientes():
         estado='pendiente',
         fecha_limite__lt=timezone.now()
     )
+    # IMPORTANTE: Guardar el count ANTES del update, porque después el queryset se re-evalúa
+    count_vencidos = abonos_vencidos.count()
     abonos_vencidos.update(estado='vencido')
 
-    return f"Verificados {abonos_pendientes.count()} abonos. {abonos_vencidos.count()} marcados como vencidos."
+    return f"Verificados {abonos_pendientes.count()} abonos. {count_vencidos} marcados como vencidos."
