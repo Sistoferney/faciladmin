@@ -83,8 +83,6 @@ Este enlace expira en 24 horas.
 ✅ Página web personalizada
 ✅ Soporte técnico
 
-{f"🎁 BONUS: Tu cupón {codigo_cupon} te da {cupon_obj.meses_gratis} mes(es) extra!" if cupon_obj else ""}
-
 ¡Nos vemos dentro!
 Equipo FacilAdmin
                 ''',
