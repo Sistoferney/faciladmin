@@ -3,8 +3,9 @@ Tareas de Celery para notificaciones
 """
 from celery import shared_task
 from django.utils import timezone
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 from .models import Notificacion
+from .services import elegir_canal
 from apps.citas.models import Cita
 from apps.abonos.models import Abono
 
@@ -26,17 +27,11 @@ def enviar_confirmacion_cita(cita_id):
         negocio = cita.negocio
 
         # Determinar canal preferido
-        if cliente.acepta_whatsapp:
-            canal = 'whatsapp'
-        elif cliente.acepta_sms:
-            canal = 'sms'
-        elif cliente.acepta_email and cliente.email:
-            canal = 'email'
-        else:
-            return
-
-        # Crear mensaje
-        mensaje = f"""
+        canal = elegir_canal(cliente)
+        resultado = {'success': False, 'error': 'El cliente no tiene canales de notificación disponibles'}
+        if canal:
+            # Crear mensaje
+            mensaje = f"""
 ¡Hola {cliente.nombre}!
 
 Tu cita ha sido agendada exitosamente:
@@ -50,11 +45,11 @@ Tu cita ha sido agendada exitosamente:
 {negocio.direccion}
 
 Gracias por tu preferencia.
-        """.strip()
+            """.strip()
 
-        # Si requiere abono, agregar información
-        if cita.requiere_abono:
-            info_abono = f"""
+            # Si requiere abono, agregar información
+            if cita.requiere_abono:
+                info_abono = f"""
 
 ⚠️ IMPORTANTE: Esta cita requiere un abono de ${cita.monto_abono}
 
@@ -66,21 +61,21 @@ Datos para transferencia:
 Fecha límite de pago: {timezone.localtime(cita.fecha_limite_abono).strftime('%d/%m/%Y %H:%M')}
 
 Por favor, envía tu comprobante de pago para confirmar tu cita.
-            """.strip()
-            mensaje += info_abono
+                """.strip()
+                mensaje += info_abono
 
-        # Crear notificación
-        notificacion = Notificacion.objects.create(
-            cliente=cliente,
-            cita=cita,
-            tipo='confirmacion_cita',
-            canal=canal,
-            asunto=f'Confirmación de cita - {negocio.nombre}',
-            mensaje=mensaje
-        )
+            # Crear notificación
+            notificacion = Notificacion.objects.create(
+                cliente=cliente,
+                cita=cita,
+                tipo='confirmacion_cita',
+                canal=canal,
+                asunto=f'Confirmación de cita - {negocio.nombre}',
+                mensaje=mensaje
+            )
 
-        # Enviar al cliente
-        resultado = notificacion.enviar()
+            # Enviar al cliente
+            resultado = notificacion.enviar()
 
         # También enviar notificación push al dueño del negocio
         try:
@@ -130,43 +125,26 @@ def enviar_recordatorios_citas():
     Se ejecuta diariamente a las 10:00 AM y envía recordatorios a TODAS
     las citas del día siguiente que aún no han recibido recordatorio.
     """
-    # Definir el rango: desde las 00:00 hasta las 23:59 de mañana
-    hoy = timezone.now()
-    inicio_manana = (hoy + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-    fin_manana = (hoy + timedelta(days=1)).replace(hour=23, minute=59, second=59, microsecond=999999)
+    # Rango: el día de mañana completo en hora de Colombia.
+    # (timezone.now() está en UTC: usarlo directo desplazaría el día 5 horas)
+    manana = timezone.localdate() + timedelta(days=1)
+    inicio_manana = timezone.make_aware(datetime.combine(manana, time.min))
+    inicio_pasado_manana = inicio_manana + timedelta(days=1)
 
     citas = Cita.objects.filter(
         estado='confirmada',
         fecha_hora__gte=inicio_manana,
-        fecha_hora__lte=fin_manana,
+        fecha_hora__lt=inicio_pasado_manana,
         recordatorio_enviado=False
-    )
+    ).select_related('cliente', 'negocio', 'servicio')
 
     enviados = 0
     for cita in citas:
         cliente = cita.cliente
         negocio = cita.negocio
 
-        # Determinar canal (prioridad: Push > WhatsApp > SMS > Email)
-        # Push es GRATIS y no requiere configuración de Twilio
-        # IMPORTANTE: Verificar que el cliente tenga suscripción push activa
-        from apps.notificaciones.models import ClientePushSubscription
-
-        tiene_push = ClientePushSubscription.objects.filter(
-            cliente=cliente,
-            activa=True
-        ).exists()
-
-        if tiene_push:
-            canal = 'push'
-        elif cliente.acepta_whatsapp:
-            canal = 'whatsapp'
-        elif cliente.acepta_sms:
-            canal = 'sms'
-        elif cliente.acepta_email and cliente.email:
-            canal = 'email'
-        else:
-            # Si no tiene ningún canal, saltar esta cita
+        canal = elegir_canal(cliente)
+        if not canal:
             continue
 
         mensaje = f"""
@@ -215,13 +193,8 @@ def enviar_recordatorio_abono(abono_id, momento):
         negocio = cita.negocio
 
         # Determinar canal
-        if cliente.acepta_whatsapp:
-            canal = 'whatsapp'
-        elif cliente.acepta_sms:
-            canal = 'sms'
-        elif cliente.acepta_email and cliente.email:
-            canal = 'email'
-        else:
+        canal = elegir_canal(cliente)
+        if not canal:
             return
 
         mensaje = f"""
@@ -271,13 +244,8 @@ def enviar_notificacion_confirmacion_abono(cita_id):
         negocio = cita.negocio
 
         # Determinar canal
-        if cliente.acepta_whatsapp:
-            canal = 'whatsapp'
-        elif cliente.acepta_sms:
-            canal = 'sms'
-        elif cliente.acepta_email and cliente.email:
-            canal = 'email'
-        else:
+        canal = elegir_canal(cliente)
+        if not canal:
             return
 
         mensaje = f"""

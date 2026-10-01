@@ -4,7 +4,7 @@ Tests de las tareas de notificaciones
 from datetime import datetime, timedelta
 from unittest.mock import patch
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from apps.authentication.models import Usuario
@@ -13,7 +13,8 @@ from apps.clientes.models import Cliente
 from apps.negocios.models import Negocio
 from apps.servicios.models import Servicio
 
-from .models import Notificacion
+from .models import ClientePushSubscription, Notificacion
+from .services import elegir_canal
 from .tasks import enviar_confirmacion_cita
 
 
@@ -35,7 +36,9 @@ class MensajesHoraLocalTests(TestCase):
         servicio = Servicio.objects.create(
             negocio=negocio, nombre='Corte', precio=10000, duracion_minutos=30
         )
-        cliente = Cliente.objects.create(negocio=negocio, nombre='Ana', telefono='3001111111')
+        cliente = Cliente.objects.create(
+            negocio=negocio, nombre='Ana', telefono='3001111111', email='ana@correo.com'
+        )
         fecha = timezone.localdate() + timedelta(days=3)
         cita = Cita.objects.create(
             negocio=negocio, cliente=cliente, servicio=servicio,
@@ -48,3 +51,118 @@ class MensajesHoraLocalTests(TestCase):
         mensaje = Notificacion.objects.get(cita=cita).mensaje
         self.assertIn('🕐 Hora: 09:00', mensaje)
         self.assertNotIn('14:00', mensaje)  # 09:00 Bogotá = 14:00 UTC
+
+
+def _crear_base():
+    admin = Usuario.objects.create_user(
+        telefono='3000000000', password='x', nombre='Admin', email='a@a.com'
+    )
+    negocio = Negocio.objects.create(administrador=admin, nombre='Spa', telefono='3000000000')
+    servicio = Servicio.objects.create(
+        negocio=negocio, nombre='Corte', precio=10000, duracion_minutos=30, frecuencia_dias=30
+    )
+    cliente = Cliente.objects.create(
+        negocio=negocio, nombre='Ana', telefono='3001111111', email='ana@correo.com'
+    )
+    return negocio, servicio, cliente
+
+
+def _local(fecha, hora):
+    return timezone.make_aware(datetime.combine(fecha, datetime.min.time().replace(hour=hora)))
+
+
+@override_settings(TWILIO_ACCOUNT_SID='', TWILIO_AUTH_TOKEN='')
+class ElegirCanalTests(TestCase):
+
+    def setUp(self):
+        _, _, self.cliente = _crear_base()
+
+    def test_sin_twilio_no_elige_whatsapp(self):
+        # acepta_whatsapp=True por defecto, pero sin Twilio fallaría siempre
+        self.assertEqual(elegir_canal(self.cliente), 'email')
+
+    def test_sin_canales_disponibles(self):
+        self.cliente.email = ''
+        self.assertIsNone(elegir_canal(self.cliente))
+
+    def test_push_tiene_prioridad(self):
+        ClientePushSubscription.objects.create(
+            cliente=self.cliente, endpoint='https://push/1', auth='a', p256dh='p'
+        )
+        self.assertEqual(elegir_canal(self.cliente), 'push')
+
+    @override_settings(TWILIO_ACCOUNT_SID='sid', TWILIO_AUTH_TOKEN='tok',
+                       TWILIO_WHATSAPP_NUMBER='+1555')
+    def test_con_twilio_usa_whatsapp(self):
+        self.assertEqual(elegir_canal(self.cliente), 'whatsapp')
+
+
+@patch('apps.citas.signals.enviar_confirmacion_cita', create=True)
+@override_settings(TWILIO_ACCOUNT_SID='', TWILIO_AUTH_TOKEN='')
+class TareasProgramadasTests(TestCase):
+
+    def setUp(self):
+        self.negocio, self.servicio, self.cliente = _crear_base()
+
+    def _cita(self, fecha_hora, **extra):
+        return Cita.objects.create(
+            negocio=self.negocio, cliente=self.cliente, servicio=self.servicio,
+            fecha_hora=fecha_hora, duracion_minutos=30,
+            estado=extra.pop('estado', 'confirmada'), **extra
+        )
+
+    @patch.object(Notificacion, 'enviar', return_value={'success': True})
+    def test_recordatorios_cubren_manana_en_hora_local(self, *mocks):
+        from .tasks import enviar_recordatorios_citas
+        manana = timezone.localdate() + timedelta(days=1)
+        temprano = self._cita(_local(manana, 8))       # 13:00 UTC
+        tarde = self._cita(_local(manana, 20))         # 01:00 UTC del día siguiente
+        pasado = self._cita(_local(manana + timedelta(days=1), 2))
+
+        enviar_recordatorios_citas()
+
+        for cita, esperado in [(temprano, True), (tarde, True), (pasado, False)]:
+            cita.refresh_from_db()
+            self.assertEqual(cita.recordatorio_enviado, esperado, cita.fecha_hora)
+
+    @patch('apps.notificaciones.services.NotificacionService.enviar_push',
+           return_value={'success': True})
+    def test_confirmacion_avisa_al_admin_aunque_cliente_no_tenga_canal(self, enviar_push, *mocks):
+        self.cliente.email = ''
+        self.cliente.save()
+        cita = self._cita(_local(timezone.localdate() + timedelta(days=2), 10))
+
+        enviar_confirmacion_cita(cita.id)
+
+        self.assertFalse(Notificacion.objects.filter(cita=cita).exists())
+        self.assertTrue(enviar_push.call_args.kwargs.get('enviar_a_admin'))
+
+    def test_completar_desde_panel_actualiza_ultima_visita(self, *mocks):
+        from django.urls import reverse
+        cita = self._cita(_local(timezone.localdate() - timedelta(days=1), 10))
+        self.client.force_login(self.negocio.administrador)
+        self.client.post(reverse('public:cita_completar', args=[self.negocio.slug, cita.id]))
+        self.cliente.refresh_from_db()
+        self.assertEqual(self.cliente.ultima_visita, cita.fecha_hora)
+        self.assertEqual(self.cliente.total_citas, 1)
+
+    @patch.object(Notificacion, 'enviar', return_value={'success': True})
+    def test_sugerencia_ignora_citas_si_el_cliente_volvio(self, *mocks):
+        from apps.fidelizacion.tasks import sugerir_proximas_citas
+        hoy = timezone.localdate()
+        self._cita(_local(hoy - timedelta(days=28), 10), estado='completada')
+        self.cliente.acepta_promociones = True
+        self.cliente.save()
+
+        self._cita(_local(hoy - timedelta(days=2), 10), estado='completada')
+        sugerir_proximas_citas()
+        self.assertFalse(Notificacion.objects.filter(tipo='sugerencia_cita').exists())
+
+    @patch.object(Notificacion, 'enviar', return_value={'success': True})
+    def test_sugerencia_se_envia_cerca_de_la_frecuencia(self, *mocks):
+        from apps.fidelizacion.tasks import sugerir_proximas_citas
+        self._cita(_local(timezone.localdate() - timedelta(days=28), 10), estado='completada')
+        self.cliente.acepta_promociones = True
+        self.cliente.save()
+        sugerir_proximas_citas()
+        self.assertEqual(Notificacion.objects.filter(tipo='sugerencia_cita').count(), 1)

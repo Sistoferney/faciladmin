@@ -11,6 +11,29 @@ import json
 logger = logging.getLogger(__name__)
 
 
+def elegir_canal(cliente):
+    """
+    Canal por el que se notificará al cliente, o None si no hay ninguno disponible.
+
+    Prioridad: Push (gratis) > WhatsApp > SMS > Email.
+    WhatsApp y SMS solo se eligen si Twilio está configurado: los clientes
+    aceptan WhatsApp por defecto, y sin Twilio el envío fallaría siempre.
+    """
+    from .models import ClientePushSubscription
+
+    twilio = bool(settings.TWILIO_ACCOUNT_SID and settings.TWILIO_AUTH_TOKEN)
+
+    if ClientePushSubscription.objects.filter(cliente=cliente, activa=True).exists():
+        return 'push'
+    if cliente.acepta_whatsapp and twilio and settings.TWILIO_WHATSAPP_NUMBER:
+        return 'whatsapp'
+    if cliente.acepta_sms and twilio and settings.TWILIO_PHONE_NUMBER:
+        return 'sms'
+    if cliente.acepta_email and cliente.email:
+        return 'email'
+    return None
+
+
 class NotificacionService:
     """Servicio para enviar notificaciones por diferentes canales"""
 

@@ -8,6 +8,7 @@ from datetime import timedelta
 from apps.clientes.models import Cliente
 from apps.citas.models import Cita
 from apps.notificaciones.models import Notificacion
+from apps.notificaciones.services import elegir_canal
 
 
 @shared_task
@@ -18,7 +19,8 @@ def sugerir_proximas_citas():
     # Obtener citas completadas
     citas_completadas = Cita.objects.filter(
         estado='completada',
-        servicio__frecuencia_dias__isnull=False
+        servicio__frecuencia_dias__isnull=False,
+        negocio__esta_activo=True,
     ).select_related('cliente', 'servicio', 'negocio')
 
     sugerencias_enviadas = 0
@@ -30,6 +32,18 @@ def sugerir_proximas_citas():
 
         # Si está cerca de la fecha sugerida (5 días antes)
         if dias_desde_cita >= (frecuencia - 5) and dias_desde_cita <= frecuencia:
+            # Solo cuenta la última visita: si el cliente volvió después
+            # por el mismo servicio, esta cita ya no aplica
+            volvio_despues = Cita.objects.filter(
+                cliente=cita.cliente,
+                servicio=cita.servicio,
+                estado='completada',
+                fecha_hora__gt=cita.fecha_hora,
+            ).exists()
+
+            if volvio_despues:
+                continue
+
             # Verificar que no tenga otra cita ya agendada
             tiene_cita_futura = Cita.objects.filter(
                 cliente=cita.cliente,
@@ -58,13 +72,8 @@ def sugerir_proximas_citas():
             if not cliente.acepta_promociones:
                 continue
 
-            if cliente.acepta_whatsapp:
-                canal = 'whatsapp'
-            elif cliente.acepta_sms:
-                canal = 'sms'
-            elif cliente.acepta_email and cliente.email:
-                canal = 'email'
-            else:
+            canal = elegir_canal(cliente)
+            if not canal:
                 continue
 
             # Crear mensaje
@@ -114,12 +123,10 @@ def identificar_clientes_inactivos():
         esta_activo=True
     ).exclude(tipo_cliente='inactivo')
 
-    # Marcar como inactivos
-    for cliente in clientes_inactivos:
-        cliente.tipo_cliente = 'inactivo'
-        cliente.save()
+    # Contar antes de actualizar: después el queryset ya no los incluye
+    total = clientes_inactivos.update(tipo_cliente='inactivo')
 
-    return f"Identificados {clientes_inactivos.count()} clientes inactivos"
+    return f"Identificados {total} clientes inactivos"
 
 
 @shared_task
@@ -149,13 +156,8 @@ def enviar_campana_reactivacion():
             continue
 
         # Determinar canal
-        if cliente.acepta_whatsapp:
-            canal = 'whatsapp'
-        elif cliente.acepta_sms:
-            canal = 'sms'
-        elif cliente.acepta_email and cliente.email:
-            canal = 'email'
-        else:
+        canal = elegir_canal(cliente)
+        if not canal:
             continue
 
         # Crear mensaje

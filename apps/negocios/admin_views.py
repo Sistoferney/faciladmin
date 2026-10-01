@@ -684,8 +684,9 @@ def cita_completar(request, slug, cita_id):
     cita = get_object_or_404(Cita, id=cita_id, negocio=negocio)
 
     if request.method == 'POST':
-        cita.estado = 'completada'
-        cita.save()
+        # Actualiza también última visita y tipo de cliente
+        # (los usan las tareas de clientes inactivos y sugerencias)
+        cita.marcar_completada()
         messages.success(request, f'Cita de {cita.cliente.nombre} marcada como completada.')
         return redirect('public:admin_agenda', slug=slug)
 
