@@ -141,6 +141,15 @@ def validar_email(request, token):
             messages.error(request, 'La contraseña debe tener al menos 8 caracteres')
             return render(request, 'suscripciones/activar_cuenta.html', {'registro': registro})
 
+        # Verificar si el usuario ya existe
+        if Usuario.objects.filter(email=registro.email).exists():
+            messages.error(
+                request,
+                'Este email ya tiene una cuenta activa. '
+                'Si olvidaste tu contraseña, usa la opción de recuperación en el login.'
+            )
+            return render(request, 'suscripciones/activar_cuenta.html', {'registro': registro})
+
         # Crear usuario admin
         try:
             user = Usuario.objects.create_user(
