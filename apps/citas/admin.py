@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from .models import Cita
+from django.utils import timezone
 
 
 @admin.register(Cita)
@@ -44,7 +45,7 @@ class CitaAdmin(admin.ModelAdmin):
     )
 
     def fecha_hora_display(self, obj):
-        return obj.fecha_hora.strftime('%d/%m/%Y %H:%M')
+        return timezone.localtime(obj.fecha_hora).strftime('%d/%m/%Y %H:%M')
     fecha_hora_display.short_description = 'Fecha y hora'
 
     def estado_display(self, obj):

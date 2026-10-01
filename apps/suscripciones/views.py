@@ -225,7 +225,7 @@ Hola {registro.nombre},
 
 🏢 Negocio: {nombre_negocio}
 📧 Email: {registro.email}
-⏰ Plan gratuito válido hasta: {suscripcion.fecha_fin.strftime('%d/%m/%Y')}
+⏰ Plan gratuito válido hasta: {timezone.localtime(suscripcion.fecha_fin).strftime('%d/%m/%Y')}
 
 Accede a tu panel aquí: {request.build_absolute_uri('/dashboard/')}
 
@@ -385,7 +385,7 @@ Hola {request.user.nombre},
 ¡Excelente noticia! Has generado tu cupón mensual por el programa de referidos.
 
 📋 Código del cupón: {cupon.codigo}
-⏰ Válido hasta: {cupon.fecha_expiracion.strftime('%d/%m/%Y')}
+⏰ Válido hasta: {timezone.localtime(cupon.fecha_expiracion).strftime('%d/%m/%Y')}
 🎯 Beneficio: 1 mes gratis (30 días)
 
 Para canjear tu cupón:
@@ -435,7 +435,7 @@ def canjear_cupon(request):
         exito, mensaje, suscripcion = cupon.canjear(negocio)
 
         if exito:
-            messages.success(request, f'¡Perfecto! {mensaje}. Nueva fecha de vencimiento: {suscripcion.fecha_fin.strftime("%d/%m/%Y")}')
+            messages.success(request, f'¡Perfecto! {mensaje}. Nueva fecha de vencimiento: {timezone.localtime(suscripcion.fecha_fin).strftime("%d/%m/%Y")}')
             return redirect('core:dashboard_redirect')
         else:
             messages.error(request, mensaje)

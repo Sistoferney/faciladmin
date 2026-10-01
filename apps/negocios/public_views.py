@@ -224,12 +224,12 @@ def agendar_cita(request, slug):
                 messages.success(
                     request,
                     f'¡Cita agendada! Te hemos enviado la información de pago a {telefono}. '
-                    f'Por favor realiza el abono antes del {cita.fecha_limite_abono.strftime("%d/%m/%Y")}.'
+                    f'Por favor realiza el abono antes del {timezone.localtime(cita.fecha_limite_abono).strftime("%d/%m/%Y")}.'
                 )
             else:
                 messages.success(
                     request,
-                    f'¡Cita confirmada! Nos vemos el {fecha_hora.strftime("%d/%m/%Y a las %H:%M")}. '
+                    f'¡Cita confirmada! Nos vemos el {timezone.localtime(fecha_hora).strftime("%d/%m/%Y a las %H:%M")}. '
                     f'Te enviaremos un recordatorio.'
                 )
 
@@ -564,13 +564,13 @@ def editar_cita_cliente(request, slug, cita_id):
 {cita.cliente.nombre} ha modificado su cita:
 
 ANTES:
-📅 {fecha_anterior.strftime('%d/%m/%Y')}
-🕐 {fecha_anterior.strftime('%H:%M')}
+📅 {timezone.localtime(fecha_anterior).strftime('%d/%m/%Y')}
+🕐 {timezone.localtime(fecha_anterior).strftime('%H:%M')}
 ✂️ {servicio_anterior.nombre}
 
 AHORA:
-📅 {nueva_fecha_hora.strftime('%d/%m/%Y')}
-🕐 {nueva_fecha_hora.strftime('%H:%M')}
+📅 {timezone.localtime(nueva_fecha_hora).strftime('%d/%m/%Y')}
+🕐 {timezone.localtime(nueva_fecha_hora).strftime('%H:%M')}
 ✂️ {servicio.nombre}
 💰 ${servicio.precio}
 📞 Tel: {cita.cliente.telefono}
@@ -586,7 +586,7 @@ AHORA:
             except Exception:
                 logger.exception('Error al notificar edición de cita %s', cita.id)
 
-            messages.success(request, f'¡Cita actualizada! Nueva fecha: {nueva_fecha_hora.strftime("%d/%m/%Y a las %H:%M")}')
+            messages.success(request, f'¡Cita actualizada! Nueva fecha: {timezone.localtime(nueva_fecha_hora).strftime("%d/%m/%Y a las %H:%M")}')
             return redirect('public:mis_citas', slug=slug)
 
         except Servicio.DoesNotExist:
@@ -652,8 +652,8 @@ def cancelar_cita_cliente(request, slug, cita_id):
             mensaje_admin = f"""
 {cita.cliente.nombre} ha cancelado su cita:
 
-📅 {cita.fecha_hora.strftime('%d/%m/%Y')}
-🕐 {cita.fecha_hora.strftime('%H:%M')}
+📅 {timezone.localtime(cita.fecha_hora).strftime('%d/%m/%Y')}
+🕐 {timezone.localtime(cita.fecha_hora).strftime('%H:%M')}
 ✂️ {cita.servicio.nombre}
 📞 Tel: {cita.cliente.telefono}
             """.strip()
@@ -972,7 +972,7 @@ def diagnostico_push_servidor(request):
             html += f"<td>{escape(sub.user.username)}</td>"
             html += f"<td>{escape(sub.negocio.nombre)} ({escape(sub.negocio.slug)})</td>"
             html += f"<td class='{estado_class}'>{estado}</td>"
-            html += f"<td>{sub.fecha_creacion.strftime('%Y-%m-%d %H:%M')}</td>"
+            html += f"<td>{timezone.localtime(sub.fecha_creacion).strftime('%Y-%m-%d %H:%M')}</td>"
             html += f"<td style='font-size: 10px;'>{escape(sub.endpoint[:40])}...</td>"
             html += f"</tr>"
         html += "</table>"

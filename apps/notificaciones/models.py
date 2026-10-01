@@ -6,6 +6,7 @@ from django.db import models
 from apps.clientes.models import Cliente
 from apps.citas.models import Cita
 import json
+from django.utils import timezone
 
 
 class Notificacion(models.Model):
@@ -149,7 +150,7 @@ class ClientePushSubscription(models.Model):
         ]
 
     def __str__(self):
-        return f"Suscripción Push - {self.cliente.nombre} ({self.fecha_suscripcion.strftime('%Y-%m-%d')})"
+        return f"Suscripción Push - {self.cliente.nombre} ({timezone.localtime(self.fecha_suscripcion).strftime('%Y-%m-%d')})"
 
     @classmethod
     def crear_desde_subscription_info(cls, cliente, subscription_data, user_agent=''):

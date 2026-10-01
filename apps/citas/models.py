@@ -113,7 +113,7 @@ class Cita(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.cliente.nombre} - {self.servicio.nombre} - {self.fecha_hora.strftime('%d/%m/%Y %H:%M')}"
+        return f"{self.cliente.nombre} - {self.servicio.nombre} - {timezone.localtime(self.fecha_hora).strftime('%d/%m/%Y %H:%M')}"
 
     def clean(self):
         """

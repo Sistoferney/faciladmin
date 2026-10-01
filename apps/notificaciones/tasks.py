@@ -41,8 +41,8 @@ def enviar_confirmacion_cita(cita_id):
 
 Tu cita ha sido agendada exitosamente:
 
-📅 Fecha: {cita.fecha_hora.strftime('%d/%m/%Y')}
-🕐 Hora: {cita.fecha_hora.strftime('%H:%M')}
+📅 Fecha: {timezone.localtime(cita.fecha_hora).strftime('%d/%m/%Y')}
+🕐 Hora: {timezone.localtime(cita.fecha_hora).strftime('%H:%M')}
 ✂️ Servicio: {cita.servicio.nombre}
 💰 Precio: ${cita.servicio.precio}
 
@@ -63,7 +63,7 @@ Datos para transferencia:
 💳 Cuenta: {negocio.numero_cuenta}
 👤 Titular: {negocio.titular_cuenta}
 
-Fecha límite de pago: {cita.fecha_limite_abono.strftime('%d/%m/%Y %H:%M')}
+Fecha límite de pago: {timezone.localtime(cita.fecha_limite_abono).strftime('%d/%m/%Y %H:%M')}
 
 Por favor, envía tu comprobante de pago para confirmar tu cita.
             """.strip()
@@ -92,8 +92,8 @@ Por favor, envía tu comprobante de pago para confirmar tu cita.
             mensaje_admin = f"""
 {cliente.nombre} ha agendado una cita:
 
-📅 {cita.fecha_hora.strftime('%d/%m/%Y')}
-🕐 {cita.fecha_hora.strftime('%H:%M')}
+📅 {timezone.localtime(cita.fecha_hora).strftime('%d/%m/%Y')}
+🕐 {timezone.localtime(cita.fecha_hora).strftime('%H:%M')}
 ✂️ {cita.servicio.nombre}
 💰 ${cita.servicio.precio}
 
@@ -174,8 +174,8 @@ def enviar_recordatorios_citas():
 
 Te recordamos tu cita para mañana:
 
-📅 Fecha: {cita.fecha_hora.strftime('%d/%m/%Y')}
-🕐 Hora: {cita.fecha_hora.strftime('%H:%M')}
+📅 Fecha: {timezone.localtime(cita.fecha_hora).strftime('%d/%m/%Y')}
+🕐 Hora: {timezone.localtime(cita.fecha_hora).strftime('%H:%M')}
 ✂️ Servicio: {cita.servicio.nombre}
 
 📍 {negocio.nombre}
@@ -229,11 +229,11 @@ def enviar_recordatorio_abono(abono_id, momento):
 
 Recordatorio de pago de abono para tu cita:
 
-📅 Fecha de cita: {cita.fecha_hora.strftime('%d/%m/%Y %H:%M')}
+📅 Fecha de cita: {timezone.localtime(cita.fecha_hora).strftime('%d/%m/%Y %H:%M')}
 ✂️ Servicio: {cita.servicio.nombre}
 💰 Monto de abono: ${abono.monto}
 
-⏰ Fecha límite: {abono.fecha_limite.strftime('%d/%m/%Y %H:%M')}
+⏰ Fecha límite: {timezone.localtime(abono.fecha_limite).strftime('%d/%m/%Y %H:%M')}
 
 Datos para transferencia:
 🏦 Banco: {negocio.banco}
@@ -285,8 +285,8 @@ def enviar_notificacion_confirmacion_abono(cita_id):
 
 ✅ Tu pago ha sido confirmado. Tu cita está asegurada:
 
-📅 Fecha: {cita.fecha_hora.strftime('%d/%m/%Y')}
-🕐 Hora: {cita.fecha_hora.strftime('%H:%M')}
+📅 Fecha: {timezone.localtime(cita.fecha_hora).strftime('%d/%m/%Y')}
+🕐 Hora: {timezone.localtime(cita.fecha_hora).strftime('%H:%M')}
 ✂️ Servicio: {cita.servicio.nombre}
 
 📍 {negocio.nombre}

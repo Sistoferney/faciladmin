@@ -7,6 +7,7 @@ from django.conf import settings
 from django.utils.text import slugify
 from django.core.exceptions import ValidationError
 import uuid
+from django.utils import timezone
 
 # Palabras reservadas del sistema que no se pueden usar como slugs
 SLUGS_RESERVADOS = [
@@ -250,4 +251,4 @@ class BloqueoAgenda(models.Model):
         ordering = ['-fecha_inicio']
 
     def __str__(self):
-        return f"{self.negocio.nombre} - {self.fecha_inicio.strftime('%d/%m/%Y %H:%M')} - {self.motivo_interno}"
+        return f"{self.negocio.nombre} - {timezone.localtime(self.fecha_inicio).strftime('%d/%m/%Y %H:%M')} - {self.motivo_interno}"
