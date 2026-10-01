@@ -40,10 +40,15 @@ else:
         print("-" * 70)
         for idx, user in enumerate(usuarios, 1):
             print(f"  {idx}. ID: {user.id} | Email: {user.email} | Nombre: {user.nombre}")
-            if hasattr(user, 'negocios') and user.negocios.exists():
-                for negocio in user.negocios.all():
-                    print(f"     - Negocio: {negocio.nombre}")
-            else:
+            try:
+                # Verificar si tiene negocio asociado (relación desde Negocio)
+                negocios = user.negocio_set.all() if hasattr(user, 'negocio_set') else []
+                if negocios:
+                    for negocio in negocios:
+                        print(f"     - Negocio: {negocio.nombre}")
+                else:
+                    print(f"     - Sin negocio asociado")
+            except:
                 print(f"     - Sin negocio asociado")
 
     print("\n" + "=" * 70)
@@ -63,8 +68,14 @@ else:
 
         for telefono, usuarios in duplicados.items():
             # Mantener solo usuarios CON negocio
-            usuarios_con_negocio = [u for u in usuarios if u.negocios.exists()]
-            usuarios_sin_negocio = [u for u in usuarios if not u.negocios.exists()]
+            def tiene_negocio(user):
+                try:
+                    return hasattr(user, 'negocio_set') and user.negocio_set.exists()
+                except:
+                    return False
+
+            usuarios_con_negocio = [u for u in usuarios if tiene_negocio(u)]
+            usuarios_sin_negocio = [u for u in usuarios if not tiene_negocio(u)]
 
             if usuarios_con_negocio and usuarios_sin_negocio:
                 for user in usuarios_sin_negocio:
