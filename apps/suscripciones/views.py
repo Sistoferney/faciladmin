@@ -160,7 +160,20 @@ def validar_email(request, token):
             )
 
             # Crear suscripción trial automática
-            plan_trial = PlanSuscripcion.objects.get(tipo='trial')
+            try:
+                plan_trial = PlanSuscripcion.objects.get(tipo='trial')
+            except PlanSuscripcion.DoesNotExist:
+                # Si no existe el plan, crearlo automáticamente
+                plan_trial = PlanSuscripcion.objects.create(
+                    tipo='trial',
+                    nombre='Trial Gratuito',
+                    precio=0.00,
+                    duracion_dias=120,
+                    descripcion='Período de prueba gratis de 120 días',
+                    activo=True,
+                    push_notifications=True,
+                    soporte_prioritario=False,
+                )
 
             # Trial siempre de 120 días
             dias_trial = 120
