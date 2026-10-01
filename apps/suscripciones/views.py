@@ -32,13 +32,13 @@ def registro_negocio(request):
             messages.error(request, 'Todos los campos son obligatorios')
             return render(request, 'suscripciones/registro.html')
 
-        # Validar que no exista
-        if RegistroNegocio.objects.filter(email=email).exists():
-            messages.error(request, 'Este email ya está registrado. Si ya validaste tu email, revisa tu bandeja de entrada.')
+        # Validar que el teléfono no exista (identificador único)
+        if RegistroNegocio.objects.filter(telefono=telefono).exists():
+            messages.error(request, 'Este teléfono ya está registrado. Si ya validaste tu email, revisa tu bandeja de entrada.')
             return render(request, 'suscripciones/registro.html')
 
-        if Usuario.objects.filter(email=email).exists():
-            messages.error(request, 'Este email ya tiene una cuenta activa. Intenta iniciar sesión.')
+        if Usuario.objects.filter(telefono=telefono).exists():
+            messages.error(request, 'Este teléfono ya tiene una cuenta activa. Intenta iniciar sesión.')
             return render(request, 'suscripciones/registro.html')
 
         # Generar token de validación
@@ -141,11 +141,11 @@ def validar_email(request, token):
             messages.error(request, 'La contraseña debe tener al menos 8 caracteres')
             return render(request, 'suscripciones/activar_cuenta.html', {'registro': registro})
 
-        # Verificar si el usuario ya existe
-        if Usuario.objects.filter(email=registro.email).exists():
+        # Verificar si el usuario ya existe (por teléfono, que es el identificador único)
+        if Usuario.objects.filter(telefono=registro.telefono).exists():
             messages.error(
                 request,
-                'Este email ya tiene una cuenta activa. '
+                'Este teléfono ya tiene una cuenta activa. '
                 'Si olvidaste tu contraseña, usa la opción de recuperación en el login.'
             )
             return render(request, 'suscripciones/activar_cuenta.html', {'registro': registro})
@@ -153,10 +153,10 @@ def validar_email(request, token):
         # Crear usuario admin
         try:
             user = Usuario.objects.create_user(
-                email=registro.email,
+                telefono=registro.telefono,
                 password=password,
                 nombre=f"{registro.nombre} {registro.apellido}",
-                telefono=registro.telefono
+                email=registro.email
             )
 
             # Crear negocio
