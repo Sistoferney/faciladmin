@@ -12,21 +12,17 @@ from datetime import timedelta
 class UsuarioManager(BaseUserManager):
     """Manager personalizado para el modelo Usuario"""
 
-    def create_user(self, telefono, password=None, **extra_fields):
-        """Crea y guarda un usuario regular usando teléfono como identificador"""
-        if not telefono:
-            raise ValueError('El teléfono es obligatorio')
-
-        # Normalizar email si se proporciona
-        if 'email' in extra_fields and extra_fields['email']:
-            extra_fields['email'] = self.normalize_email(extra_fields['email'])
-
-        user = self.model(telefono=telefono, **extra_fields)
+    def create_user(self, email, password=None, **extra_fields):
+        """Crea y guarda un usuario regular"""
+        if not email:
+            raise ValueError('El email es obligatorio')
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, telefono, password=None, **extra_fields):
+    def create_superuser(self, email, password=None, **extra_fields):
         """Crea y guarda un superusuario"""
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
@@ -37,23 +33,20 @@ class UsuarioManager(BaseUserManager):
         if extra_fields.get('is_superuser') is not True:
             raise ValueError('Superuser must have is_superuser=True.')
 
-        return self.create_user(telefono, password, **extra_fields)
+        return self.create_user(email, password, **extra_fields)
 
 
 class Usuario(AbstractUser):
     """
     Modelo de usuario personalizado para administradores
     RF-01: Registro de administradores
-    RF-02: Login con teléfono y contraseña
+    RF-02: Login con email y contraseña
     RF-03: Recuperación de contraseña
-
-    IMPORTANTE: El identificador único es el TELÉFONO, no el email.
-    Varios usuarios pueden compartir el mismo email.
     """
     username = None  # Removemos el username
-    telefono = models.CharField('Teléfono', max_length=20, unique=True, db_index=True)
-    email = models.EmailField('Correo electrónico')  # Email NO único pero requerido
+    email = models.EmailField('Correo electrónico', unique=True)
     nombre = models.CharField('Nombre completo', max_length=255)
+    telefono = models.CharField('Teléfono', max_length=20, blank=True)
 
     # Configuración del negocio al que pertenece (OneToOne)
     # Se definirá la relación desde el modelo Negocio
@@ -61,7 +54,7 @@ class Usuario(AbstractUser):
     fecha_registro = models.DateTimeField('Fecha de registro', auto_now_add=True)
     esta_activo = models.BooleanField('Activo', default=True)
 
-    USERNAME_FIELD = 'telefono'
+    USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['nombre']
 
     objects = UsuarioManager()
@@ -72,7 +65,7 @@ class Usuario(AbstractUser):
         ordering = ['-fecha_registro']
 
     def __str__(self):
-        return f"{self.nombre} ({self.telefono})"
+        return f"{self.nombre} ({self.email})"
 
     @property
     def tiene_negocio(self):

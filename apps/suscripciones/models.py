@@ -254,12 +254,7 @@ class UsoCupon(models.Model):
 
 
 class RegistroNegocio(models.Model):
-    """
-    Datos de registro simplificado antes de crear el negocio completo
-
-    IMPORTANTE: El identificador único es el TELÉFONO, no el email.
-    El email es opcional y puede repetirse entre usuarios.
-    """
+    """Datos de registro simplificado antes de crear el negocio completo"""
     ESTADO_REGISTRO = [
         ('pendiente_email', 'Pendiente Validación Email'),
         ('completado', 'Registro Completado'),
@@ -269,8 +264,8 @@ class RegistroNegocio(models.Model):
     # Datos básicos del usuario
     nombre = models.CharField(max_length=100)
     apellido = models.CharField(max_length=100)
-    telefono = models.CharField(max_length=20, unique=True, db_index=True)  # Identificador único
-    email = models.EmailField()  # Email NO único, pero requerido
+    email = models.EmailField(unique=True)
+    telefono = models.CharField(max_length=20)
 
     # Validación
     estado = models.CharField(max_length=20, choices=ESTADO_REGISTRO, default='pendiente_email')
@@ -290,7 +285,7 @@ class RegistroNegocio(models.Model):
         verbose_name_plural = 'Registros de Negocios'
 
     def __str__(self):
-        return f"{self.nombre} {self.apellido} - {self.telefono} ({self.get_estado_display()})"
+        return f"{self.nombre} {self.apellido} - {self.email} ({self.get_estado_display()})"
 
     @property
     def token_valido(self):

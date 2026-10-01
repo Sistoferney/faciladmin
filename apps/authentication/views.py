@@ -91,22 +91,22 @@ class SolicitarRecuperacionView(View):
 
     def post(self, request):
         """Procesa la solicitud de recuperación"""
-        telefono = request.POST.get('telefono', '').strip()
+        email = request.POST.get('email', '').strip().lower()
 
-        # Validar que se ingresó un teléfono
-        if not telefono:
-            messages.error(request, 'Por favor ingresa tu número de teléfono.')
+        # Validar formato básico de email
+        if not email or '@' not in email:
+            messages.error(request, 'Por favor ingresa un correo electrónico válido.')
             return render(request, self.template_name)
 
-        # Siempre mostrar el mismo mensaje para no revelar si el teléfono existe
+        # Siempre mostrar el mismo mensaje para no revelar si el email existe
         # (seguridad contra enumeración de usuarios)
         mensaje_exitoso = (
-            'Si el teléfono está registrado, '
+            'Si el correo electrónico está registrado, '
             'recibirás un enlace para restablecer tu contraseña en los próximos minutos.'
         )
 
         try:
-            usuario = Usuario.objects.get(telefono=telefono, esta_activo=True)
+            usuario = Usuario.objects.get(email=email, esta_activo=True)
 
             # Invalidar tokens anteriores del usuario (opcional, por seguridad)
             TokenRecuperacion.objects.filter(
