@@ -20,6 +20,10 @@ from apps.servicios.models import Servicio
 from apps.clientes.models import Cliente
 from apps.citas.models import Cita
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 def superuser_required(view_func):
     """
@@ -233,8 +237,9 @@ def agendar_cita(request, slug):
 
         except Servicio.DoesNotExist:
             messages.error(request, 'El servicio seleccionado no está disponible.')
-        except Exception as e:
-            messages.error(request, f'Error al agendar la cita: {str(e)}')
+        except Exception:
+            logger.exception('Error al agendar cita en %s', slug)
+            messages.error(request, 'No pudimos agendar tu cita. Por favor intenta de nuevo.')
 
     context = {
         'negocio': negocio,
@@ -578,16 +583,17 @@ AHORA:
                     cita=cita,
                     enviar_a_admin=True
                 )
-            except Exception as e:
-                print(f"[Notificación Admin] Error al enviar notificación de edición: {e}")
+            except Exception:
+                logger.exception('Error al notificar edición de cita %s', cita.id)
 
             messages.success(request, f'¡Cita actualizada! Nueva fecha: {nueva_fecha_hora.strftime("%d/%m/%Y a las %H:%M")}')
             return redirect('public:mis_citas', slug=slug)
 
         except Servicio.DoesNotExist:
             messages.error(request, 'El servicio seleccionado no está disponible.')
-        except Exception as e:
-            messages.error(request, f'Error al editar la cita: {str(e)}')
+        except Exception:
+            logger.exception('Error al editar cita %s', cita_id)
+            messages.error(request, 'No pudimos actualizar tu cita. Por favor intenta de nuevo.')
 
     context = {
         'negocio': negocio,
@@ -662,8 +668,8 @@ def cancelar_cita_cliente(request, slug, cita_id):
                 cita=cita,
                 enviar_a_admin=True
             )
-        except Exception as e:
-            print(f"[Notificación Admin] Error al enviar notificación de cancelación: {e}")
+        except Exception:
+            logger.exception('Error al notificar cancelación de cita %s', cita.id)
 
         messages.success(request, 'Tu cita ha sido cancelada exitosamente.')
         return redirect('public:mis_citas', slug=slug)

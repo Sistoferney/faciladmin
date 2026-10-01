@@ -8,6 +8,10 @@ from .models import Notificacion
 from apps.citas.models import Cita
 from apps.abonos.models import Abono
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 @shared_task
 def enviar_confirmacion_cita(cita_id):
@@ -106,11 +110,11 @@ Por favor, envía tu comprobante de pago para confirmar tu cita.
             )
 
             if resultado_admin.get('success'):
-                print(f"[Notificación Admin] Enviada: {resultado_admin.get('enviados_admin', 0)} notificaciones")
+                logger.info(f"[Notificación Admin] Enviada: {resultado_admin.get('enviados_admin', 0)} notificaciones")
 
-        except Exception as e:
+        except Exception:
             # Si falla el envío al admin, no afectar el flujo principal
-            print(f"[Notificación Admin] Error: {e}")
+            logger.exception('Error al notificar al admin la cita %s', cita_id)
 
         return resultado
 

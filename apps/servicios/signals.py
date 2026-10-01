@@ -8,6 +8,10 @@ from django.dispatch import receiver
 from .models import Servicio
 import cloudinary.uploader
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 @receiver(pre_save, sender=Servicio)
 def eliminar_imagen_anterior(sender, instance, **kwargs):
@@ -40,9 +44,9 @@ def eliminar_imagen_anterior(sender, instance, **kwargs):
 
                     # Eliminar de Cloudinary
                     cloudinary.uploader.destroy(public_id, invalidate=True)
-                    print(f"✓ Imagen anterior eliminada de Cloudinary: {public_id}")
+                    logger.info(f"Imagen anterior eliminada de Cloudinary: {public_id}")
                 except Exception as e:
-                    print(f"Error al eliminar imagen de Cloudinary: {e}")
+                    logger.warning(f"Error al eliminar imagen de Cloudinary: {e}")
 
     except Servicio.DoesNotExist:
         pass
@@ -65,11 +69,11 @@ def eliminar_imagen_al_borrar_servicio(sender, instance, **kwargs):
                     public_id = '/'.join(public_id_parts).rsplit('.', 1)[0]
 
                     cloudinary.uploader.destroy(public_id, invalidate=True)
-                    print(f"✓ Imagen eliminada de Cloudinary al borrar servicio: {public_id}")
+                    logger.info(f"Imagen eliminada de Cloudinary al borrar servicio: {public_id}")
                 except Exception as e:
-                    print(f"Error al eliminar imagen de Cloudinary: {e}")
+                    logger.warning(f"Error al eliminar imagen de Cloudinary: {e}")
         except Exception as e:
-            print(f"Error al procesar eliminación de imagen: {e}")
+            logger.warning(f"Error al procesar eliminación de imagen: {e}")
 
 
 @receiver(post_save, sender=Servicio)

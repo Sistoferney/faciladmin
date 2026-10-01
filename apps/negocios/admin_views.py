@@ -14,6 +14,10 @@ from apps.clientes.models import Cliente
 from apps.citas.models import Cita
 from apps.abonos.models import Abono
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 def admin_required(view_func):
     """
@@ -428,7 +432,8 @@ def servicio_crear(request, slug):
                 if 'unique constraint' in str(e).lower() or 'duplicate key' in str(e).lower():
                     messages.error(request, f'Ya existe un servicio con el nombre "{servicio.nombre}". Por favor usa un nombre diferente.')
                 else:
-                    messages.error(request, f'Error al crear el servicio: {str(e)}')
+                    logger.exception('Error al crear servicio en %s', slug)
+                    messages.error(request, 'No se pudo crear el servicio. Por favor intenta de nuevo.')
         else:
             messages.error(request, 'Por favor corrige los errores en el formulario.')
     else:
@@ -466,7 +471,8 @@ def servicio_editar(request, slug, servicio_id):
                 if 'unique constraint' in str(e).lower() or 'duplicate key' in str(e).lower():
                     messages.error(request, f'Ya existe otro servicio con el nombre "{form.cleaned_data.get("nombre")}". Por favor usa un nombre diferente.')
                 else:
-                    messages.error(request, f'Error al actualizar el servicio: {str(e)}')
+                    logger.exception('Error al actualizar servicio %s', servicio_id)
+                    messages.error(request, 'No se pudo actualizar el servicio. Por favor intenta de nuevo.')
         else:
             messages.error(request, 'Por favor corrige los errores en el formulario.')
     else:
@@ -873,7 +879,7 @@ def generar_qr(request, slug):
             qr_img.paste(logo_bg, qr_logo_pos)
         except Exception as e:
             # Si falla, continuar sin logo
-            print(f"Error agregando logo al QR: {e}")
+            logger.warning('Error agregando logo al QR de %s: %s', slug, e)
 
     # Crear imagen final con texto
     # Agregar espacio abajo para el nombre

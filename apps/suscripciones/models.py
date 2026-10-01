@@ -3,6 +3,10 @@ from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class PlanSuscripcion(models.Model):
     """Planes disponibles: Trial, Mensual"""
@@ -232,7 +236,8 @@ class Cupon(models.Model):
         except Suscripcion.DoesNotExist:
             return False, "No tienes una suscripción activa", None
         except Exception as e:
-            return False, f"Error al canjear cupón: {str(e)}", None
+            logger.exception('Error al canjear cupón %s', self.id)
+            return False, "No se pudo canjear el cupón. Por favor intenta de nuevo.", None
 
 
 class UsoCupon(models.Model):

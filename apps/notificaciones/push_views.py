@@ -6,6 +6,9 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.conf import settings
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @require_http_methods(["GET"])
@@ -90,10 +93,11 @@ def subscribe_push(request):
             'success': False,
             'error': 'Datos inválidos'
         }, status=400)
-    except Exception as e:
+    except Exception:
+        logger.exception('Error en %s', request.path)
         return JsonResponse({
             'success': False,
-            'error': str(e)
+            'error': 'Error interno del servidor'
         }, status=500)
 
 
@@ -136,10 +140,11 @@ def unsubscribe_push(request):
             'success': False,
             'error': 'Datos inválidos'
         }, status=400)
-    except Exception as e:
+    except Exception:
+        logger.exception('Error en %s', request.path)
         return JsonResponse({
             'success': False,
-            'error': str(e)
+            'error': 'Error interno del servidor'
         }, status=500)
 
 
@@ -210,10 +215,11 @@ def subscribe_admin_push(request):
                         'success': False,
                         'error': 'Usuario no tiene negocio asociado'
                     }, status=404)
-            except Exception as e:
+            except Exception:
+                logger.exception('Error buscando negocio del usuario %s', request.user.pk)
                 return JsonResponse({
                     'success': False,
-                    'error': f'Error buscando negocio del usuario: {str(e)}'
+                    'error': 'Error interno del servidor'
                 }, status=500)
 
         # Crear o actualizar la suscripción
@@ -243,10 +249,11 @@ def subscribe_admin_push(request):
             'success': False,
             'error': 'Datos inválidos'
         }, status=400)
-    except Exception as e:
+    except Exception:
+        logger.exception('Error en %s', request.path)
         return JsonResponse({
             'success': False,
-            'error': str(e)
+            'error': 'Error interno del servidor'
         }, status=500)
 
 
@@ -277,8 +284,9 @@ def test_push_notification(request):
             'message': 'Notificación de prueba enviada'
         })
 
-    except Exception as e:
+    except Exception:
+        logger.exception('Error en %s', request.path)
         return JsonResponse({
             'success': False,
-            'error': str(e)
+            'error': 'Error interno del servidor'
         }, status=500)

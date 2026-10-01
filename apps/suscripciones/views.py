@@ -18,6 +18,11 @@ from .models import (
 from apps.negocios.models import Negocio
 from apps.authentication.models import Usuario
 
+import logging
+from django.db import transaction
+
+logger = logging.getLogger(__name__)
+
 
 def registro_negocio(request):
     """Paso 1: Formulario de registro inicial SIMPLIFICADO (sin cupones)"""
@@ -94,8 +99,9 @@ Equipo FacilAdmin
             messages.success(request, f'¡Casi listo {nombre}! Te enviamos un email a {email} para activar tu cuenta gratis.')
             return redirect('suscripciones:registro_pendiente')
 
-        except Exception as e:
+        except Exception:
             # Si falla el email, borrar el registro y mostrar error
+            logger.exception('Error enviando email de validación a %s', email)
             registro.delete()
             messages.error(request, 'Hubo un error al enviar el email de validación. Por favor intenta de nuevo.')
             return render(request, 'suscripciones/registro.html')
@@ -120,7 +126,7 @@ def validar_email(request, token):
     # Verificar si ya fue completado
     if registro.estado == 'completado':
         messages.info(request, 'Esta cuenta ya fue activada. Puedes iniciar sesión.')
-        return redirect('authentication:login')
+        return redirect('login')
 
     # Si es POST, procesar la activación
     if request.method == 'POST':
@@ -152,55 +158,58 @@ def validar_email(request, token):
 
         # Crear usuario admin
         try:
-            user = Usuario.objects.create_user(
-                telefono=registro.telefono,
-                password=password,
-                nombre=f"{registro.nombre} {registro.apellido}",
-                email=registro.email
-            )
-
-            # Crear negocio
-            negocio = Negocio.objects.create(
-                nombre=nombre_negocio,
-                telefono=registro.telefono,
-                email=registro.email,
-                administrador=user,
-                esta_activo=True
-            )
-
-            # Crear suscripción trial automática
-            try:
-                plan_trial = PlanSuscripcion.objects.get(tipo='trial')
-            except PlanSuscripcion.DoesNotExist:
-                # Si no existe el plan, crearlo automáticamente
-                plan_trial = PlanSuscripcion.objects.create(
-                    tipo='trial',
-                    nombre='Trial Gratuito',
-                    precio=0.00,
-                    duracion_dias=120,
-                    descripcion='Período de prueba gratis de 120 días',
-                    activo=True,
-                    push_notifications=True,
-                    soporte_prioritario=False,
+            # Todo o nada: si algo falla no queda un usuario sin negocio
+            # que impida volver a intentar la activación
+            with transaction.atomic():
+                user = Usuario.objects.create_user(
+                    telefono=registro.telefono,
+                    password=password,
+                    nombre=f"{registro.nombre} {registro.apellido}",
+                    email=registro.email
                 )
 
-            # Trial siempre de 120 días
-            dias_trial = 120
+                # Crear negocio
+                negocio = Negocio.objects.create(
+                    nombre=nombre_negocio,
+                    telefono=registro.telefono,
+                    email=registro.email,
+                    administrador=user,
+                    esta_activo=True
+                )
 
-            suscripcion = Suscripcion.objects.create(
-                negocio=negocio,
-                plan=plan_trial,
-                estado='trial',
-                fecha_inicio=timezone.now(),
-                fecha_fin=timezone.now() + timedelta(days=dias_trial),
-                auto_renovacion=False
-            )
+                # Crear suscripción trial automática
+                try:
+                    plan_trial = PlanSuscripcion.objects.get(tipo='trial')
+                except PlanSuscripcion.DoesNotExist:
+                    # Si no existe el plan, crearlo automáticamente
+                    plan_trial = PlanSuscripcion.objects.create(
+                        tipo='trial',
+                        nombre='Trial Gratuito',
+                        precio=0.00,
+                        duracion_dias=120,
+                        descripcion='Período de prueba gratis de 120 días',
+                        activo=True,
+                        push_notifications=True,
+                        soporte_prioritario=False,
+                    )
 
-            # Actualizar registro
-            registro.estado = 'completado'
-            registro.email_validado_en = timezone.now()
-            registro.negocio_creado = negocio
-            registro.save()
+                # Trial siempre de 120 días
+                dias_trial = 120
+
+                suscripcion = Suscripcion.objects.create(
+                    negocio=negocio,
+                    plan=plan_trial,
+                    estado='trial',
+                    fecha_inicio=timezone.now(),
+                    fecha_fin=timezone.now() + timedelta(days=dias_trial),
+                    auto_renovacion=False
+                )
+
+                # Actualizar registro
+                registro.estado = 'completado'
+                registro.email_validado_en = timezone.now()
+                registro.negocio_creado = negocio
+                registro.save()
 
             # Login automático
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
@@ -218,7 +227,7 @@ Hola {registro.nombre},
 📧 Email: {registro.email}
 ⏰ Plan gratuito válido hasta: {suscripcion.fecha_fin.strftime('%d/%m/%Y')}
 
-Accede a tu panel aquí: {request.build_absolute_uri('/admin/dashboard/')}
+Accede a tu panel aquí: {request.build_absolute_uri('/dashboard/')}
 
 Durante los próximos {dias_trial} días tendrás acceso COMPLETO a:
 ✅ Gestión ilimitada de citas
@@ -245,10 +254,11 @@ Equipo FacilAdmin
             messages.success(request, f'¡Bienvenido {registro.nombre}! Tu cuenta está activa por {dias_trial} días. 🎉')
 
             # Redirigir al dashboard
-            return redirect('admin_dashboard')
+            return redirect('core:dashboard_redirect')
 
-        except Exception as e:
-            messages.error(request, f'Hubo un error al crear tu cuenta: {str(e)}. Por favor contacta soporte.')
+        except Exception:
+            logger.exception('Error al activar cuenta del registro %s', registro.id)
+            messages.error(request, 'Hubo un error al crear tu cuenta. Por favor contacta soporte.')
             return render(request, 'suscripciones/activar_cuenta.html', {'registro': registro})
 
     # GET: Mostrar formulario de activación
@@ -273,7 +283,7 @@ def programa_referidos_dashboard(request):
     negocio = request.user.negocios.first()
     if not negocio:
         messages.error(request, 'No tienes un negocio asociado')
-        return redirect('admin_dashboard')
+        return redirect('core:dashboard_redirect')
 
     # Obtener o crear programa de referidos
     programa, created = ProgramaReferidos.objects.get_or_create(negocio=negocio)
@@ -352,7 +362,7 @@ def generar_cupon_referidos(request):
     negocio = request.user.negocios.first()
     if not negocio:
         messages.error(request, 'No tienes un negocio asociado')
-        return redirect('admin_dashboard')
+        return redirect('core:dashboard_redirect')
 
     try:
         programa = ProgramaReferidos.objects.get(negocio=negocio)
@@ -407,7 +417,7 @@ def canjear_cupon(request):
     negocio = request.user.negocios.first()
     if not negocio:
         messages.error(request, 'No tienes un negocio asociado')
-        return redirect('admin_dashboard')
+        return redirect('core:dashboard_redirect')
 
     if request.method == 'POST':
         codigo_cupon = request.POST.get('codigo_cupon', '').strip().upper()
@@ -426,7 +436,7 @@ def canjear_cupon(request):
 
         if exito:
             messages.success(request, f'¡Perfecto! {mensaje}. Nueva fecha de vencimiento: {suscripcion.fecha_fin.strftime("%d/%m/%Y")}')
-            return redirect('admin_dashboard')
+            return redirect('core:dashboard_redirect')
         else:
             messages.error(request, mensaje)
 
