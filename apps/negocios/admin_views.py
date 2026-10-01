@@ -359,13 +359,16 @@ def abonos_admin(request, slug):
     negocio = get_object_or_404(Negocio, slug=slug)
 
     # Filtrar por estado
-    estado = request.GET.get('estado', 'pendiente')
+    # Por defecto: los que requieren una decisión del dueño (pendientes y vencidos)
+    estado = request.GET.get('estado', 'por_revisar')
 
     abonos = Abono.objects.filter(
         cita__negocio=negocio
     ).select_related('cita__cliente', 'cita__servicio')
 
-    if estado and estado != 'todos':
+    if estado == 'por_revisar':
+        abonos = abonos.filter(estado__in=['pendiente', 'vencido'])
+    elif estado and estado != 'todos':
         abonos = abonos.filter(estado=estado)
 
     abonos = abonos.order_by('-fecha_creacion')
@@ -708,12 +711,12 @@ def cita_cancelar(request, slug, cita_id):
     cita = get_object_or_404(Cita, id=cita_id, negocio=negocio)
 
     if request.method == 'POST':
-        motivo = request.POST.get('motivo', '')
-        cita.estado = 'cancelada'
-        if motivo:
-            cita.notas_admin = f"Cancelada: {motivo}"
-        cita.save()
+        # Guarda el motivo en las notas internas de la cita
+        cita.cancelar(request.POST.get('motivo', '').strip())
         messages.success(request, f'Cita de {cita.cliente.nombre} cancelada.')
+        # Volver a abonos si se canceló desde ahí (abono vencido)
+        if request.GET.get('desde') == 'abonos':
+            return redirect('public:abonos_admin', slug=slug)
         return redirect('public:admin_agenda', slug=slug)
 
     context = {

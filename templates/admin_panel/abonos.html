@@ -10,6 +10,7 @@
             <div>
                 <form method="GET" class="d-inline-block">
                     <select name="estado" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="por_revisar" {% if estado_filtro == 'por_revisar' %}selected{% endif %}>Por revisar</option>
                         <option value="pendiente" {% if estado_filtro == 'pendiente' %}selected{% endif %}>Pendientes</option>
                         <option value="confirmado" {% if estado_filtro == 'confirmado' %}selected{% endif %}>Confirmados</option>
                         <option value="rechazado" {% if estado_filtro == 'rechazado' %}selected{% endif %}>Rechazados</option>
@@ -113,6 +114,16 @@
                                         </a>
                                         <a href="{% url 'public:abono_rechazar' negocio.slug abono.id %}" class="btn btn-danger" title="Rechazar">
                                             <i class="bi bi-x"></i>
+                                        </a>
+                                    </div>
+                                    {% elif abono.estado == 'vencido' and abono.cita.estado == 'pendiente_abono' %}
+                                    <!-- El dueño decide: confirmar si el cliente pagó tarde, o cancelar la cita -->
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'public:abono_confirmar' negocio.slug abono.id %}" class="btn btn-success" title="Confirmar pago tardío">
+                                            <i class="bi bi-check"></i>
+                                        </a>
+                                        <a href="{% url 'public:cita_cancelar' negocio.slug abono.cita.id %}?desde=abonos" class="btn btn-outline-danger" title="Cancelar cita y liberar horario">
+                                            <i class="bi bi-calendar-x"></i>
                                         </a>
                                     </div>
                                     {% else %}

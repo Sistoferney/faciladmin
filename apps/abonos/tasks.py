@@ -4,6 +4,31 @@ Tareas de Celery para abonos
 from celery import shared_task
 from django.utils import timezone
 from .models import Abono
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def _avisar_admin_abono_vencido(abono):
+    """Notifica por push al dueño que un abono venció sin pagarse"""
+    from apps.notificaciones.services import NotificacionService
+
+    cita = abono.cita
+    fecha = timezone.localtime(cita.fecha_hora)
+    try:
+        NotificacionService().enviar_push(
+            cliente=cita.cliente,
+            titulo='Abono vencido',
+            mensaje=(
+                f'{cita.cliente.nombre} no pagó el abono de ${abono.monto} '
+                f'para {cita.servicio.nombre} el {fecha.strftime("%d/%m/%Y a las %H:%M")}.\n'
+                'Revisa Abonos para confirmar el pago o cancelar la cita.'
+            ),
+            cita=cita,
+            enviar_a_admin=True,
+        )
+    except Exception:
+        logger.exception('Error avisando abono vencido %s', abono.id)
 
 
 @shared_task
@@ -32,12 +57,17 @@ def verificar_abonos_pendientes():
             enviar_recordatorio_abono.delay(abono.id, '24h')
 
     # Marcar abonos vencidos
-    abonos_vencidos = Abono.objects.filter(
+    abonos_vencidos = list(Abono.objects.filter(
         estado='pendiente',
         fecha_limite__lt=timezone.now()
-    )
-    # IMPORTANTE: Guardar el count ANTES del update, porque después el queryset se re-evalúa
-    count_vencidos = abonos_vencidos.count()
-    abonos_vencidos.update(estado='vencido')
+    ).select_related('cita__cliente', 'cita__servicio', 'cita__negocio'))
+    count_vencidos = Abono.objects.filter(
+        id__in=[a.id for a in abonos_vencidos]
+    ).update(estado='vencido')
+
+    # La cita NO se cancela automáticamente: el dueño decide si confirma
+    # un pago tardío o cancela la cita (desde Abonos > Por revisar)
+    for abono in abonos_vencidos:
+        _avisar_admin_abono_vencido(abono)
 
     return f"Verificados {abonos_pendientes.count()} abonos. {count_vencidos} marcados como vencidos."
