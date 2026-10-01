@@ -5,15 +5,57 @@ RF-08 a RF-12, RF-16 a RF-19
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.utils import timezone
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
+from django.utils.html import escape
 from django.views.decorators.http import require_http_methods
 from django_ratelimit.decorators import ratelimit
+from django.db import transaction
 from datetime import datetime, timedelta
+from functools import wraps
+import calendar
 import re
+from .disponibilidad import horarios_disponibles, esta_disponible
 from .models import Negocio
 from apps.servicios.models import Servicio
 from apps.clientes.models import Cliente
 from apps.citas.models import Cita
+
+
+def superuser_required(view_func):
+    """
+    Restringe la vista a superadmins. Para el resto responde 404
+    para no revelar que el endpoint existe.
+    """
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_superuser:
+            raise Http404
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+# Clave de sesión con los clientes que se han identificado en cada negocio
+# Formato: {str(negocio_id): cliente_id}
+SESION_CLIENTES_VERIFICADOS = 'clientes_verificados'
+
+
+def _marcar_cliente_verificado(request, cliente):
+    """
+    Registra en la sesión que este navegador se identificó como el cliente
+    (al agendar o al consultar "Mis citas" con su teléfono).
+    """
+    verificados = request.session.get(SESION_CLIENTES_VERIFICADOS, {})
+    verificados[str(cliente.negocio_id)] = cliente.id
+    request.session[SESION_CLIENTES_VERIFICADOS] = verificados
+
+
+def _cliente_puede_gestionar(request, cita):
+    """
+    Verifica que la cita pertenezca al cliente identificado en esta sesión.
+    Evita que se vean, editen o cancelen citas ajenas cambiando el ID en la URL.
+    """
+    verificados = request.session.get(SESION_CLIENTES_VERIFICADOS, {})
+    return verificados.get(str(cita.negocio_id)) == cita.cliente_id
 
 
 def minipagina_negocio(request, slug):
@@ -75,12 +117,16 @@ def agendar_cita(request, slug):
             referencia_direccion = request.POST.get('referencia_direccion', '').strip()
 
             # Validaciones básicas
-            if not all([nombre, telefono, servicio_id, fecha, hora]):
+            if not all([telefono, servicio_id, fecha, hora]):
                 messages.error(request, 'Por favor completa todos los campos obligatorios.')
                 return redirect('public:agendar', slug=slug)
 
+            # El nombre solo es obligatorio para clientes nuevos: a los existentes
+            # el formulario no les muestra sus datos (ver buscar_cliente_api)
+            cliente_existente = Cliente.buscar_por_telefono(negocio, telefono)
+
             # Validar longitud del nombre
-            if len(nombre) < 2 or len(nombre) > 200:
+            if not cliente_existente and (len(nombre) < 2 or len(nombre) > 200):
                 messages.error(request, 'El nombre debe tener entre 2 y 200 caracteres.')
                 return redirect('public:agendar', slug=slug)
 
@@ -101,69 +147,69 @@ def agendar_cita(request, slug):
                 return redirect('public:agendar', slug=slug)
 
             # Obtener servicio
-            servicio = Servicio.objects.get(id=servicio_id, negocio=negocio)
+            servicio = Servicio.objects.get(id=servicio_id, negocio=negocio, esta_activo=True)
 
             # Crear fecha_hora en la zona horaria local (Colombia)
-            import pytz
-            fecha_hora_naive = datetime.strptime(f"{fecha} {hora}", "%Y-%m-%d %H:%M")
-            tz = pytz.timezone('America/Bogota')
-            fecha_hora = tz.localize(fecha_hora_naive)
-
-            # Validar que la fecha sea futura
-            if fecha_hora < timezone.now():
-                messages.error(request, 'No puedes agendar citas en el pasado.')
-                return redirect('public:agendar', slug=slug)
-
-            # RF-06, RF-24: Obtener o crear cliente por teléfono
-            cliente, created = Cliente.obtener_o_crear_por_telefono(
-                negocio=negocio,
-                telefono=telefono,
-                nombre=nombre,
-                email=email
-            )
-
-            # Actualizar dirección del cliente si el negocio es a domicilio
-            if negocio.es_a_domicilio:
-                cliente.direccion = direccion
-                cliente.ciudad = ciudad
-                cliente.codigo_postal = codigo_postal
-                cliente.referencia_direccion = referencia_direccion
-                cliente.save()
-
-            # Validar que no exista una cita duplicada
-            citas_existentes = Cita.objects.filter(
-                cliente=cliente,
-                negocio=negocio,
-                fecha_hora=fecha_hora,
-                estado__in=['pendiente_abono', 'confirmada']
-            ).exists()
-
-            if citas_existentes:
-                messages.error(request, 'Ya tienes una cita agendada en este horario. Por favor elige otro horario.')
-                return redirect('public:agendar', slug=slug)
-
-            # Crear la cita
-            cita = Cita.objects.create(
-                negocio=negocio,
-                cliente=cliente,
-                servicio=servicio,
-                fecha_hora=fecha_hora,
-                duracion_minutos=servicio.duracion_minutos,
-                estado='pendiente_abono' if servicio.requiere_pago_abono else 'confirmada',
-                origen='web',
-                notas_cliente=notas
-            )
-
-            # RF-49, RF-50: Crear registro de abono si el servicio lo requiere
-            if servicio.requiere_pago_abono:
-                from apps.abonos.models import Abono
-                Abono.objects.create(
-                    cita=cita,
-                    monto=servicio.precio_abono,
-                    metodo_pago='transferencia',  # Por defecto transferencia
-                    estado='pendiente',
-                    fecha_limite=cita.fecha_limite_abono
+            try:
+                fecha_hora = timezone.make_aware(
+                    datetime.strptime(f"{fecha} {hora}", "%Y-%m-%d %H:%M")
                 )
+            except ValueError:
+                messages.error(request, 'La fecha u hora seleccionada no es válida.')
+                return redirect('public:agendar', slug=slug)
+
+            with transaction.atomic():
+                # Bloquear el negocio mientras se agenda: evita que dos personas
+                # reserven el mismo horario al mismo tiempo
+                Negocio.objects.select_for_update().get(pk=negocio.pk)
+
+                # Validar en el servidor lo mismo que muestra el calendario:
+                # horario de atención, bloqueos y citas que se cruzan
+                if not esta_disponible(negocio, fecha_hora, servicio.duracion_minutos):
+                    messages.error(request, 'El horario seleccionado ya no está disponible. Por favor elige otro.')
+                    return redirect('public:agendar', slug=slug)
+
+                # RF-06, RF-24: Obtener o crear cliente por teléfono
+                cliente, created = Cliente.obtener_o_crear_por_telefono(
+                    negocio=negocio,
+                    telefono=telefono,
+                    nombre=nombre,
+                    email=email
+                )
+
+                # Actualizar dirección del cliente si el negocio es a domicilio
+                if negocio.es_a_domicilio:
+                    cliente.direccion = direccion
+                    cliente.ciudad = ciudad
+                    cliente.codigo_postal = codigo_postal
+                    cliente.referencia_direccion = referencia_direccion
+                    cliente.save()
+
+                # Crear la cita
+                cita = Cita.objects.create(
+                    negocio=negocio,
+                    cliente=cliente,
+                    servicio=servicio,
+                    fecha_hora=fecha_hora,
+                    duracion_minutos=servicio.duracion_minutos,
+                    estado='pendiente_abono' if servicio.requiere_pago_abono else 'confirmada',
+                    origen='web',
+                    notas_cliente=notas
+                )
+
+                # RF-49, RF-50: Crear registro de abono si el servicio lo requiere
+                if servicio.requiere_pago_abono:
+                    from apps.abonos.models import Abono
+                    Abono.objects.create(
+                        cita=cita,
+                        monto=servicio.precio_abono,
+                        metodo_pago='transferencia',  # Por defecto transferencia
+                        estado='pendiente',
+                        fecha_limite=cita.fecha_limite_abono
+                    )
+
+            # Permitir que este navegador vea/gestione la cita recién creada
+            _marcar_cliente_verificado(request, cliente)
 
             # NOTA: La notificación al admin se envía automáticamente desde la señal post_save
             # en apps/citas/signals.py → enviar_confirmacion_cita()
@@ -208,6 +254,10 @@ def confirmacion_cita(request, slug, cita_id):
     negocio = get_object_or_404(Negocio, slug=slug, esta_activo=True)
     cita = get_object_or_404(Cita, id=cita_id, negocio=negocio)
 
+    if not _cliente_puede_gestionar(request, cita):
+        messages.info(request, 'Ingresa tu número de teléfono para ver tus citas.')
+        return redirect('public:mis_citas', slug=slug)
+
     context = {
         'negocio': negocio,
         'cita': cita,
@@ -224,9 +274,6 @@ def disponibilidad_api(request, slug):
     RF-17: Disponibilidad en tiempo real
     Rate limit: 60 consultas por minuto por IP
     """
-    import json
-    from django.http import JsonResponse
-
     negocio = get_object_or_404(Negocio, slug=slug, esta_activo=True)
 
     fecha = request.GET.get('fecha')
@@ -238,91 +285,11 @@ def disponibilidad_api(request, slug):
     try:
         servicio = Servicio.objects.get(id=servicio_id, negocio=negocio)
         fecha_obj = datetime.strptime(fecha, '%Y-%m-%d').date()
+    except (Servicio.DoesNotExist, ValueError):
+        return JsonResponse({'error': 'Parámetros inválidos'}, status=400)
 
-        # Validar que la fecha no sea pasada
-        if fecha_obj < timezone.now().date():
-            return JsonResponse({'horarios': []})
-
-        # Verificar si el negocio trabaja en este día de la semana
-        dia_semana = fecha_obj.weekday()  # 0=Lunes, 6=Domingo
-
-        # Verificar con ConfiguracionHorario si existe
-        config_dia = negocio.configuraciones_horario.filter(dia_semana=dia_semana).first()
-        if config_dia:
-            # Hay configuración específica para este día
-            if not config_dia.esta_abierto:
-                return JsonResponse({'horarios': []})  # Día cerrado, sin horarios
-            # Usar horarios específicos del día
-            hora_apertura = config_dia.hora_apertura
-            hora_cierre = config_dia.hora_cierre
-        else:
-            # No hay configuración específica, usar horarios generales
-            hora_apertura = negocio.horario_apertura if negocio.horario_apertura else datetime.strptime('09:00', '%H:%M').time()
-            hora_cierre = negocio.horario_cierre if negocio.horario_cierre else datetime.strptime('19:00', '%H:%M').time()
-
-        # Generar horarios disponibles cada 30 minutos
-        horarios = []
-        hora_inicio = hora_apertura.hour
-        hora_fin = hora_cierre.hour
-
-        for hora in range(hora_inicio, hora_fin):
-            for minuto in [0, 30]:  # Slots cada 30 minutos
-                # No agregar el último slot si pasa del horario de cierre
-                if hora == hora_fin - 1 and minuto == 30:
-                    if hora_cierre.minute == 0:
-                        continue
-
-                hora_str = f"{hora:02d}:{minuto:02d}"
-                # Crear fecha_hora en zona horaria local (Colombia)
-                import pytz
-                fecha_hora_naive = datetime.combine(fecha_obj, datetime.strptime(hora_str, '%H:%M').time())
-                tz = pytz.timezone('America/Bogota')
-                fecha_hora = tz.localize(fecha_hora_naive)
-
-                # Validar que sea en el futuro
-                if fecha_hora <= timezone.now():
-                    continue
-
-                # Verificar si ya hay cita en ese horario (considerar duración del servicio)
-                # Una cita ocupa el slot + los siguientes slots según su duración
-                fin_slot = fecha_hora + timedelta(minutes=servicio.duracion_minutos)
-
-                # VALIDACIÓN: No permitir citas que terminen después del horario de cierre
-                hora_cierre_dt = datetime.combine(fecha_obj, hora_cierre)
-                if timezone.is_aware(fecha_hora):
-                    hora_cierre_dt = tz.localize(hora_cierre_dt)
-                if fin_slot > hora_cierre_dt:
-                    # La cita terminaría después del horario de cierre, no disponible
-                    continue
-
-                # Buscar citas que se traslapen con este slot
-                citas_traslapadas = Cita.objects.filter(
-                    negocio=negocio,
-                    estado__in=['pendiente_abono', 'confirmada']
-                ).filter(
-                    fecha_hora__lt=fin_slot
-                ).filter(
-                    fecha_hora__gte=fecha_hora - timedelta(minutes=120)  # Verificar 2 horas antes
-                )
-
-                # Verificar si hay traslape real
-                disponible = True
-                for cita in citas_traslapadas:
-                    cita_fin = cita.fecha_hora + timedelta(minutes=cita.duracion_minutos)
-                    # Si hay traslape, no está disponible
-                    if not (fin_slot <= cita.fecha_hora or fecha_hora >= cita_fin):
-                        disponible = False
-                        break
-
-                if disponible:
-                    horarios.append(hora_str)
-
-        return JsonResponse({'horarios': horarios})
-
-    except Servicio.DoesNotExist:
-        return JsonResponse({'error': 'Servicio no encontrado'}, status=404)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+    horarios = horarios_disponibles(negocio, fecha_obj, servicio.duracion_minutos)
+    return JsonResponse({'horarios': horarios})
 
 
 @ratelimit(key='ip', rate='60/m', block=True)
@@ -332,8 +299,6 @@ def fechas_disponibles_api(request, slug):
     Retorna lista de fechas que tienen al menos un horario disponible
     Rate limit: 60 consultas por minuto por IP
     """
-    import pytz
-
     negocio = get_object_or_404(Negocio, slug=slug, esta_activo=True)
 
     servicio_id = request.GET.get('servicio')
@@ -345,204 +310,47 @@ def fechas_disponibles_api(request, slug):
 
     try:
         servicio = Servicio.objects.get(id=servicio_id, negocio=negocio)
-        year = int(year)
-        month = int(month)
-
-        # Obtener primer y último día del mes
-        primer_dia = datetime(year, month, 1).date()
-        if month == 12:
-            ultimo_dia = datetime(year + 1, 1, 1).date() - timedelta(days=1)
-        else:
-            ultimo_dia = datetime(year, month + 1, 1).date() - timedelta(days=1)
-
-        # Obtener horarios del negocio
-        hora_apertura = negocio.horario_apertura if negocio.horario_apertura else datetime.strptime('09:00', '%H:%M').time()
-        hora_cierre = negocio.horario_cierre if negocio.horario_cierre else datetime.strptime('19:00', '%H:%M').time()
-
-        fechas_con_disponibilidad = []
-        fecha_actual = timezone.now().date()
-        tz = pytz.timezone('America/Bogota')
-
-        # Iterar cada día del mes
-        fecha = primer_dia
-        while fecha <= ultimo_dia:
-            # Saltar fechas pasadas
-            if fecha < fecha_actual:
-                fecha += timedelta(days=1)
-                continue
-
-            # Verificar si el negocio trabaja en este día de la semana
-            dia_semana = fecha.weekday()  # 0=Lunes, 6=Domingo
-
-            # Opción 1: Verificar con ConfiguracionHorario si existe
-            config_dia = negocio.configuraciones_horario.filter(dia_semana=dia_semana).first()
-            if config_dia:
-                # Hay configuración específica para este día
-                if not config_dia.esta_abierto:
-                    fecha += timedelta(days=1)
-                    continue
-                # Usar horarios específicos del día
-                hora_apertura_dia = config_dia.hora_apertura
-                hora_cierre_dia = config_dia.hora_cierre
-            else:
-                # No hay configuración específica, usar validación genérica
-                # Por defecto, si no hay config, asumir que domingo (6) está cerrado
-                # a menos que se especifique lo contrario
-                hora_apertura_dia = hora_apertura
-                hora_cierre_dia = hora_cierre
-
-            # Verificar si hay al menos un horario disponible en este día
-            tiene_disponibilidad = False
-            hora_inicio = hora_apertura_dia.hour
-            hora_fin = hora_cierre_dia.hour
-
-            for hora in range(hora_inicio, hora_fin):
-                if tiene_disponibilidad:
-                    break
-
-                for minuto in [0, 30]:
-                    # No agregar el último slot si pasa del horario de cierre
-                    if hora == hora_fin - 1 and minuto == 30:
-                        if hora_cierre.minute == 0:
-                            continue
-
-                    hora_str = f"{hora:02d}:{minuto:02d}"
-                    fecha_hora_naive = datetime.combine(fecha, datetime.strptime(hora_str, '%H:%M').time())
-                    fecha_hora = tz.localize(fecha_hora_naive)
-
-                    # Validar que sea en el futuro
-                    if fecha_hora <= timezone.now():
-                        continue
-
-                    # Verificar si ya hay cita en ese horario
-                    fin_slot = fecha_hora + timedelta(minutes=servicio.duracion_minutos)
-
-                    # Validar que no termine después del cierre
-                    hora_cierre_dt = datetime.combine(fecha, hora_cierre)
-                    if timezone.is_aware(fecha_hora):
-                        hora_cierre_dt = tz.localize(hora_cierre_dt)
-                    if fin_slot > hora_cierre_dt:
-                        continue
-
-                    # Buscar citas que se traslapen
-                    citas_traslapadas = Cita.objects.filter(
-                        negocio=negocio,
-                        estado__in=['pendiente_abono', 'confirmada']
-                    ).filter(
-                        fecha_hora__lt=fin_slot
-                    ).filter(
-                        fecha_hora__gte=fecha_hora - timedelta(minutes=120)
-                    )
-
-                    # Verificar si hay traslape real
-                    disponible = True
-                    for cita in citas_traslapadas:
-                        cita_fin = cita.fecha_hora + timedelta(minutes=cita.duracion_minutos)
-                        if not (fin_slot <= cita.fecha_hora or fecha_hora >= cita_fin):
-                            disponible = False
-                            break
-
-                    if disponible:
-                        tiene_disponibilidad = True
-                        break
-
-            if tiene_disponibilidad:
-                fechas_con_disponibilidad.append(fecha.isoformat())
-
-            fecha += timedelta(days=1)
-
-        return JsonResponse({'fechas': fechas_con_disponibilidad})
-
-    except Servicio.DoesNotExist:
-        return JsonResponse({'error': 'Servicio no encontrado'}, status=404)
-    except ValueError as e:
+        primer_dia = datetime(int(year), int(month), 1).date()
+    except (Servicio.DoesNotExist, ValueError):
         return JsonResponse({'error': 'Parámetros inválidos'}, status=400)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+
+    _, dias_mes = calendar.monthrange(primer_dia.year, primer_dia.month)
+    hoy = timezone.localdate()
+
+    fechas_con_disponibilidad = []
+    for dia in range(dias_mes):
+        fecha = primer_dia + timedelta(days=dia)
+        if fecha < hoy:
+            continue
+        if horarios_disponibles(negocio, fecha, servicio.duracion_minutos):
+            fechas_con_disponibilidad.append(fecha.isoformat())
+
+    return JsonResponse({'fechas': fechas_con_disponibilidad})
 
 
 @ratelimit(key='ip', rate='30/m', block=True)
 def buscar_cliente_api(request, slug):
     """
-    API para buscar un cliente/usuario por teléfono.
-    Retorna los datos del cliente si existe.
-    Busca comparando los últimos 10 dígitos del teléfono (número local).
+    API para saber si un teléfono ya corresponde a un cliente del negocio.
+    Solo devuelve el primer nombre para saludarlo: no expone email ni datos
+    personales, ya que cualquiera puede consultar cualquier número.
+    Usa la misma normalización del teléfono que al agendar (formato E.164).
     Rate limit: 30 búsquedas por minuto por IP
     """
     negocio = get_object_or_404(Negocio, slug=slug)
     telefono = request.GET.get('telefono', '').strip()
 
-    if not telefono:
+    if len(re.sub(r'\D', '', telefono)) < 10:
         return JsonResponse({'existe': False})
 
-    try:
-        # Normalizar teléfono: extraer solo dígitos
-        import re
-        telefono_digitos = re.sub(r'\D', '', telefono)
-
-        # Si tiene menos de 10 dígitos, no buscar
-        if len(telefono_digitos) < 10:
-            return JsonResponse({'existe': False})
-
-        # Buscar cliente por teléfono en este negocio
-        from apps.clientes.models import Cliente
-
-        # Obtener últimos 10 dígitos del teléfono buscado (número local sin código de país)
-        ultimos_10_buscado = telefono_digitos[-10:]
-
-        # Buscar entre todos los clientes del negocio
-        clientes = Cliente.objects.filter(negocio=negocio)
-
-        for cliente in clientes:
-            # Normalizar teléfono del cliente
-            tel_cliente_digitos = re.sub(r'\D', '', str(cliente.telefono))
-
-            # Comparar de múltiples formas para mayor flexibilidad:
-            # 1. Comparar exacto
-            if telefono_digitos == tel_cliente_digitos:
-                return JsonResponse({
-                    'existe': True,
-                    'nombre': cliente.nombre,
-                    'email': cliente.email or '',
-                    'telefono': str(cliente.telefono)
-                })
-
-            # 2. Comparar los últimos 10 dígitos (número local colombiano)
-            ultimos_10_cliente = tel_cliente_digitos[-10:] if len(tel_cliente_digitos) >= 10 else tel_cliente_digitos
-            if ultimos_10_buscado == ultimos_10_cliente:
-                return JsonResponse({
-                    'existe': True,
-                    'nombre': cliente.nombre,
-                    'email': cliente.email or '',
-                    'telefono': str(cliente.telefono)
-                })
-
-            # 3. Comparar sin códigos de país (últimos 9-10 dígitos)
-            # Esto maneja casos donde un número tiene 9 o 10 dígitos sin código
-            ultimos_9_buscado = telefono_digitos[-9:]
-            ultimos_9_cliente = tel_cliente_digitos[-9:] if len(tel_cliente_digitos) >= 9 else tel_cliente_digitos
-
-            if ultimos_9_buscado == ultimos_9_cliente or tel_cliente_digitos.endswith(ultimos_10_buscado):
-                return JsonResponse({
-                    'existe': True,
-                    'nombre': cliente.nombre,
-                    'email': cliente.email or '',
-                    'telefono': str(cliente.telefono)
-                })
-
-            # 4. Comparar si el número buscado termina con el número del cliente
-            if telefono_digitos.endswith(tel_cliente_digitos):
-                return JsonResponse({
-                    'existe': True,
-                    'nombre': cliente.nombre,
-                    'email': cliente.email or '',
-                    'telefono': str(cliente.telefono)
-                })
-
+    cliente = Cliente.buscar_por_telefono(negocio, telefono)
+    if not cliente:
         return JsonResponse({'existe': False})
 
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse({
+        'existe': True,
+        'nombre': cliente.nombre.split()[0] if cliente.nombre else '',
+    })
 
 
 def manifest_minipagina(request, slug):
@@ -625,6 +433,7 @@ def mis_citas(request, slug):
         # Buscar cliente por teléfono en este negocio
         try:
             cliente = Cliente.objects.get(telefono=telefono, negocio=negocio)
+            _marcar_cliente_verificado(request, cliente)
 
             # Obtener todas las citas del cliente, ordenadas por fecha (más recientes primero)
             citas = Cita.objects.filter(
@@ -667,6 +476,10 @@ def editar_cita_cliente(request, slug, cita_id):
     negocio = get_object_or_404(Negocio, slug=slug, esta_activo=True)
     cita = get_object_or_404(Cita, id=cita_id, negocio=negocio)
 
+    if not _cliente_puede_gestionar(request, cita):
+        messages.error(request, 'Ingresa tu número de teléfono para gestionar tus citas.')
+        return redirect('public:mis_citas', slug=slug)
+
     # Validar que la cita no esté cancelada o completada
     if cita.estado in ['cancelada', 'completada', 'no_asistio']:
         messages.error(request, 'No puedes editar una cita cancelada o completada.')
@@ -699,11 +512,14 @@ def editar_cita_cliente(request, slug, cita_id):
             # Obtener servicio
             servicio = Servicio.objects.get(id=servicio_id, negocio=negocio, esta_activo=True)
 
-            # Crear nueva fecha_hora
-            import pytz
-            fecha_hora_naive = datetime.strptime(f"{fecha} {hora}", "%Y-%m-%d %H:%M")
-            tz = pytz.timezone('America/Bogota')
-            nueva_fecha_hora = tz.localize(fecha_hora_naive)
+            # Crear nueva fecha_hora en la zona horaria local (Colombia)
+            try:
+                nueva_fecha_hora = timezone.make_aware(
+                    datetime.strptime(f"{fecha} {hora}", "%Y-%m-%d %H:%M")
+                )
+            except ValueError:
+                messages.error(request, 'La fecha u hora seleccionada no es válida.')
+                return redirect('public:editar_cita_cliente', slug=slug, cita_id=cita_id)
 
             # Validar que la nueva fecha sea futura y con más de 24 horas
             tiempo_hasta_nueva_fecha = nueva_fecha_hora - ahora
@@ -711,28 +527,27 @@ def editar_cita_cliente(request, slug, cita_id):
                 messages.error(request, 'La nueva fecha debe ser con al menos 24 horas de anticipación.')
                 return redirect('public:editar_cita_cliente', slug=slug, cita_id=cita_id)
 
-            # Validar que no haya otra cita en ese horario (del mismo cliente)
-            citas_conflicto = Cita.objects.filter(
-                cliente=cita.cliente,
-                negocio=negocio,
-                fecha_hora=nueva_fecha_hora,
-                estado__in=['pendiente_abono', 'confirmada']
-            ).exclude(id=cita.id).exists()
-
-            if citas_conflicto:
-                messages.error(request, 'Ya tienes otra cita agendada en ese horario.')
-                return redirect('public:editar_cita_cliente', slug=slug, cita_id=cita_id)
-
             # Guardar cambios anteriores para notificación
             fecha_anterior = cita.fecha_hora
             servicio_anterior = cita.servicio
 
-            # Actualizar la cita
-            cita.servicio = servicio
-            cita.fecha_hora = nueva_fecha_hora
-            cita.duracion_minutos = servicio.duracion_minutos
-            cita.notas_cliente = notas
-            cita.save()
+            with transaction.atomic():
+                # Bloquear el negocio para evitar reservas simultáneas del mismo horario
+                Negocio.objects.select_for_update().get(pk=negocio.pk)
+
+                # Horario de atención, bloqueos y cruces con otras citas
+                # (excluyendo esta misma cita, que se está moviendo)
+                if not esta_disponible(negocio, nueva_fecha_hora, servicio.duracion_minutos,
+                                       excluir_cita_id=cita.id):
+                    messages.error(request, 'El horario seleccionado no está disponible. Por favor elige otro.')
+                    return redirect('public:editar_cita_cliente', slug=slug, cita_id=cita_id)
+
+                # Actualizar la cita
+                cita.servicio = servicio
+                cita.fecha_hora = nueva_fecha_hora
+                cita.duracion_minutos = servicio.duracion_minutos
+                cita.notas_cliente = notas
+                cita.save()
 
             # Enviar notificación al dueño del negocio
             try:
@@ -791,6 +606,10 @@ def cancelar_cita_cliente(request, slug, cita_id):
     """
     negocio = get_object_or_404(Negocio, slug=slug, esta_activo=True)
     cita = get_object_or_404(Cita, id=cita_id, negocio=negocio)
+
+    if not _cliente_puede_gestionar(request, cita):
+        messages.error(request, 'Ingresa tu número de teléfono para gestionar tus citas.')
+        return redirect('public:mis_citas', slug=slug)
 
     # Validar que la cita no esté ya cancelada o completada
     if cita.estado in ['cancelada', 'completada', 'no_asistio']:
@@ -908,6 +727,7 @@ def manifest_admin(request, slug):
 
     return JsonResponse(manifest, content_type='application/manifest+json')
 
+@superuser_required
 def diagnostico_vapid_config(request):
     """
     Diagnóstico COMPLETO de configuración VAPID
@@ -1074,7 +894,7 @@ def diagnostico_vapid_config(request):
     # Retornar HTML formateado para mejor legibilidad
     html = "<html><head><style>body{font-family:monospace;padding:20px;}pre{background:#f5f5f5;padding:10px;border-radius:5px;}</style></head><body>"
     html += "<h1>Diagnostico VAPID - FacilAdmin</h1>"
-    html += "<pre>" + json.dumps(diagnostico, indent=2, ensure_ascii=False) + "</pre>"
+    html += "<pre>" + escape(json.dumps(diagnostico, indent=2, ensure_ascii=False)) + "</pre>"
     html += "</body></html>"
 
     return HttpResponse(html)
@@ -1089,6 +909,7 @@ def diagnostico_push(request):
     return render(request, 'diagnostico_push.html')
 
 
+@superuser_required
 def diagnostico_push_servidor(request):
     """
     Diagnóstico del servidor - Muestra suscripciones en la BD
@@ -1142,11 +963,11 @@ def diagnostico_push_servidor(request):
             estado_class = "ok" if sub.activa else "error"
             html += f"<tr>"
             html += f"<td>{sub.id}</td>"
-            html += f"<td>{sub.user.username}</td>"
-            html += f"<td>{sub.negocio.nombre} ({sub.negocio.slug})</td>"
+            html += f"<td>{escape(sub.user.username)}</td>"
+            html += f"<td>{escape(sub.negocio.nombre)} ({escape(sub.negocio.slug)})</td>"
             html += f"<td class='{estado_class}'>{estado}</td>"
             html += f"<td>{sub.fecha_creacion.strftime('%Y-%m-%d %H:%M')}</td>"
-            html += f"<td style='font-size: 10px;'>{sub.endpoint[:40]}...</td>"
+            html += f"<td style='font-size: 10px;'>{escape(sub.endpoint[:40])}...</td>"
             html += f"</tr>"
         html += "</table>"
     else:
@@ -1179,9 +1000,9 @@ def diagnostico_push_servidor(request):
             subs_count = UsuarioPushSubscription.objects.filter(negocio=negocio, activa=True).count()
             subs_class = 'ok' if subs_count > 0 else 'error'
             html += f"<tr>"
-            html += f"<td>{negocio.nombre}</td>"
-            html += f"<td>{negocio.slug}</td>"
-            html += f"<td>{negocio.administrador.username if negocio.administrador else 'Sin admin'}</td>"
+            html += f"<td>{escape(negocio.nombre)}</td>"
+            html += f"<td>{escape(negocio.slug)}</td>"
+            html += f"<td>{escape(negocio.administrador.username) if negocio.administrador else 'Sin admin'}</td>"
             html += f"<td class='{subs_class}'>{subs_count}</td>"
             html += f"</tr>"
         html += "</table>"
@@ -1242,6 +1063,7 @@ def diagnostico_push_servidor(request):
     return HttpResponse(html)
 
 
+@superuser_required
 def test_enviar_push_admin(request):
     """
     Endpoint de prueba para enviar una notificación push a todos los admins suscritos

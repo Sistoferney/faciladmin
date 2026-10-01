@@ -4,6 +4,7 @@ Signals para el modelo Cita
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.conf import settings
+from django.db import transaction
 from .models import Cita
 import logging
 
@@ -16,7 +17,10 @@ def cita_creada(sender, instance, created, **kwargs):
     Signal que se ejecuta cuando se crea una nueva cita
     RF-18: Enviar confirmación de cita
     """
-    if created:
+    if not created:
+        return
+
+    def enviar():
         try:
             # Enviar confirmación al cliente
             from apps.notificaciones.tasks import enviar_confirmacion_cita
@@ -29,6 +33,10 @@ def cita_creada(sender, instance, created, **kwargs):
         except Exception as e:
             # Si falla (por ejemplo, Redis no disponible), solo registrar el error
             logger.warning(f"No se pudo enviar confirmación de cita: {e}")
+
+    # Esperar a que termine la transacción: así el worker encuentra la cita
+    # y el abono ya creados (ver agendar_cita)
+    transaction.on_commit(enviar)
 
 
 @receiver(post_save, sender=Cita)

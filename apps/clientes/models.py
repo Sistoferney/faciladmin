@@ -3,6 +3,7 @@ Modelos para gestión de clientes (CRM básico)
 Nota: "Cliente" en este contexto se refiere a usuarios del spa (personas que agendan citas)
 RF-04 a RF-06, RF-24 a RF-27, RF-40 a RF-42, RF-43 a RF-44
 """
+from django.core.exceptions import ValidationError
 from django.db import models
 from phonenumber_field.modelfields import PhoneNumberField
 from apps.negocios.models import Negocio
@@ -154,6 +155,18 @@ class Cliente(models.Model):
     def es_cliente_inactivo(self):
         """RF-31: Verifica si es un cliente inactivo"""
         return self.tipo_cliente == 'inactivo'
+
+    @classmethod
+    def buscar_por_telefono(cls, negocio, telefono):
+        """
+        Busca un cliente del negocio por teléfono, normalizado igual que
+        al guardarlo (PhoneNumberField, región CO). Retorna None si no existe
+        o si el teléfono no se puede interpretar.
+        """
+        try:
+            return cls.objects.filter(negocio=negocio, telefono=telefono).first()
+        except ValidationError:
+            return None
 
     @classmethod
     def obtener_o_crear_por_telefono(cls, negocio, telefono, nombre='', **kwargs):

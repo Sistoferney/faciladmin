@@ -468,16 +468,19 @@
                                     <i class="bi bi-search"></i> Buscando usuario...
                                 </div>
                                 <div id="userFound" class="text-success mt-2" style="display: none;">
-                                    <i class="bi bi-check-circle-fill"></i> ¡Bienvenido de nuevo! Tus datos han sido cargados.
+                                    <i class="bi bi-check-circle-fill"></i> <span id="userFoundText"></span>
                                 </div>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Nombre Completo *</label>
-                                <input type="text" name="nombre" id="nombre_step1" class="form-control" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Email (opcional)</label>
-                                <input type="email" name="email" id="email_step1" class="form-control">
+                            <!-- Solo para clientes nuevos: a los existentes no se les muestran sus datos -->
+                            <div id="datosNuevoCliente">
+                                <div class="mb-3">
+                                    <label class="form-label">Nombre Completo *</label>
+                                    <input type="text" name="nombre" id="nombre_step1" class="form-control" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Email (opcional)</label>
+                                    <input type="email" name="email" id="email_step1" class="form-control">
+                                </div>
                             </div>
 
                             {% if negocio.es_a_domicilio %}
@@ -885,7 +888,7 @@
                     alert('Por favor ingresa un teléfono válido');
                     return false;
                 }
-                if (!nombre) {
+                if (!nombre && !clienteExistente) {
                     alert('Por favor ingresa tu nombre');
                     return false;
                 }
@@ -1006,8 +1009,25 @@
             {% endif %}
         }
 
-        // Búsqueda automática de cliente por teléfono
+        // Búsqueda automática de cliente por teléfono.
+        // Por privacidad el servidor solo devuelve el primer nombre: si el cliente
+        // existe se ocultan los campos de nombre/email y se usan los datos guardados.
         let searchTimeout = null;
+        let clienteExistente = false;
+
+        function mostrarDatosNuevoCliente(mostrar) {
+            const nombreInput = document.getElementById('nombre_step1');
+            clienteExistente = !mostrar;
+            document.getElementById('datosNuevoCliente').style.display = mostrar ? '' : 'none';
+            if (mostrar) {
+                nombreInput.setAttribute('required', 'required');
+            } else {
+                nombreInput.removeAttribute('required');
+                nombreInput.value = '';
+                document.getElementById('email_step1').value = '';
+            }
+        }
+
         function buscarCliente(telefono) {
             // Limpiar timeout anterior
             if (searchTimeout) {
@@ -1020,15 +1040,8 @@
 
             // Solo buscar si tiene al menos 10 dígitos
             const digitos = telefono.replace(/\D/g, '');
-            console.log('Teléfono ingresado:', telefono, 'Dígitos:', digitos);
-
             if (digitos.length < 10) {
-                console.log('Menos de 10 dígitos, no se busca');
-                // Limpiar y habilitar campos para nuevo usuario
-                document.getElementById('nombre_step1').value = '';
-                document.getElementById('email_step1').value = '';
-                document.getElementById('nombre_step1').removeAttribute('readonly');
-                document.getElementById('email_step1').removeAttribute('readonly');
+                mostrarDatosNuevoCliente(true);
                 return;
             }
 
@@ -1038,42 +1051,26 @@
             // Esperar 500ms después de que el usuario deje de escribir
             searchTimeout = setTimeout(() => {
                 const url = `/{{ negocio.slug }}/api/buscar-cliente/?telefono=${encodeURIComponent(telefono)}`;
-                console.log('Buscando en:', url);
 
                 fetch(url)
-                    .then(response => {
-                        console.log('Respuesta recibida:', response.status);
-                        return response.json();
-                    })
+                    .then(response => response.json())
                     .then(data => {
-                        console.log('Datos recibidos:', data);
                         document.getElementById('searchingUser').style.display = 'none';
 
                         if (data.existe) {
-                            // Cliente encontrado - autocompletar
-                            console.log('Cliente encontrado:', data.nombre);
-                            document.getElementById('nombre_step1').value = data.nombre;
-                            document.getElementById('email_step1').value = data.email;
+                            const saludo = data.nombre ? `¡Hola, ${data.nombre}!` : '¡Hola de nuevo!';
+                            document.getElementById('userFoundText').textContent =
+                                `${saludo} Ya tenemos tus datos, continúa con tu reserva.`;
                             document.getElementById('userFound').style.display = 'block';
-
-                            // Deshabilitar campos para evitar que los editen
-                            document.getElementById('nombre_step1').setAttribute('readonly', 'readonly');
-                            document.getElementById('email_step1').setAttribute('readonly', 'readonly');
+                            mostrarDatosNuevoCliente(false);
                         } else {
-                            // Cliente nuevo - limpiar y habilitar campos
-                            console.log('Cliente no encontrado - nuevo usuario');
-                            document.getElementById('nombre_step1').value = '';
-                            document.getElementById('email_step1').value = '';
-                            document.getElementById('nombre_step1').removeAttribute('readonly');
-                            document.getElementById('email_step1').removeAttribute('readonly');
+                            mostrarDatosNuevoCliente(true);
                         }
                     })
                     .catch(error => {
                         console.error('Error buscando cliente:', error);
                         document.getElementById('searchingUser').style.display = 'none';
-                        // En caso de error, habilitar campos
-                        document.getElementById('nombre_step1').removeAttribute('readonly');
-                        document.getElementById('email_step1').removeAttribute('readonly');
+                        mostrarDatosNuevoCliente(true);
                     });
             }, 500);
         }

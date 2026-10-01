@@ -108,7 +108,9 @@
                                    id="hora"
                                    name="hora"
                                    value="{{ cita.fecha_hora|date:'H:i' }}"
+                                   step="1800"
                                    required>
+                            <div class="form-text">Horarios cada 30 minutos (ej. 10:00 o 10:30), dentro del horario de atención</div>
                         </div>
 
                         <!-- Notas -->
