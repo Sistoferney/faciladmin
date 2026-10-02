@@ -361,3 +361,66 @@ class DisponibilidadTests(TestCase):
         resp = self.client.get(reverse('public:editar_cita_cliente', args=[self.negocio.slug, propia.id]))
         self.assertContains(resp, '<select class="form-select"\n                                    id="hora"')
         self.assertContains(resp, 'data-actual="10:00"')
+
+
+@patch('apps.citas.signals.enviar_confirmacion_cita', create=True)
+class SesionPersistentePWATests(TestCase):
+    """
+    La PWA instalada no debe pedir login (dueño) ni teléfono (cliente)
+    cada vez que se abre.
+    """
+
+    def setUp(self):
+        self.admin = Usuario.objects.create_user(
+            telefono='3000000000', password='x', nombre='Admin', email='a@a.com'
+        )
+        self.negocio = Negocio.objects.create(
+            administrador=self.admin, nombre='Spa Prueba', telefono='3000000000'
+        )
+        servicio = Servicio.objects.create(
+            negocio=self.negocio, nombre='Corte', precio=10000, duracion_minutos=30
+        )
+        self.cliente = Cliente.objects.create(negocio=self.negocio, nombre='Ana', telefono='3001111111')
+        self.cita = Cita.objects.create(
+            negocio=self.negocio, cliente=self.cliente, servicio=servicio,
+            fecha_hora=timezone.now() + timedelta(days=3), duracion_minutos=30, estado='confirmada'
+        )
+        self.url_mis_citas = reverse('public:mis_citas', args=[self.negocio.slug])
+
+    def test_sesion_dura_60_dias(self, *mocks):
+        from django.conf import settings
+        self.assertEqual(settings.SESSION_COOKIE_AGE, 60 * 24 * 60 * 60)
+        self.assertTrue(settings.SESSION_SAVE_EVERY_REQUEST)
+
+    def test_panel_sin_sesion_va_al_login_y_vuelve(self, *mocks):
+        url_panel = reverse('public:admin_dashboard', args=[self.negocio.slug])
+        resp = self.client.get(url_panel)
+        self.assertRedirects(resp, f'/login/?next={url_panel}', fetch_redirect_response=False)
+
+        resp = self.client.post(f'/login/?next={url_panel}', {'username': '3000000000', 'password': 'x'})
+        self.assertRedirects(resp, url_panel, fetch_redirect_response=False)
+
+    def test_mis_citas_recuerda_al_cliente(self, *mocks):
+        self.client.post(self.url_mis_citas, {'telefono': '300 111 1111'})
+        # Al volver a abrir (GET) ya no pide el teléfono
+        resp = self.client.get(self.url_mis_citas)
+        self.assertContains(resp, 'Ana')
+        self.assertContains(resp, reverse('public:editar_cita_cliente', args=[self.negocio.slug, self.cita.id]))
+
+    def test_buscar_con_otro_telefono_olvida_al_cliente(self, *mocks):
+        self.client.post(self.url_mis_citas, {'telefono': '3001111111'})
+        self.client.post(self.url_mis_citas, {'accion': 'salir'})
+        resp = self.client.get(self.url_mis_citas)
+        self.assertNotContains(resp, reverse('public:editar_cita_cliente', args=[self.negocio.slug, self.cita.id]))
+        self.assertContains(resp, 'name="telefono"')
+
+    def test_agendar_precarga_telefono_del_cliente_recordado(self, *mocks):
+        url = reverse('public:agendar', args=[self.negocio.slug])
+        self.assertNotContains(self.client.get(url), '+573001111111')
+        self.client.post(self.url_mis_citas, {'telefono': '3001111111'})
+        self.assertContains(self.client.get(url), '+573001111111')
+
+    def test_service_worker_sin_cache_http(self, *mocks):
+        resp = self.client.get('/sw.js')
+        self.assertEqual(resp['Cache-Control'], 'no-cache')
+        self.assertIn('faciladmin-v5', resp.content.decode())

@@ -1130,6 +1130,14 @@
                     e.target.value = '+57 ';
                 }
             });
+
+            // Cliente ya identificado en este dispositivo: precargar su teléfono
+            {% if telefono_recordado %}
+            if (!telefonoInput.value) {
+                telefonoInput.value = '{{ telefono_recordado|escapejs }}';
+                buscarCliente(telefonoInput.value);
+            }
+            {% endif %}
         }
 
         /**

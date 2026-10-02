@@ -69,9 +69,13 @@
                         </h5>
                         <span class="badge bg-secondary">{{ telefono }}</span>
                     </div>
-                    <a href="{% url 'public:mis_citas' negocio.slug %}" class="btn btn-sm btn-outline-secondary">
-                        <i class="bi bi-arrow-left"></i> Buscar con otro teléfono
-                    </a>
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="salir">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Buscar con otro teléfono
+                        </button>
+                    </form>
                 </div>
             </div>
 

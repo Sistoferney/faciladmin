@@ -4,6 +4,7 @@ Panel de administración intuitivo para dueños de negocios
 """
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import redirect_to_login
 from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Count, Sum, Q
@@ -25,8 +26,9 @@ def admin_required(view_func):
     """
     def wrapper(request, slug, *args, **kwargs):
         if not request.user.is_authenticated:
-            messages.error(request, 'Debes iniciar sesión para acceder al panel de administración.')
-            return redirect('/')
+            # Ir al login y volver a esta página después (importante en la PWA,
+            # que abre directamente el panel)
+            return redirect_to_login(request.get_full_path())
 
         negocio = get_object_or_404(Negocio, slug=slug)
 

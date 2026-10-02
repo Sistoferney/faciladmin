@@ -4,9 +4,10 @@
  * Versión optimizada para notificaciones en segundo plano
  */
 
-const CACHE_NAME = 'faciladmin-v4';
+// v5: deja de cachear páginas HTML (el activate borra la caché v4, que podía
+// contener páginas privadas del panel del dueño)
+const CACHE_NAME = 'faciladmin-v5';
 const CACHE_ASSETS = [
-    '/',
     '/static/css/main.css',
     '/static/js/main.js',
     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css',
@@ -78,7 +79,22 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// Estrategia: Network First, luego Cache (para contenido dinámico)
+// Página mostrada al navegar sin conexión
+const OFFLINE_HTML = `<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sin conexión</title>
+<style>body{font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;
+min-height:100vh;margin:0;padding:16px;text-align:center;background:#f5f5f5;color:#333}
+button{margin-top:16px;padding:10px 20px;border:0;border-radius:8px;background:#667eea;color:#fff;font-size:16px}</style>
+</head><body><div><h1>Sin conexión</h1><p>Revisa tu conexión a internet e intenta de nuevo.</p>
+<button onclick="location.reload()">Reintentar</button></div></body></html>`;
+
+// Estrategia:
+// - Páginas (navegación) y APIs: siempre red, nunca se guardan en caché.
+//   Así la sesión se valida en cada apertura y no quedan páginas privadas
+//   del panel guardadas en el dispositivo.
+// - Archivos estáticos (/static/): red primero y copia en caché para offline.
 self.addEventListener('fetch', (event) => {
     // Ignorar requests que no sean GET
     if (event.request.method !== 'GET') {
@@ -87,6 +103,20 @@ self.addEventListener('fetch', (event) => {
 
     // Ignorar requests a APIs externas (Google Analytics, etc.)
     if (!event.request.url.startsWith(self.location.origin)) {
+        return;
+    }
+
+    if (event.request.mode === 'navigate') {
+        event.respondWith(
+            fetch(event.request).catch(() => new Response(OFFLINE_HTML, {
+                headers: { 'Content-Type': 'text/html; charset=utf-8' }
+            }))
+        );
+        return;
+    }
+
+    // Solo los archivos estáticos se guardan en caché
+    if (!new URL(event.request.url).pathname.startsWith('/static/')) {
         return;
     }
 
@@ -109,12 +139,7 @@ self.addEventListener('fetch', (event) => {
                         return cachedResponse;
                     }
 
-                    // Si no está en caché y es una navegación, mostrar página offline
-                    if (event.request.mode === 'navigate') {
-                        return caches.match('/offline.html');
-                    }
-
-                    // Para otros recursos, retornar error
+                    // No está en caché: retornar error
                     return new Response('Offline', {
                         status: 503,
                         statusText: 'Service Unavailable'

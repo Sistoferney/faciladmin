@@ -197,7 +197,10 @@ CELERY_TIMEZONE = TIME_ZONE
 PHONENUMBER_DEFAULT_REGION = 'CO'
 
 # Session Settings
-SESSION_COOKIE_AGE = 86400  # 24 horas
+# 60 días, renovándose con cada visita (SESSION_SAVE_EVERY_REQUEST): la PWA
+# instalada se mantiene logueada mientras se use al menos una vez cada 60 días.
+# Aplica también a clientes de la mini-página (recordar quién es por teléfono).
+SESSION_COOKIE_AGE = 60 * 24 * 60 * 60
 SESSION_SAVE_EVERY_REQUEST = True
 
 # Authentication URLs

@@ -53,6 +53,21 @@ def _marcar_cliente_verificado(request, cliente):
     request.session[SESION_CLIENTES_VERIFICADOS] = verificados
 
 
+def _cliente_verificado(request, negocio):
+    """Cliente identificado en esta sesión para el negocio, o None"""
+    cliente_id = request.session.get(SESION_CLIENTES_VERIFICADOS, {}).get(str(negocio.id))
+    if not cliente_id:
+        return None
+    return Cliente.objects.filter(id=cliente_id, negocio=negocio).first()
+
+
+def _olvidar_cliente(request, negocio):
+    """Deja de recordar al cliente de este negocio en la sesión"""
+    verificados = request.session.get(SESION_CLIENTES_VERIFICADOS, {})
+    if verificados.pop(str(negocio.id), None) is not None:
+        request.session[SESION_CLIENTES_VERIFICADOS] = verificados
+
+
 def _cliente_puede_gestionar(request, cita):
     """
     Verifica que la cita pertenezca al cliente identificado en esta sesión.
@@ -241,9 +256,13 @@ def agendar_cita(request, slug):
             logger.exception('Error al agendar cita en %s', slug)
             messages.error(request, 'No pudimos agendar tu cita. Por favor intenta de nuevo.')
 
+    # Si el cliente ya se identificó en este dispositivo, precargar su teléfono
+    cliente_recordado = _cliente_verificado(request, negocio)
+
     context = {
         'negocio': negocio,
         'servicios': servicios,
+        'telefono_recordado': cliente_recordado.telefono.as_e164 if cliente_recordado else '',
         'title': f'Agendar Cita - {negocio.nombre}',
     }
 
@@ -423,16 +442,18 @@ def manifest_minipagina(request, slug):
 
 def mis_citas(request, slug):
     """
-    Vista para que los clientes vean sus citas agendadas
-    Requiere ingresar teléfono para identificarse
+    Vista para que los clientes vean sus citas agendadas.
+    La primera vez se identifican con su teléfono; después la sesión los
+    recuerda (60 días), así la PWA instalada no vuelve a pedirlo.
     """
     negocio = get_object_or_404(Negocio, slug=slug, esta_activo=True)
 
-    citas = None
-    cliente = None
-    telefono = None
-
     if request.method == 'POST':
+        # "Buscar con otro teléfono": olvidar al cliente de esta sesión
+        if request.POST.get('accion') == 'salir':
+            _olvidar_cliente(request, negocio)
+            return redirect('public:mis_citas', slug=slug)
+
         telefono = request.POST.get('telefono', '').strip()
 
         # Validar que el teléfono no esté vacío
@@ -446,38 +467,40 @@ def mis_citas(request, slug):
             messages.error(request, 'El número de teléfono debe tener al menos 10 dígitos.')
             return redirect('public:mis_citas', slug=slug)
 
-        # Buscar cliente por teléfono en este negocio
-        try:
-            cliente = Cliente.objects.get(telefono=telefono, negocio=negocio)
-            _marcar_cliente_verificado(request, cliente)
-
-            # Obtener todas las citas del cliente, ordenadas por fecha (más recientes primero)
-            citas = Cita.objects.filter(
-                cliente=cliente,
-                negocio=negocio
-            ).select_related('servicio').order_by('-fecha_hora')
-
-            # Separar citas en futuras y pasadas
-            ahora = timezone.now()
-            citas_futuras = []
-            citas_pasadas = []
-
-            for cita in citas:
-                if cita.fecha_hora > ahora and cita.estado not in ['cancelada', 'completada', 'no_asistio']:
-                    citas_futuras.append(cita)
-                else:
-                    citas_pasadas.append(cita)
-
-        except Cliente.DoesNotExist:
+        cliente = Cliente.buscar_por_telefono(negocio, telefono)
+        if not cliente:
             messages.warning(request, f'No encontramos citas asociadas al teléfono {telefono} en {negocio.nombre}.')
             return redirect('public:mis_citas', slug=slug)
+
+        _marcar_cliente_verificado(request, cliente)
+        # Redirigir (PRG): recargar la página no reenvía el formulario
+        return redirect('public:mis_citas', slug=slug)
+
+    cliente = _cliente_verificado(request, negocio)
+    citas_futuras = citas_pasadas = None
+
+    if cliente:
+        citas = Cita.objects.filter(
+            cliente=cliente,
+            negocio=negocio
+        ).select_related('servicio').order_by('-fecha_hora')
+
+        # Separar citas en futuras y pasadas
+        ahora = timezone.now()
+        citas_futuras = []
+        citas_pasadas = []
+        for cita in citas:
+            if cita.fecha_hora > ahora and cita.estado not in ['cancelada', 'completada', 'no_asistio']:
+                citas_futuras.append(cita)
+            else:
+                citas_pasadas.append(cita)
 
     context = {
         'negocio': negocio,
         'cliente': cliente,
-        'telefono': telefono,
-        'citas_futuras': citas_futuras if cliente else None,
-        'citas_pasadas': citas_pasadas if cliente else None,
+        'telefono': cliente.telefono if cliente else None,
+        'citas_futuras': citas_futuras,
+        'citas_pasadas': citas_pasadas,
         'title': f'Mis Citas - {negocio.nombre}',
     }
 

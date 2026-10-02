@@ -71,6 +71,8 @@ def service_worker(request):
         response = HttpResponse(sw_content, content_type='application/javascript')
         # Agregar header para permitir scope en toda la aplicación
         response['Service-Worker-Allowed'] = '/'
+        # Revisar siempre si hay versión nueva del Service Worker
+        response['Cache-Control'] = 'no-cache'
         return response
     except FileNotFoundError:
         return HttpResponse('Service Worker not found', status=404)
