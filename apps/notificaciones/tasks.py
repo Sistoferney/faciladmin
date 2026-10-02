@@ -276,3 +276,90 @@ def enviar_notificacion_confirmacion_abono(cita_id):
 
     except Cita.DoesNotExist:
         return {'success': False, 'error': 'Cita no encontrada'}
+
+
+# Cambios hechos por el dueño desde el panel que se avisan al cliente.
+# (La confirmación de abono usa enviar_notificacion_confirmacion_abono)
+EVENTOS_CITA = {
+    'confirmada': {
+        'tipo': 'confirmacion_cita',
+        'asunto': 'Cita confirmada',
+        'texto': '✅ Tu cita está confirmada. ¡Te esperamos!',
+    },
+    'cancelada': {
+        'tipo': 'cancelacion',
+        'asunto': 'Cita cancelada',
+        'texto': '❌ Tu cita fue cancelada por {negocio}.',
+    },
+    'abono_rechazado': {
+        'tipo': 'abono_rechazado',
+        'asunto': 'No pudimos validar tu pago',
+        'texto': '⚠️ No pudimos validar el pago del abono de tu cita.',
+    },
+}
+
+
+@shared_task
+def notificar_cambio_cita(cita_id, evento, motivo=''):
+    """
+    Avisa al cliente un cambio en su cita hecho por el dueño desde el panel:
+    'confirmada', 'cancelada' o 'abono_rechazado'.
+    """
+    config = EVENTOS_CITA[evento]
+    try:
+        cita = Cita.objects.select_related('cliente', 'negocio', 'servicio').get(id=cita_id)
+    except Cita.DoesNotExist:
+        return {'success': False, 'error': 'Cita no encontrada'}
+
+    cliente = cita.cliente
+    negocio = cita.negocio
+    canal = elegir_canal(cliente)
+    if not canal:
+        return {'success': False, 'error': 'El cliente no tiene canales de notificación disponibles'}
+
+    fecha = timezone.localtime(cita.fecha_hora)
+    mensaje = f"""
+¡Hola {cliente.nombre}!
+
+{config['texto'].format(negocio=negocio.nombre)}
+
+📅 Fecha: {fecha.strftime('%d/%m/%Y')}
+🕐 Hora: {fecha.strftime('%H:%M')}
+✂️ Servicio: {cita.servicio.nombre}
+
+📍 {negocio.nombre}
+    """.strip()
+
+    if motivo:
+        mensaje += f"\n\n💬 Motivo: {motivo}"
+
+    notificacion = Notificacion.objects.create(
+        cliente=cliente,
+        cita=cita,
+        tipo=config['tipo'],
+        canal=canal,
+        asunto=f"{config['asunto']} - {negocio.nombre}",
+        mensaje=mensaje
+    )
+    return notificacion.enviar()
+
+
+def programar_notificacion(tarea, *args):
+    """
+    Ejecuta la tarea al confirmarse la transacción: en segundo plano si hay
+    worker de Celery, o en el momento si no hay Redis (modo EAGER).
+    Un fallo al notificar nunca debe romper la acción del dueño.
+    """
+    from django.conf import settings
+    from django.db import transaction
+
+    def ejecutar():
+        try:
+            if getattr(settings, 'CELERY_TASK_ALWAYS_EAGER', False):
+                tarea(*args)
+            else:
+                tarea.delay(*args)
+        except Exception:
+            logger.exception('Error enviando notificación %s%s', tarea.name, args)
+
+    transaction.on_commit(ejecutar)

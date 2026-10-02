@@ -207,7 +207,9 @@ self.addEventListener('push', (event) => {
             data: {
                 url: data.url || data.link || '/',
                 citaId: data.citaId || null,
-                tipo: data.tipo || 'general'
+                tipo: data.tipo || 'general',
+                // Enlace del botón "WhatsApp" (acción 'whatsapp')
+                whatsapp: data.whatsapp || null
             },
             actions: data.actions || [],
             // Agregar timestamp para que cada notificación sea única
@@ -265,6 +267,16 @@ async function notifyClients(message) {
 // Manejar click en notificaciones
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
+
+    // Botón "WhatsApp": abrir el chat con el mensaje prellenado
+    const datos = event.notification.data || {};
+    if (event.action === 'whatsapp' && datos.whatsapp) {
+        event.waitUntil(Promise.all([
+            decrementBadge(),
+            clients.openWindow(datos.whatsapp)
+        ]));
+        return;
+    }
 
     // URL absoluta: client.url es absoluta, así se puede comparar y reutilizar la ventana
     const urlToOpen = new URL((event.notification.data && event.notification.data.url) || '/', self.location.origin).href;

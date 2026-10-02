@@ -402,9 +402,10 @@
 {% endblock %}
 
 {% block extra_js %}
+{{ calendario_grid|json_script:"calendario-data" }}
 <script>
 // Datos del calendario
-const calendarioData = {{ calendario_grid_json|safe }};
+const calendarioData = JSON.parse(document.getElementById('calendario-data').textContent);
 
 console.log('Datos del calendario cargados:', calendarioData);
 console.log('Total de celdas con datos:', Object.keys(calendarioData).length);
@@ -443,17 +444,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Si es continuación, usar clase especial
                 if (cita.es_continuacion) {
                     citaDiv.className = `cita-block ${cita.estado} cita-continuacion`;
-                    citaDiv.onclick = () => verCita(cita.id, cita.estado, cita.cliente, cita.servicio);
+                    citaDiv.onclick = () => verCita(cita.id, cita.estado, cita.cliente, cita.servicio, cita.whatsapp);
                     citaDiv.title = `${cita.cliente} - ${cita.servicio} (Inicia a las ${cita.hora})`;
                     citaDiv.innerHTML = `<small><i class="bi bi-arrow-up"></i> Ocupado</small>`;
                 } else {
                     citaDiv.className = `cita-block ${cita.estado}`;
-                    citaDiv.onclick = () => verCita(cita.id, cita.estado, cita.cliente, cita.servicio);
+                    citaDiv.onclick = () => verCita(cita.id, cita.estado, cita.cliente, cita.servicio, cita.whatsapp);
 
                     // Mostrar duración si es mayor a 30 minutos
                     const duracionText = cita.duracion > 30 ? ` (${cita.duracion}min)` : '';
                     citaDiv.title = `${cita.cliente} - ${cita.servicio}${duracionText}`;
-                    citaDiv.innerHTML = `<strong>${cita.cliente}</strong><br>${cita.servicio.substring(0, 20)}${duracionText}`;
+                    // textContent (no innerHTML): el nombre lo escribe el cliente en el
+                    // formulario público y no debe poder inyectar HTML en el panel
+                    const nombre = document.createElement('strong');
+                    nombre.textContent = cita.cliente;
+                    citaDiv.append(nombre, document.createElement('br'),
+                                   `${cita.servicio.substring(0, 20)}${duracionText}`);
                 }
 
                 cell.appendChild(citaDiv);
@@ -561,7 +567,7 @@ function crearBloqueoDesdeSeleccion() {
     window.location.href = url.toString();
 }
 
-function verCita(citaId, estado, cliente, servicio) {
+function verCita(citaId, estado, cliente, servicio, whatsapp) {
     // Actualizar información del modal
     document.getElementById('modalCliente').textContent = cliente;
     document.getElementById('modalServicio').textContent = servicio;
@@ -614,6 +620,17 @@ function verCita(citaId, estado, cliente, servicio) {
     }
 
     accionesDiv.innerHTML = acciones;
+
+    // Botón para resolver dudas con el cliente por WhatsApp
+    if (whatsapp) {
+        const btnWhatsapp = document.createElement('a');
+        btnWhatsapp.href = whatsapp;
+        btnWhatsapp.target = '_blank';
+        btnWhatsapp.rel = 'noopener';
+        btnWhatsapp.className = 'btn btn-outline-success w-100 mt-2';
+        btnWhatsapp.innerHTML = '<i class="bi bi-whatsapp"></i> Escribir al cliente por WhatsApp';
+        accionesDiv.appendChild(btnWhatsapp);
+    }
 
     // Mostrar modal
     const modal = new bootstrap.Modal(document.getElementById('citaModal'));

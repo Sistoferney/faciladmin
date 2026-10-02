@@ -158,6 +158,18 @@ class NotificacionService:
                     payload['url'] = f'/{cita.negocio.slug}/admin/agenda/'
                 else:
                     payload['url'] = f'/{cita.negocio.slug}/mis-citas/'
+
+                # Botón "WhatsApp" en la notificación para resolver dudas:
+                # el dueño escribe al cliente y el cliente escribe al negocio.
+                # (iPhone no muestra botones en notificaciones: allí están en la app)
+                from apps.core.whatsapp import enlace_cliente_a_negocio, enlace_negocio_a_cliente
+                enlace = enlace_negocio_a_cliente(cita) if enviar_a_admin else enlace_cliente_a_negocio(cita)
+                if enlace:
+                    payload['whatsapp'] = enlace
+                    payload['actions'] = [{
+                        'action': 'whatsapp',
+                        'title': '💬 WhatsApp al cliente' if enviar_a_admin else '💬 Escribir por WhatsApp',
+                    }]
                 payload['data'] = {
                     'citaId': cita.id,
                     'tipo': 'recordatorio_cita'

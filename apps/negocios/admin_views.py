@@ -14,6 +14,12 @@ from apps.servicios.models import Servicio
 from apps.clientes.models import Cliente
 from apps.citas.models import Cita
 from apps.abonos.models import Abono
+from apps.core.whatsapp import enlace_negocio_a_cliente
+from apps.notificaciones.tasks import (
+    enviar_notificacion_confirmacion_abono,
+    notificar_cambio_cita,
+    programar_notificacion,
+)
 
 import logging
 
@@ -218,6 +224,8 @@ def agenda_admin(request, slug):
             'estado': cita.estado,
             'hora': fecha_hora_local.strftime('%H:%M'),
             'duracion': duracion_minutos,
+            # Botón para escribirle al cliente por WhatsApp desde el detalle
+            'whatsapp': enlace_negocio_a_cliente(cita),
         }
 
         # Marcar todos los slots que ocupa esta cita
@@ -300,11 +308,7 @@ def agenda_admin(request, slug):
     # Navegación de semanas
     semana_anterior = inicio_semana - timedelta(days=7)
     semana_siguiente = inicio_semana + timedelta(days=7)
-    fecha_hoy = timezone.now().date()  # Siempre la fecha actual
-
-    # Convertir calendario_grid a JSON
-    import json
-    calendario_grid_json = json.dumps(calendario_grid)
+    fecha_hoy = timezone.localdate()  # Fecha actual en Colombia (no UTC)
 
     context = {
         'negocio': negocio,
@@ -316,7 +320,9 @@ def agenda_admin(request, slug):
         'semana_siguiente': semana_siguiente,
         'dias_semana': dias_semana,
         'bloques_tiempo': bloques_tiempo,
-        'calendario_grid_json': calendario_grid_json,
+        # Se pasa con json_script en el template: escapa '</script>' y HTML
+        # (los nombres de clientes vienen del formulario público)
+        'calendario_grid': calendario_grid,
         'stats': stats,
     }
 
@@ -668,7 +674,8 @@ def cita_confirmar(request, slug, cita_id):
     if request.method == 'POST':
         cita.estado = 'confirmada'
         cita.save()
-        messages.success(request, f'Cita de {cita.cliente.nombre} confirmada exitosamente.')
+        programar_notificacion(notificar_cambio_cita, cita.id, 'confirmada')
+        messages.success(request, f'Cita de {cita.cliente.nombre} confirmada. Le avisaremos al cliente.')
         return redirect('public:admin_agenda', slug=slug)
 
     context = {
@@ -713,9 +720,11 @@ def cita_cancelar(request, slug, cita_id):
     cita = get_object_or_404(Cita, id=cita_id, negocio=negocio)
 
     if request.method == 'POST':
-        # Guarda el motivo en las notas internas de la cita
-        cita.cancelar(request.POST.get('motivo', '').strip())
-        messages.success(request, f'Cita de {cita.cliente.nombre} cancelada.')
+        # Guarda el motivo en las notas internas de la cita y se lo avisa al cliente
+        motivo = request.POST.get('motivo', '').strip()
+        cita.cancelar(motivo)
+        programar_notificacion(notificar_cambio_cita, cita.id, 'cancelada', motivo)
+        messages.success(request, f'Cita de {cita.cliente.nombre} cancelada. Le avisaremos al cliente.')
         # Volver a abonos si se canceló desde ahí (abono vencido)
         if request.GET.get('desde') == 'abonos':
             return redirect('public:abonos_admin', slug=slug)
@@ -773,6 +782,9 @@ def abono_confirmar(request, slug, abono_id):
             abono.cita.estado = 'confirmada'
             abono.cita.save()
 
+        # "✅ Tu pago ha sido confirmado. Tu cita está asegurada"
+        programar_notificacion(enviar_notificacion_confirmacion_abono, abono.cita.id)
+
         messages.success(request, f'¡Abono confirmado! Cita de {abono.cita.cliente.nombre} confirmada.')
         return redirect('public:abonos_admin', slug=slug)
 
@@ -796,10 +808,13 @@ def abono_rechazar(request, slug, abono_id):
     abono = get_object_or_404(Abono, id=abono_id, cita__negocio=negocio)
 
     if request.method == 'POST':
-        motivo = request.POST.get('motivo', '')
+        motivo = request.POST.get('motivo', '').strip()
         abono.estado = 'rechazado'
         abono.notas_admin = motivo
         abono.save()
+
+        # La cita no se cancela: el dueño decide (puede cancelarla desde la agenda)
+        programar_notificacion(notificar_cambio_cita, abono.cita.id, 'abono_rechazado', motivo)
 
         messages.warning(request, f'Abono rechazado. El cliente {abono.cita.cliente.nombre} será notificado.')
         return redirect('public:abonos_admin', slug=slug)

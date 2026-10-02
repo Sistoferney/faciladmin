@@ -22,6 +22,7 @@ class Notificacion(models.Model):
         ('recordatorio_abono', 'Recordatorio de abono'),  # RF-56
         ('confirmacion_abono', 'Confirmación de abono'),  # RF-57
         ('cancelacion', 'Cancelación'),  # RF-57
+        ('abono_rechazado', 'Abono rechazado'),  # RF-57
         ('promocion', 'Promoción'),  # RF-34
         ('sugerencia_cita', 'Sugerencia de próxima cita'),  # RF-30
         ('reactivacion', 'Reactivación de cliente'),  # RF-32
@@ -92,14 +93,23 @@ class Notificacion(models.Model):
 
         service = NotificacionService()
 
+        # En email/SMS/WhatsApp se agrega el enlace para escribir al negocio.
+        # En push no: allí va como botón de la notificación.
+        mensaje = self.mensaje
+        if self.cita and self.canal != 'push':
+            from apps.core.whatsapp import enlace_cliente_a_negocio
+            enlace = enlace_cliente_a_negocio(self.cita)
+            if enlace:
+                mensaje = f'{mensaje}\n\n💬 ¿Dudas? Escríbenos por WhatsApp: {enlace}'
+
         if self.canal == 'push':
-            resultado = service.enviar_push(self.cliente, self.asunto, self.mensaje, self.cita)
+            resultado = service.enviar_push(self.cliente, self.asunto, mensaje, self.cita)
         elif self.canal == 'whatsapp':
-            resultado = service.enviar_whatsapp(self.cliente.telefono.as_e164, self.mensaje)
+            resultado = service.enviar_whatsapp(self.cliente.telefono.as_e164, mensaje)
         elif self.canal == 'sms':
-            resultado = service.enviar_sms(self.cliente.telefono.as_e164, self.mensaje)
+            resultado = service.enviar_sms(self.cliente.telefono.as_e164, mensaje)
         elif self.canal == 'email':
-            resultado = service.enviar_email(self.cliente.email, self.asunto, self.mensaje)
+            resultado = service.enviar_email(self.cliente.email, self.asunto, mensaje)
         else:
             resultado = {'success': False, 'error': 'Canal no soportado'}
 

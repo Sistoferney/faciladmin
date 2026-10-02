@@ -1,3 +1,4 @@
+{% load whatsapp %}
 {% load static %}
 <!DOCTYPE html>
 <html lang="es">
@@ -943,8 +944,8 @@
             const whatsappBtn = document.getElementById('btnWhatsAppContact');
             if (whatsappBtn) {
                 const mensaje = `Hola, me interesa el servicio *${selectedService.name}* (${selectedService.duration} min - $${selectedService.price}). Me gustaría coordinar fecha, hora y dirección para el servicio a domicilio.`;
-                const whatsappNumber = '{{ negocio.whatsapp }}'.replace(/\D/g, ''); // Solo dígitos
-                whatsappBtn.href = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(mensaje)}`;
+                // URL con el número normalizado (incluye código de país)
+                whatsappBtn.href = `{% whatsapp_negocio negocio %}?text=${encodeURIComponent(mensaje)}`;
             }
         }
 

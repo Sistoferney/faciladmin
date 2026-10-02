@@ -271,3 +271,132 @@ class PayloadPushTests(TestCase):
     def test_sin_cita_no_hay_tag(self, webpush, *mocks):
         self._enviar(None, a_admin=False)
         self.assertNotIn('tag', self._payload(webpush))
+
+
+class EnlaceWhatsappTests(TestCase):
+
+    def test_agrega_codigo_de_pais(self):
+        from apps.core.whatsapp import enlace_whatsapp
+        # Antes: wa.me/3001234567 (sin 57) abría un número equivocado
+        self.assertEqual(enlace_whatsapp('300 123 4567'), 'https://wa.me/573001234567')
+        self.assertEqual(enlace_whatsapp('+57 300-123-4567'), 'https://wa.me/573001234567')
+
+    def test_mensaje_prellenado(self):
+        from apps.core.whatsapp import enlace_whatsapp
+        self.assertEqual(
+            enlace_whatsapp('3001234567', 'Hola, una duda'),
+            'https://wa.me/573001234567?text=Hola%2C%20una%20duda',
+        )
+
+    def test_numero_invalido(self):
+        from apps.core.whatsapp import enlace_whatsapp
+        self.assertEqual(enlace_whatsapp(''), '')
+        self.assertEqual(enlace_whatsapp('123'), '')
+
+
+@patch('apps.citas.signals.enviar_confirmacion_cita', create=True)
+@override_settings(TWILIO_ACCOUNT_SID='', TWILIO_AUTH_TOKEN='')
+class AccionesPanelNotificanClienteTests(TestCase):
+    """
+    Lo que hace el dueño en el panel se le avisa al cliente, con enlace para
+    resolver dudas por WhatsApp.
+    """
+
+    def setUp(self):
+        from django.urls import reverse
+        from apps.abonos.models import Abono
+        self.reverse = reverse
+        self.negocio, self.servicio, self.cliente = _crear_base()
+        self.negocio.whatsapp = '300 999 8888'
+        self.negocio.save()
+        self.cita = Cita.objects.create(
+            negocio=self.negocio, cliente=self.cliente, servicio=self.servicio,
+            fecha_hora=_local(timezone.localdate() + timedelta(days=3), 10),
+            duracion_minutos=30, estado='pendiente_abono',
+        )
+        self.abono = Abono.objects.create(
+            cita=self.cita, monto=5000, metodo_pago='transferencia', estado='pendiente',
+            fecha_limite=timezone.now() + timedelta(days=1),
+        )
+        self.client.force_login(self.negocio.administrador)
+
+    def _post(self, nombre, obj_id, **datos):
+        url = self.reverse(f'public:{nombre}', args=[self.negocio.slug, obj_id])
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(url, datos)
+
+    @patch('apps.notificaciones.services.NotificacionService.enviar_email',
+           return_value={'success': True})
+    def test_cancelar_avisa_al_cliente_con_motivo_y_whatsapp(self, enviar_email, *mocks):
+        self._post('cita_cancelar', self.cita.id, motivo='Cerramos por mantenimiento')
+
+        notif = Notificacion.objects.get(cita=self.cita, tipo='cancelacion')
+        self.assertIn('Cerramos por mantenimiento', notif.mensaje)
+        enviado = enviar_email.call_args.args[2]
+        self.assertIn('https://wa.me/573009998888?text=', enviado)
+
+    @patch('apps.notificaciones.services.NotificacionService.enviar_email',
+           return_value={'success': True})
+    def test_confirmar_cita_avisa(self, *mocks):
+        self._post('cita_confirmar', self.cita.id)
+        self.assertTrue(Notificacion.objects.filter(cita=self.cita, tipo='confirmacion_cita').exists())
+
+    @patch('apps.notificaciones.services.NotificacionService.enviar_email',
+           return_value={'success': True})
+    def test_confirmar_abono_avisa(self, *mocks):
+        self._post('abono_confirmar', self.abono.id)
+        self.assertTrue(Notificacion.objects.filter(cita=self.cita, tipo='confirmacion_abono').exists())
+
+    @patch('apps.notificaciones.services.NotificacionService.enviar_email',
+           return_value={'success': True})
+    def test_rechazar_abono_avisa_y_no_cancela_la_cita(self, *mocks):
+        self._post('abono_rechazar', self.abono.id, motivo='El comprobante no es legible')
+        notif = Notificacion.objects.get(cita=self.cita, tipo='abono_rechazado')
+        self.assertIn('El comprobante no es legible', notif.mensaje)
+        self.cita.refresh_from_db()
+        self.assertEqual(self.cita.estado, 'pendiente_abono')
+
+    def test_fallo_al_notificar_no_rompe_la_accion(self, *mocks):
+        with patch('apps.notificaciones.models.Notificacion.enviar', side_effect=RuntimeError('fallo')):
+            self._post('cita_cancelar', self.cita.id)
+        self.cita.refresh_from_db()
+        self.assertEqual(self.cita.estado, 'cancelada')
+
+
+@patch('apps.citas.signals.enviar_confirmacion_cita', create=True)
+@patch('py_vapid.Vapid.from_pem')
+@patch('pywebpush.webpush')
+class BotonWhatsappEnPushTests(TestCase):
+
+    def setUp(self):
+        from .models import UsuarioPushSubscription
+        self.negocio, self.servicio, self.cliente = _crear_base()
+        self.negocio.whatsapp = '3009998888'
+        self.negocio.save()
+        UsuarioPushSubscription.objects.create(
+            user=self.negocio.administrador, negocio=self.negocio,
+            endpoint='https://push/admin', auth='a', p256dh='p',
+        )
+        ClientePushSubscription.objects.create(
+            cliente=self.cliente, endpoint='https://push/cliente', auth='a', p256dh='p'
+        )
+        self.cita = Cita.objects.create(
+            negocio=self.negocio, cliente=self.cliente, servicio=self.servicio,
+            fecha_hora=_local(timezone.localdate() + timedelta(days=2), 10),
+            duracion_minutos=30, estado='confirmada',
+        )
+
+    def _payload(self, webpush, a_admin):
+        import json
+        from .services import NotificacionService
+        NotificacionService().enviar_push(self.cliente, 'T', 'M', cita=self.cita, enviar_a_admin=a_admin)
+        return json.loads(webpush.call_args.kwargs['data'])
+
+    def test_dueno_recibe_boton_para_escribir_al_cliente(self, webpush, *mocks):
+        payload = self._payload(webpush, a_admin=True)
+        self.assertTrue(payload['whatsapp'].startswith('https://wa.me/573001111111?text=Hola%20Ana'))
+        self.assertEqual(payload['actions'][0]['action'], 'whatsapp')
+
+    def test_cliente_recibe_boton_para_escribir_al_negocio(self, webpush, *mocks):
+        payload = self._payload(webpush, a_admin=False)
+        self.assertTrue(payload['whatsapp'].startswith('https://wa.me/573009998888?text='))
