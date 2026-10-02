@@ -648,7 +648,10 @@ function getNotificationStatus() {
 /**
  * Muestra un indicador visual del estado de las notificaciones
  */
-function showNotificationStatusIndicator() {
+// alCargar=true: llamado al abrir/cambiar de página. Solo se muestra si hace
+// falta una acción (activar o desbloquear), y no si la persona ya lo cerró en
+// esta sesión. "Notificaciones activadas" solo se muestra justo al activarlas.
+function showNotificationStatusIndicator({ alCargar = false } = {}) {
     // Evitar duplicados
     if (document.getElementById('notification-status-indicator')) {
         return;
@@ -659,6 +662,17 @@ function showNotificationStatusIndicator() {
     // No mostrar si no está soportado
     if (!status.supported) {
         return;
+    }
+
+    if (alCargar) {
+        if (status.permission === 'granted') {
+            return;
+        }
+        try {
+            if (sessionStorage.getItem('indicador_notificaciones_cerrado')) {
+                return;
+            }
+        } catch (e) { /* sessionStorage no disponible */ }
     }
 
     // Crear contenedor del indicador
@@ -731,6 +745,8 @@ function showNotificationStatusIndicator() {
     if (closeBtn) {
         closeBtn.addEventListener('click', () => {
             indicator.remove();
+            // No volver a mostrarlo al cambiar de página durante esta sesión
+            try { sessionStorage.setItem('indicador_notificaciones_cerrado', '1'); } catch (e) { /* sin sessionStorage */ }
         });
     }
 
@@ -998,7 +1014,7 @@ window.addEventListener('load', () => {
     if (isPWAInstalled() || esAdmin) {
         // Esperar un poco para que el DOM esté listo
         setTimeout(() => {
-            showNotificationStatusIndicator();
+            showNotificationStatusIndicator({ alCargar: true });
         }, 1500);
     }
 });
