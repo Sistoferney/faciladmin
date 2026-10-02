@@ -35,7 +35,7 @@ function registerServiceWorker() {
                         console.log('[PWA] Nueva versión lista para instalar');
 
                         // Mostrar notificación más amigable
-                        const mensaje = 'Nueva actualización disponible con mejoras y correcciones. ¿Actualizar ahora?';
+                        const mensaje = 'Hay una nueva versión con mejoras ✨ ¿La cargamos ahora? Solo toma un segundo.';
 
                         if (confirm(mensaje)) {
                             console.log('[PWA] Usuario aceptó actualización');
@@ -101,8 +101,8 @@ window.addEventListener('beforeinstallprompt', (e) => {
     // Disparar evento personalizado para que los componentes lo manejen
     window.dispatchEvent(new CustomEvent('pwa-installable'));
 
-    // Mostrar banner de instalación si no está instalada
-    if (!isPWAInstalled()) {
+    // Mostrar banner de instalación si no está instalada (y no se descartó)
+    if (!isPWAInstalled() && !bannerDescartado()) {
         showInstallBanner();
     }
 });
@@ -112,13 +112,52 @@ window.addEventListener('beforeinstallprompt', (e) => {
  */
 function isIOS() {
     const userAgent = window.navigator.userAgent.toLowerCase();
-    return /iphone|ipad|ipod/.test(userAgent);
+    // iPadOS 13+ se identifica como Mac: se distingue por la pantalla táctil
+    const esIPad = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+    return /iphone|ipad|ipod/.test(userAgent) || esIPad;
+}
+
+/**
+ * Celular/tablet o computador: los banners adaptan sus textos
+ * ("en mi celular" / "en mi computador")
+ */
+function esMovil() {
+    return isIOS() || /android|mobile/i.test(navigator.userAgent);
+}
+
+/**
+ * Muestra solo los textos del dispositivo actual:
+ * elementos con data-solo-movil o data-solo-pc
+ */
+function ajustarTextosDispositivo() {
+    const movil = esMovil();
+    document.querySelectorAll('[data-solo-movil]').forEach((el) => { el.hidden = !movil; });
+    document.querySelectorAll('[data-solo-pc]').forEach((el) => { el.hidden = movil; });
+}
+
+/**
+ * El panel del dueño y la mini-página son apps distintas: cada una recuerda
+ * por separado si se descartó su banner (comparten localStorage en el navegador).
+ * Se vuelve a ofrecer después de 14 días.
+ */
+const DIAS_PARA_REOFRECER = 14;
+
+function claveBannerDescartado() {
+    const app = window.location.pathname.includes('/admin/') ? 'panel' : 'cliente';
+    return `pwa_banner_descartado_${app}`;
+}
+
+function bannerDescartado() {
+    const descartadoEn = Number(localStorage.getItem(claveBannerDescartado()));
+    return Boolean(descartadoEn) && (Date.now() - descartadoEn) < DIAS_PARA_REOFRECER * 24 * 60 * 60 * 1000;
 }
 
 /**
  * Muestra el banner de instalación
  */
 function showInstallBanner() {
+    ajustarTextosDispositivo();
+
     // En iOS, mostrar banner especial con instrucciones
     if (isIOS()) {
         const iosBanner = document.getElementById('install-banner-ios');
@@ -126,7 +165,7 @@ function showInstallBanner() {
             iosBanner.style.display = 'block';
         }
     } else {
-        // Android/Chrome: banner normal
+        // Android y computador (Chrome/Edge): banner con botón
         const banner = document.getElementById('install-banner');
         if (banner) {
             banner.style.display = 'block';
@@ -139,10 +178,7 @@ function showInstallBanner() {
  * En iOS no existe beforeinstallprompt, así que mostramos el banner directamente
  */
 window.addEventListener('load', () => {
-    // Verificar si ya fue descartado
-    const bannerDismissed = localStorage.getItem('pwa_banner_dismissed');
-
-    if (!bannerDismissed && isIOS() && !isPWAInstalled()) {
+    if (!bannerDescartado() && isIOS() && !isPWAInstalled()) {
         // Esperar un poco para que el DOM esté listo
         setTimeout(() => {
             showInstallBanner();
@@ -164,8 +200,8 @@ function hideInstallBanner() {
         iosBanner.style.display = 'none';
     }
 
-    // Guardar preferencia para no mostrar más
-    localStorage.setItem('pwa_banner_dismissed', 'true');
+    // No volver a mostrarlo en esta app por unos días
+    localStorage.setItem(claveBannerDescartado(), String(Date.now()));
 }
 
 /**

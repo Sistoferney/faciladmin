@@ -94,22 +94,25 @@
         </div>
     </nav>
 
-    <!-- Banner de Instalación PWA (Android) -->
+    <!-- Banner de Instalación PWA (Android y computador) -->
     <div id="install-banner" class="alert alert-info alert-dismissible fade show sticky-top mb-0" style="display: none; z-index: 1050; border-radius: 0;">
         <div class="container">
             <div class="row align-items-center">
                 <div class="col-md-8 col-sm-7 col-8">
                     <div class="d-flex align-items-center">
-                        <i class="bi bi-phone fs-3 me-3"></i>
+                        <i class="bi bi-phone fs-3 me-3" data-solo-movil></i>
+                        <i class="bi bi-laptop fs-3 me-3" data-solo-pc hidden></i>
                         <div>
-                            <strong>¡Instala nuestra app!</strong>
-                            <p class="mb-0 small">Recibe recordatorios de tus citas automáticamente</p>
+                            <strong>Ten a {{ negocio.nombre }} a un toque</strong>
+                            <p class="mb-0 small">Agenda en segundos y recibe un recordatorio antes de tu cita.</p>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-4 col-sm-5 col-4 text-end">
                     <button onclick="PWA.promptInstall()" class="btn btn-primary btn-sm">
-                        <i class="bi bi-download"></i> Instalar
+                        <i class="bi bi-download"></i>
+                        <span data-solo-movil>Agregar a mi celular</span>
+                        <span data-solo-pc hidden>Agregar a mi computador</span>
                     </button>
                     <button type="button" class="btn-close ms-2" onclick="PWA.hideInstallBanner()" aria-label="Close"></button>
                 </div>
@@ -125,12 +128,11 @@
                     <div class="d-flex align-items-start">
                         <i class="bi bi-apple fs-3 me-3"></i>
                         <div class="flex-grow-1">
-                            <strong>¡Instala nuestra app!</strong>
-                            <p class="mb-2 small">Para recibir recordatorios de citas:</p>
+                            <strong>Ten a {{ negocio.nombre }} a un toque 📲</strong>
+                            <p class="mb-2 small">Agrégala a tu pantalla de inicio en 2 pasos:</p>
                             <ol class="mb-0 small ps-3">
-                                <li>Toca el botón <i class="bi bi-box-arrow-up"></i> <strong>Compartir</strong> (abajo)</li>
-                                <li>Selecciona <strong>"Agregar a pantalla de inicio"</strong></li>
-                                <li>Confirma tocando <strong>"Agregar"</strong></li>
+                                <li>Toca <i class="bi bi-box-arrow-up"></i> <strong>Compartir</strong> (abajo)</li>
+                                <li>Elige <strong>"Agregar a pantalla de inicio"</strong></li>
                             </ol>
                         </div>
                         <button type="button" class="btn-close ms-2" onclick="PWA.hideInstallBanner()" aria-label="Close"></button>

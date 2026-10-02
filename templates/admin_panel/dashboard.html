@@ -3,18 +3,45 @@
 {% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
-<!-- Banner de Instalación de PWA -->
-<div id="install-pwa-banner" class="alert alert-success alert-dismissible fade show mb-4" role="alert" style="display: none;">
+<!-- Banners de Instalación de PWA (los muestra pwa-register.js) -->
+<!-- Android y computador: botón de instalación -->
+<div id="install-banner" class="alert alert-success alert-dismissible fade show mb-4" role="alert" style="display: none;">
     <div class="d-flex align-items-center">
-        <i class="bi bi-download me-3" style="font-size: 2rem;"></i>
+        <i class="bi bi-phone me-3" style="font-size: 2rem;" data-solo-movil></i>
+        <i class="bi bi-laptop me-3" style="font-size: 2rem;" data-solo-pc hidden></i>
         <div class="flex-grow-1">
-            <h5 class="alert-heading mb-1">Instala la aplicación</h5>
-            <p class="mb-2">Accede más rápido al panel desde tu dispositivo. Funciona como una app nativa.</p>
-            <button type="button" class="btn btn-success btn-sm" onclick="instalarPWAAdmin()">
-                <i class="bi bi-phone"></i> Instalar Aplicación
+            <h5 class="alert-heading mb-1">
+                <span data-solo-movil>Tu negocio en tu bolsillo</span>
+                <span data-solo-pc hidden>Tu negocio a un clic</span>
+            </h5>
+            <p class="mb-2">
+                Entérate al instante de cada cita nueva y gestiona tu agenda desde
+                <span data-solo-movil>el celular.</span>
+                <span data-solo-pc hidden>tu computador.</span>
+            </p>
+            <button type="button" class="btn btn-success btn-sm" onclick="PWA.promptInstall()">
+                <i class="bi bi-download"></i>
+                <span data-solo-movil>Instalar en mi celular</span>
+                <span data-solo-pc hidden>Instalar en mi computador</span>
             </button>
         </div>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" onclick="cerrarBannerInstalacion()"></button>
+        <button type="button" class="btn-close" aria-label="Cerrar" onclick="PWA.hideInstallBanner()"></button>
+    </div>
+</div>
+
+<!-- iPhone/iPad: no hay botón de instalación, se explican los pasos de Safari -->
+<div id="install-banner-ios" class="alert alert-success alert-dismissible fade show mb-4" role="alert" style="display: none;">
+    <div class="d-flex align-items-start">
+        <i class="bi bi-apple me-3" style="font-size: 2rem;"></i>
+        <div class="flex-grow-1">
+            <h5 class="alert-heading mb-1">Tu negocio en tu bolsillo 📲</h5>
+            <p class="mb-2">Entérate al instante de cada cita nueva. Agrégalo a tu pantalla de inicio en 2 pasos:</p>
+            <ol class="mb-0 ps-3">
+                <li>Toca <i class="bi bi-box-arrow-up"></i> <strong>Compartir</strong> en Safari</li>
+                <li>Elige <strong>"Agregar a pantalla de inicio"</strong></li>
+            </ol>
+        </div>
+        <button type="button" class="btn-close" aria-label="Cerrar" onclick="PWA.hideInstallBanner()"></button>
     </div>
 </div>
 
@@ -311,22 +338,6 @@
 {% block extra_js %}
 <script>
 // Usar las funciones globales de window.PWA (definidas en pwa-register.js)
-
-// Función para instalar la PWA (llamada desde el botón del banner)
-async function instalarPWAAdmin() {
-    await window.PWA.promptInstall();
-
-    // Ocultar banner si la instalación fue exitosa
-    const banner = document.getElementById('install-pwa-banner');
-    if (banner && window.PWA.isPWAInstalled()) {
-        banner.style.display = 'none';
-    }
-}
-
-// Función para cerrar el banner de instalación
-function cerrarBannerInstalacion() {
-    window.PWA.hideInstallBanner();
-}
 
 // Función para activar notificaciones (llamada desde el botón del banner)
 async function activarNotificacionesAdmin() {

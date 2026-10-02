@@ -430,3 +430,19 @@ class SesionPersistentePWATests(TestCase):
         resp = self.client.get(reverse('public:confirmacion_cita', args=[self.negocio.slug, self.cita.id]))
         self.assertContains(resp, 'id="btn-activar-recordatorios"')
         self.assertNotContains(resp, 'confirm(')
+
+    def test_banners_de_instalacion(self, *mocks):
+        # Mini-página: textos con el nombre del negocio, para celular y computador
+        resp = self.client.get(reverse('public:minipagina', args=[self.negocio.slug]))
+        self.assertContains(resp, 'Ten a Spa Prueba a un toque')
+        self.assertContains(resp, 'Agregar a mi celular')
+        self.assertContains(resp, 'Agregar a mi computador')
+        self.assertContains(resp, 'Agregar a pantalla de inicio')
+
+        # Panel: usa los mismos ids que pwa-register.js sabe mostrar
+        self.client.force_login(self.admin)
+        resp = self.client.get(reverse('public:admin_dashboard', args=[self.negocio.slug]))
+        self.assertContains(resp, 'id="install-banner"')
+        self.assertContains(resp, 'id="install-banner-ios"')
+        self.assertContains(resp, 'Instalar en mi computador')
+        self.assertNotContains(resp, 'install-pwa-banner')
