@@ -211,3 +211,63 @@ class SuscripcionPushClienteTests(TestCase):
         # Reenviar la misma suscripción no la duplica
         self._post()
         self.assertEqual(ClientePushSubscription.objects.count(), 1)
+
+
+@patch('apps.citas.signals.enviar_confirmacion_cita', create=True)
+@patch('py_vapid.Vapid.from_pem')
+@patch('pywebpush.webpush')
+class PayloadPushTests(TestCase):
+    """
+    Cada cita tiene su propio tag (no se reemplazan notificaciones de citas
+    distintas) y al tocarla cada quien va a su app: dueño a la agenda,
+    cliente a sus citas.
+    """
+
+    def setUp(self):
+        from .models import UsuarioPushSubscription
+        self.negocio, self.servicio, self.cliente = _crear_base()
+        UsuarioPushSubscription.objects.create(
+            user=self.negocio.administrador, negocio=self.negocio,
+            endpoint='https://push/admin', auth='a', p256dh='p',
+        )
+        ClientePushSubscription.objects.create(
+            cliente=self.cliente, endpoint='https://push/cliente', auth='a', p256dh='p'
+        )
+
+    def _cita(self, dias):
+        return Cita.objects.create(
+            negocio=self.negocio, cliente=self.cliente, servicio=self.servicio,
+            fecha_hora=_local(timezone.localdate() + timedelta(days=dias), 10),
+            duracion_minutos=30, estado='confirmada',
+        )
+
+    def _payload(self, webpush):
+        import json
+        return json.loads(webpush.call_args.kwargs['data'])
+
+    def _enviar(self, cita, a_admin):
+        from .services import NotificacionService
+        return NotificacionService().enviar_push(
+            self.cliente, 'Título', 'Mensaje', cita=cita, enviar_a_admin=a_admin
+        )
+
+    def test_admin_va_a_la_agenda(self, webpush, *mocks):
+        cita = self._cita(2)
+        self.assertTrue(self._enviar(cita, a_admin=True)['success'])
+        payload = self._payload(webpush)
+        self.assertEqual(payload['url'], f'/{self.negocio.slug}/admin/agenda/')
+        self.assertEqual(payload['tag'], f'cita-{cita.id}')
+
+    def test_cliente_va_a_mis_citas(self, webpush, *mocks):
+        self._enviar(self._cita(2), a_admin=False)
+        self.assertEqual(self._payload(webpush)['url'], f'/{self.negocio.slug}/mis-citas/')
+
+    def test_citas_distintas_tienen_tags_distintos(self, webpush, *mocks):
+        self._enviar(self._cita(2), a_admin=True)
+        tag1 = self._payload(webpush)['tag']
+        self._enviar(self._cita(3), a_admin=True)
+        self.assertNotEqual(tag1, self._payload(webpush)['tag'])
+
+    def test_sin_cita_no_hay_tag(self, webpush, *mocks):
+        self._enviar(None, a_admin=False)
+        self.assertNotIn('tag', self._payload(webpush))

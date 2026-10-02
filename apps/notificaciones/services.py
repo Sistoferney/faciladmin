@@ -143,14 +143,21 @@ class NotificacionService:
                 'body': mensaje,
                 'icon': '/static/images/faciladmin-logo.png',
                 'url': '/',
-                'tag': f'notificacion-{cliente.id}',
                 'requireInteraction': True,
                 'vibrate': [200, 100, 200]
             }
 
             if cita:
-                # Agregar URL específica para la cita
-                payload['url'] = f'/{cita.negocio.slug}/'
+                # Las notificaciones de una misma cita (nueva, editada, cancelada)
+                # se reemplazan entre sí; las de citas distintas se acumulan.
+                # Sin cita no hay tag: cada notificación se muestra por separado.
+                payload['tag'] = f'cita-{cita.id}'
+                # Al tocar la notificación: el dueño va a su agenda y el cliente
+                # a sus citas (cada uno dentro de su app instalada)
+                if enviar_a_admin:
+                    payload['url'] = f'/{cita.negocio.slug}/admin/agenda/'
+                else:
+                    payload['url'] = f'/{cita.negocio.slug}/mis-citas/'
                 payload['data'] = {
                     'citaId': cita.id,
                     'tipo': 'recordatorio_cita'

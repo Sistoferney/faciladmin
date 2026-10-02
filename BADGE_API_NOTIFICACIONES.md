@@ -37,8 +37,20 @@ Se agregaron funciones para controlar el badge desde el cliente:
 - `setNotificationBadge(count)`: Actualiza el badge a un número específico
 
 #### Auto-limpieza del Badge
-- Cuando el usuario enfoca la app instalada, el badge se limpia automáticamente después de 2 segundos
+- Al abrir la app instalada o volver a ella, el badge se limpia después de 2 segundos
+  (eventos `pageshow` y `visibilitychange`; `focus` casi nunca se dispara al abrir desde el ícono)
 - Esto simula el comportamiento de apps como WhatsApp o Telegram
+
+#### Agrupación de notificaciones (tag)
+- Las notificaciones de una **misma cita** (nueva, editada, cancelada) usan el tag `cita-<id>`
+  y se reemplazan entre sí; en ese caso el contador **no** se incrementa
+- Las de citas distintas se acumulan en la bandeja, cada una con su +1
+- Sin cita no hay tag: cada notificación se muestra por separado
+
+#### Al tocar la notificación
+- Dueño: abre `/<slug>/admin/agenda/`
+- Cliente: abre `/<slug>/mis-citas/`
+- Si la app ya está abierta en otra pantalla, se navega a esa página en vez de abrir otra ventana
 
 ### 3. Templates
 Los templates ya tenían configurado:
@@ -96,7 +108,7 @@ console.log('Badge API soportada:', 'setAppBadge' in navigator);
 **Nota:** El Badge API solo está soportado en:
 - ✅ Chrome/Edge 81+ en Android
 - ✅ Chrome/Edge 81+ en Windows/macOS (solo en PWA instalada)
-- ❌ Safari (no soportado)
+- ✅ iPhone/iPad con iOS 16.4+ (solo app instalada en pantalla de inicio y con permiso de notificaciones)
 - ❌ Firefox (no soportado)
 
 ### 3. Probar Incremento Manual del Badge
@@ -199,7 +211,7 @@ if (PWA.isPWAInstalled()) {
 | Edge Android | ✅ Sí | Desde v81 |
 | Chrome Desktop | ✅ Sí | Solo PWA instalada |
 | Edge Desktop | ✅ Sí | Solo PWA instalada |
-| Safari iOS | ❌ No | No soportado |
+| Safari iOS / iPadOS | ✅ Sí | iOS 16.4+, solo app en pantalla de inicio con permiso de notificaciones |
 | Firefox | ❌ No | No soportado |
 
 ## Recursos

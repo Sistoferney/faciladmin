@@ -517,14 +517,21 @@ async function setNotificationBadge(count) {
 /**
  * Limpiar badge cuando el usuario abre la app
  */
+// 'focus' casi nunca se dispara al abrir la app desde el ícono; 'pageshow'
+// (apertura) y 'visibilitychange' (volver a la app) sí, también en iPhone.
+let limpiarBadgeTimeout = null;
+function limpiarBadgeSiVisible() {
+    if (document.visibilityState !== 'visible') {
+        return;
+    }
+    // Pequeño retraso para que el usuario alcance a ver que había notificaciones
+    clearTimeout(limpiarBadgeTimeout);
+    limpiarBadgeTimeout = setTimeout(clearNotificationBadge, 2000);
+}
+
 if (isPWAInstalled()) {
-    window.addEventListener('focus', () => {
-        // Cuando el usuario enfoca la app, limpiar el badge después de un delay
-        // (para dar tiempo a que vean las notificaciones)
-        setTimeout(() => {
-            clearNotificationBadge();
-        }, 2000); // 2 segundos
-    });
+    window.addEventListener('pageshow', limpiarBadgeSiVisible);
+    document.addEventListener('visibilitychange', limpiarBadgeSiVisible);
 }
 
 /**

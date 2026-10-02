@@ -199,7 +199,9 @@ self.addEventListener('push', (event) => {
             body: data.body || data.message || '',
             icon: data.icon || '/static/images/faciladmin-logo.png',
             badge: data.badge || '/static/images/faciladmin-logo.png',
-            tag: data.tag || 'faciladmin-notification',
+            // Sin tag por defecto: cada notificación se muestra por separado
+            // (con un tag común se reemplazaban y solo quedaba la última)
+            ...(data.tag ? { tag: data.tag, renotify: true } : {}),
             requireInteraction: data.requireInteraction || false,
             vibrate: data.vibrate || [200, 100, 200],
             data: {
@@ -214,8 +216,15 @@ self.addEventListener('push', (event) => {
 
         event.waitUntil(
             Promise.all([
-                self.registration.showNotification(title, options),
-                incrementBadge(),
+                // Si reemplaza una notificación visible de la misma cita, no sumar
+                // al contador (debe coincidir con lo que se ve en la bandeja)
+                (data.tag
+                    ? self.registration.getNotifications({ tag: data.tag })
+                    : Promise.resolve([])
+                ).then((previas) => Promise.all([
+                    self.registration.showNotification(title, options),
+                    previas.length ? null : incrementBadge()
+                ])),
                 // Notificar a los clientes activos que llegó una notificación
                 notifyClients({
                     type: 'PUSH_RECEIVED',
@@ -257,19 +266,26 @@ async function notifyClients(message) {
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
 
-    const urlToOpen = event.notification.data.url || '/';
+    // URL absoluta: client.url es absoluta, así se puede comparar y reutilizar la ventana
+    const urlToOpen = new URL((event.notification.data && event.notification.data.url) || '/', self.location.origin).href;
 
     event.waitUntil(
         Promise.all([
             decrementBadge(),
             clients.matchAll({ type: 'window', includeUncontrolled: true })
                 .then((clientList) => {
-                    // Si ya hay una ventana abierta, enfocarla
-                    for (let i = 0; i < clientList.length; i++) {
-                        const client = clientList[i];
-                        if (client.url === urlToOpen && 'focus' in client) {
-                            return client.focus();
-                        }
+                    // Si ya está abierta exactamente esa página, enfocarla
+                    const exacta = clientList.find((c) => c.url === urlToOpen && 'focus' in c);
+                    if (exacta) {
+                        return exacta.focus();
+                    }
+                    // Si la misma app (panel del dueño o mini-página) está abierta en
+                    // otra pantalla, llevarla a la página de la notificación
+                    const esPanel = (url) => new URL(url).pathname.includes('/admin/');
+                    const misma = clientList.find((c) =>
+                        esPanel(c.url) === esPanel(urlToOpen) && 'navigate' in c);
+                    if (misma) {
+                        return misma.navigate(urlToOpen).then((c) => (c || misma).focus());
                     }
                     // Si no, abrir nueva ventana
                     if (clients.openWindow) {
