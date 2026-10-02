@@ -16,6 +16,7 @@
                         <option value="confirmado" {% if estado_filtro == 'confirmado' %}selected{% endif %}>Confirmados</option>
                         <option value="rechazado" {% if estado_filtro == 'rechazado' %}selected{% endif %}>Rechazados</option>
                         <option value="vencido" {% if estado_filtro == 'vencido' %}selected{% endif %}>Vencidos</option>
+                        <option value="exonerado" {% if estado_filtro == 'exonerado' %}selected{% endif %}>Exonerados (sin abono)</option>
                         <option value="todos" {% if estado_filtro == 'todos' %}selected{% endif %}>Todos</option>
                     </select>
                 </form>
@@ -95,6 +96,11 @@
                                         <span class="badge bg-secondary">
                                             <i class="bi bi-exclamation-circle"></i> Vencido
                                         </span>
+                                    {% elif abono.estado == 'exonerado' %}
+                                        <span class="badge bg-light text-success border border-success" title="{{ abono.notas_admin }}">
+                                            <i class="bi bi-hand-thumbs-up"></i> Sin abono
+                                        </span>
+                                        {% if abono.notas_admin %}<br><small class="text-muted">{{ abono.notas_admin }}</small>{% endif %}
                                     {% endif %}
                                 </td>
                                 <td class="align-middle">
@@ -116,6 +122,9 @@
                                         <a href="{% url 'public:abono_rechazar' negocio.slug abono.id %}" class="btn btn-danger" title="Rechazar">
                                             <i class="bi bi-x"></i>
                                         </a>
+                                        <a href="{% url 'public:cita_confirmar' negocio.slug abono.cita.id %}?desde=abonos" class="btn btn-outline-success" title="Confirmar sin abono (cliente de confianza)">
+                                            <i class="bi bi-hand-thumbs-up"></i>
+                                        </a>
                                     </div>
                                     {% elif abono.estado == 'vencido' and abono.cita.estado == 'pendiente_abono' %}
                                     <!-- El dueño decide: confirmar si el cliente pagó tarde, o cancelar la cita -->
@@ -125,6 +134,9 @@
                                         </a>
                                         <a href="{% url 'public:cita_cancelar' negocio.slug abono.cita.id %}?desde=abonos" class="btn btn-outline-danger" title="Cancelar cita y liberar horario">
                                             <i class="bi bi-calendar-x"></i>
+                                        </a>
+                                        <a href="{% url 'public:cita_confirmar' negocio.slug abono.cita.id %}?desde=abonos" class="btn btn-outline-success" title="Confirmar sin abono (cliente de confianza)">
+                                            <i class="bi bi-hand-thumbs-up"></i>
                                         </a>
                                     </div>
                                     {% endif %}

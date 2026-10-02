@@ -666,25 +666,79 @@ def bloqueo_eliminar(request, slug, bloqueo_id):
 @admin_required
 def cita_confirmar(request, slug, cita_id):
     """
-    Confirmar una cita (cambiar de pendiente_abono a confirmada)
+    Confirmar una cita.
+    Si tiene un abono por resolver, el dueño elige:
+    - 'pago': recibió el abono -> abono confirmado
+    - 'sin_abono': confía en el cliente -> abono exonerado (se detienen los
+      recordatorios de pago y la alerta de vencido). Opcionalmente marca al
+      cliente para no volver a pedirle abono.
     """
     negocio = get_object_or_404(Negocio, slug=slug)
     cita = get_object_or_404(Cita, id=cita_id, negocio=negocio)
 
+    abono = getattr(cita, 'abono', None)
+    abono_por_resolver = abono if abono and abono.estado in ('pendiente', 'vencido') else None
+
     if request.method == 'POST':
-        cita.estado = 'confirmada'
-        cita.save()
-        programar_notificacion(notificar_cambio_cita, cita.id, 'confirmada')
-        messages.success(request, f'Cita de {cita.cliente.nombre} confirmada. Le avisaremos al cliente.')
+        modo = request.POST.get('modo', 'pago')
+
+        if abono_por_resolver and modo == 'sin_abono':
+            abono_por_resolver.exonerar(request.user, request.POST.get('nota', '').strip())
+            if request.POST.get('no_exigir_mas'):
+                cita.cliente.no_exigir_abono = True
+                cita.cliente.save(update_fields=['no_exigir_abono'])
+            programar_notificacion(notificar_cambio_cita, cita.id, 'confirmada')
+            messages.success(request, f'Cita de {cita.cliente.nombre} confirmada sin abono. Le avisaremos al cliente.')
+
+        elif abono_por_resolver:
+            abono_por_resolver.estado = 'confirmado'
+            abono_por_resolver.confirmado_por = request.user
+            abono_por_resolver.fecha_confirmacion = timezone.now()
+            abono_por_resolver.save()
+            cita.estado = 'confirmada'
+            cita.save()
+            # "✅ Tu pago ha sido confirmado. Tu cita está asegurada"
+            programar_notificacion(enviar_notificacion_confirmacion_abono, cita.id)
+            messages.success(request, f'¡Abono confirmado! Cita de {cita.cliente.nombre} confirmada.')
+
+        else:
+            cita.estado = 'confirmada'
+            cita.save()
+            programar_notificacion(notificar_cambio_cita, cita.id, 'confirmada')
+            messages.success(request, f'Cita de {cita.cliente.nombre} confirmada. Le avisaremos al cliente.')
+
+        if request.GET.get('desde') == 'abonos':
+            return redirect('public:abonos_admin', slug=slug)
         return redirect('public:admin_agenda', slug=slug)
 
     context = {
         'negocio': negocio,
         'seccion_activa': 'agenda',
         'cita': cita,
+        'abono': abono_por_resolver,
     }
 
     return render(request, 'admin_panel/cita_confirmar.html', context)
+
+
+@admin_required
+def cliente_no_exigir_abono(request, slug, cliente_id):
+    """
+    Activa/desactiva "no exigir abono" para un cliente de confianza:
+    sus próximas citas quedan confirmadas sin pedir anticipo.
+    """
+    negocio = get_object_or_404(Negocio, slug=slug)
+    cliente = get_object_or_404(Cliente, id=cliente_id, negocio=negocio)
+
+    if request.method == 'POST':
+        cliente.no_exigir_abono = not cliente.no_exigir_abono
+        cliente.save(update_fields=['no_exigir_abono'])
+        if cliente.no_exigir_abono:
+            messages.success(request, f'A {cliente.nombre} ya no se le pedirá abono en sus próximas citas.')
+        else:
+            messages.info(request, f'A {cliente.nombre} se le volverá a pedir abono cuando el servicio lo requiera.')
+
+    return redirect('public:admin_clientes', slug=slug)
 
 
 @admin_required

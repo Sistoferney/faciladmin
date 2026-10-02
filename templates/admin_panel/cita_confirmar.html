@@ -12,10 +12,19 @@
                 </h5>
             </div>
             <div class="card-body">
+                {% if abono %}
                 <div class="alert alert-info">
                     <i class="bi bi-info-circle"></i>
-                    ¿Confirmar el abono y aprobar esta cita?
+                    Esta cita tiene un abono de <strong>${{ abono.monto|floatformat:0 }}</strong>
+                    {% if abono.estado == 'vencido' %}(vencido){% else %}pendiente{% endif %}.
+                    ¿Cómo quieres confirmarla?
                 </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    ¿Confirmar esta cita?
+                </div>
+                {% endif %}
 
                 <div class="card mb-4">
                     <div class="card-body">
@@ -40,6 +49,41 @@
                     </div>
                 </div>
 
+                {% if abono %}
+                <!-- Opción 1: recibió el pago -->
+                <form method="post" class="mb-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="modo" value="pago">
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-cash-coin"></i> Recibí el abono — Confirmar pago
+                    </button>
+                </form>
+
+                <!-- Opción 2: confía en el cliente y no le cobra el anticipo -->
+                <form method="post" class="border rounded p-3 mb-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="modo" value="sin_abono">
+                    <p class="mb-2 small text-muted">
+                        ¿Conoces a {{ cita.cliente.nombre }} y no necesitas el anticipo?
+                        Se detienen los recordatorios de pago.
+                    </p>
+                    <input type="text" name="nota" class="form-control form-control-sm mb-2"
+                           placeholder="Nota interna (opcional), ej: clienta frecuente" maxlength="200">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="no_exigir_mas" value="1" id="no_exigir_mas">
+                        <label class="form-check-label small" for="no_exigir_mas">
+                            No volver a pedirle abono a {{ cita.cliente.nombre }}
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-outline-success w-100">
+                        <i class="bi bi-hand-thumbs-up"></i> Confirmar sin abono
+                    </button>
+                </form>
+
+                <a href="{% url 'public:admin_agenda' negocio.slug %}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Volver
+                </a>
+                {% else %}
                 <form method="post">
                     {% csrf_token %}
                     <div class="d-flex justify-content-between">
@@ -51,6 +95,7 @@
                         </button>
                     </div>
                 </form>
+                {% endif %}
             </div>
         </div>
     </div>

@@ -77,3 +77,140 @@ class AbonoVencidoTests(TestCase):
         self.client.post(reverse('public:abono_confirmar', args=[self.negocio.slug, self.abono.id]))
         self.cita.refresh_from_db()
         self.assertEqual(self.cita.estado, 'confirmada')
+
+
+@patch('apps.citas.signals.enviar_confirmacion_cita', create=True)
+@patch('apps.notificaciones.models.Notificacion.enviar', return_value={'success': True})
+class ConfirmarSinAbonoTests(TestCase):
+    """
+    Excepciones del dueño: confirmar una cita sin abono, y clientes de
+    confianza a los que nunca se les pide.
+    """
+
+    def setUp(self):
+        self.admin = Usuario.objects.create_user(
+            telefono='3000000000', password='x', nombre='Admin', email='a@a.com'
+        )
+        self.negocio = Negocio.objects.create(
+            administrador=self.admin, nombre='Spa', telefono='3000000000', banco='Banco Prueba'
+        )
+        self.servicio = Servicio.objects.create(
+            negocio=self.negocio, nombre='Masaje', precio=50000, duracion_minutos=60,
+            requiere_abono=True, monto_abono=20000,
+        )
+        self.cliente = Cliente.objects.create(
+            negocio=self.negocio, nombre='Ana', telefono='3001111111', email='ana@correo.com'
+        )
+        self.cita = Cita.objects.create(
+            negocio=self.negocio, cliente=self.cliente, servicio=self.servicio,
+            fecha_hora=timezone.now() + timedelta(days=4), duracion_minutos=60,
+            estado='pendiente_abono',
+        )
+        self.abono = Abono.objects.create(
+            cita=self.cita, monto=20000, metodo_pago='transferencia', estado='pendiente',
+            fecha_limite=timezone.now() + timedelta(days=2),
+        )
+        self.client.force_login(self.admin)
+        self.url = reverse('public:cita_confirmar', args=[self.negocio.slug, self.cita.id])
+
+    def _post(self, url, datos):
+        with self.captureOnCommitCallbacks(execute=True):
+            return self.client.post(url, datos)
+
+    def test_pantalla_ofrece_las_dos_opciones(self, *mocks):
+        resp = self.client.get(self.url)
+        self.assertContains(resp, 'Confirmar pago')
+        self.assertContains(resp, 'Confirmar sin abono')
+
+    def test_confirmar_sin_abono(self, *mocks):
+        from apps.notificaciones.models import Notificacion
+        self._post(self.url, {'modo': 'sin_abono', 'nota': 'Clienta frecuente'})
+
+        self.abono.refresh_from_db()
+        self.cita.refresh_from_db()
+        self.cliente.refresh_from_db()
+        self.assertEqual(self.abono.estado, 'exonerado')
+        self.assertEqual(self.abono.notas_admin, 'Clienta frecuente')
+        self.assertEqual(self.cita.estado, 'confirmada')
+        self.assertFalse(self.cliente.no_exigir_abono)
+        # Al cliente se le avisa que está confirmada (no que su pago fue confirmado)
+        self.assertTrue(Notificacion.objects.filter(cita=self.cita, tipo='confirmacion_cita').exists())
+        self.assertFalse(Notificacion.objects.filter(cita=self.cita, tipo='confirmacion_abono').exists())
+
+    @patch('apps.notificaciones.services.NotificacionService.enviar_push')
+    def test_exonerado_no_recibe_recordatorios_ni_se_vence(self, enviar_push, *mocks):
+        self._post(self.url, {'modo': 'sin_abono'})
+        Abono.objects.filter(pk=self.abono.pk).update(fecha_limite=timezone.now() - timedelta(hours=1))
+
+        with patch('apps.notificaciones.tasks.enviar_recordatorio_abono.delay') as recordatorio:
+            verificar_abonos_pendientes()
+
+        recordatorio.assert_not_called()
+        enviar_push.assert_not_called()  # sin aviso de "abono vencido" al dueño
+        self.abono.refresh_from_db()
+        self.assertEqual(self.abono.estado, 'exonerado')
+
+    def test_no_volver_a_pedir_marca_al_cliente(self, *mocks):
+        self._post(self.url, {'modo': 'sin_abono', 'no_exigir_mas': '1'})
+        self.cliente.refresh_from_db()
+        self.assertTrue(self.cliente.no_exigir_abono)
+
+    def test_confirmar_pago(self, *mocks):
+        from apps.notificaciones.models import Notificacion
+        self._post(self.url, {'modo': 'pago'})
+        self.abono.refresh_from_db()
+        self.assertEqual(self.abono.estado, 'confirmado')
+        self.assertEqual(self.abono.confirmado_por, self.admin)
+        self.assertTrue(Notificacion.objects.filter(cita=self.cita, tipo='confirmacion_abono').exists())
+
+    def test_interruptor_en_clientes(self, *mocks):
+        url = reverse('public:cliente_no_exigir_abono', args=[self.negocio.slug, self.cliente.id])
+        self.client.post(url)
+        self.cliente.refresh_from_db()
+        self.assertTrue(self.cliente.no_exigir_abono)
+        resp = self.client.get(reverse('public:admin_clientes', args=[self.negocio.slug]))
+        self.assertContains(resp, 'Pedir abono')
+        self.client.post(url)
+        self.cliente.refresh_from_db()
+        self.assertFalse(self.cliente.no_exigir_abono)
+
+    def test_otro_negocio_no_puede_cambiar_el_cliente(self, *mocks):
+        otro = Usuario.objects.create_user(telefono='3009999999', password='x', nombre='Otro', email='o@o.com')
+        Negocio.objects.create(administrador=otro, nombre='Otro Spa', telefono='3009999999')
+        self.client.force_login(otro)
+        self.client.post(reverse('public:cliente_no_exigir_abono', args=[self.negocio.slug, self.cliente.id]))
+        self.cliente.refresh_from_db()
+        self.assertFalse(self.cliente.no_exigir_abono)
+
+    def test_cliente_de_confianza_agenda_sin_abono(self, *mocks):
+        from apps.negocios.disponibilidad import horarios_disponibles
+        self.cliente.no_exigir_abono = True
+        self.cliente.save()
+        self.client.logout()
+
+        fecha = timezone.localdate() + timedelta(days=5)
+        hora = horarios_disponibles(self.negocio, fecha, 60)[0]
+        resp = self.client.post(reverse('public:agendar', args=[self.negocio.slug]), {
+            'telefono': '300 111 1111', 'servicio': self.servicio.id,
+            'fecha': fecha.isoformat(), 'hora': hora,
+        })
+
+        cita = Cita.objects.exclude(pk=self.cita.pk).get(cliente=self.cliente)
+        self.assertEqual(cita.estado, 'confirmada')
+        self.assertFalse(Abono.objects.filter(cita=cita).exists())
+        # La confirmación no le muestra datos bancarios
+        resp = self.client.get(resp.url)
+        self.assertNotContains(resp, 'Banco Prueba')
+
+    def test_cliente_normal_sigue_con_abono(self, *mocks):
+        from apps.negocios.disponibilidad import horarios_disponibles
+        self.client.logout()
+        fecha = timezone.localdate() + timedelta(days=5)
+        hora = horarios_disponibles(self.negocio, fecha, 60)[0]
+        self.client.post(reverse('public:agendar', args=[self.negocio.slug]), {
+            'telefono': '3001111111', 'servicio': self.servicio.id,
+            'fecha': fecha.isoformat(), 'hora': hora,
+        })
+        cita = Cita.objects.exclude(pk=self.cita.pk).get(cliente=self.cliente)
+        self.assertEqual(cita.estado, 'pendiente_abono')
+        self.assertTrue(Abono.objects.filter(cita=cita).exists())

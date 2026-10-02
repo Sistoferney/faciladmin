@@ -21,6 +21,7 @@ class Abono(models.Model):
         ('confirmado', 'Confirmado'),
         ('rechazado', 'Rechazado'),
         ('vencido', 'Vencido'),
+        ('exonerado', 'Exonerado'),  # El dueño confirmó la cita sin cobrar el abono
     ]
 
     METODO_PAGO_CHOICES = [
@@ -112,6 +113,24 @@ class Abono(models.Model):
 
         # Confirmar la cita asociada
         self.cita.confirmar_abono(usuario)
+
+    def exonerar(self, usuario, nota=''):
+        """
+        El dueño confirma la cita sin cobrar el abono (cliente de confianza).
+        Al dejar de estar 'pendiente' se detienen los recordatorios de pago
+        y la alerta de abono vencido.
+        """
+        from django.utils import timezone
+
+        self.estado = 'exonerado'
+        self.confirmado_por = usuario
+        self.fecha_confirmacion = timezone.now()
+        self.notas_admin = nota
+        self.save()
+
+        if self.cita.estado == 'pendiente_abono':
+            self.cita.estado = 'confirmada'
+            self.cita.save()
 
     def rechazar(self, usuario, motivo=''):
         """

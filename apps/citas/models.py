@@ -192,8 +192,11 @@ class Cita(models.Model):
 
     @property
     def requiere_abono(self):
-        """Verifica si la cita requiere abono"""
-        return self.servicio.requiere_pago_abono
+        """
+        La cita tiene un abono asociado (para mostrar datos de pago).
+        Los clientes exonerados ("no exigir abono") no tienen abono.
+        """
+        return getattr(self, 'abono', None) is not None
 
     @property
     def monto_abono(self):

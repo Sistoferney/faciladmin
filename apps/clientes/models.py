@@ -82,6 +82,13 @@ class Cliente(models.Model):
     acepta_email = models.BooleanField('Acepta Email', default=True)
     acepta_promociones = models.BooleanField('Acepta promociones', default=True)
 
+    # Cliente de confianza: sus citas se confirman sin pedir abono
+    no_exigir_abono = models.BooleanField(
+        'No exigir abono',
+        default=False,
+        help_text='Sus citas quedan confirmadas sin pedir anticipo, aunque el servicio lo requiera'
+    )
+
     # Metadata
     fecha_registro = models.DateTimeField('Fecha de registro', auto_now_add=True)
     fecha_actualizacion = models.DateTimeField('Última actualización', auto_now=True)

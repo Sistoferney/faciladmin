@@ -338,7 +338,7 @@ class AccionesPanelNotificanClienteTests(TestCase):
     @patch('apps.notificaciones.services.NotificacionService.enviar_email',
            return_value={'success': True})
     def test_confirmar_cita_avisa(self, *mocks):
-        self._post('cita_confirmar', self.cita.id)
+        self._post('cita_confirmar', self.cita.id, modo='sin_abono')
         self.assertTrue(Notificacion.objects.filter(cita=self.cita, tipo='confirmacion_cita').exists())
 
     @patch('apps.notificaciones.services.NotificacionService.enviar_email',

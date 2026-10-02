@@ -593,7 +593,7 @@ function verCita(citaId, estado, cliente, servicio, whatsapp) {
     if (estado === 'pendiente_abono') {
         acciones = `
             <a href="/{{ negocio.slug }}/admin/citas/${citaId}/confirmar/" class="btn btn-success w-100 mb-2">
-                <i class="bi bi-check-circle"></i> Confirmar Abono
+                <i class="bi bi-check-circle"></i> Confirmar cita
             </a>
             <a href="/{{ negocio.slug }}/admin/citas/${citaId}/cancelar/" class="btn btn-danger w-100">
                 <i class="bi bi-x-circle"></i> Cancelar Cita

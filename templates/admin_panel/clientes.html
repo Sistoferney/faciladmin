@@ -50,7 +50,14 @@
                             {% for cliente in clientes %}
                             <tr>
                                 <td class="align-middle">
-                                    <div class="fw-bold">{{ cliente.nombre }}</div>
+                                    <div class="fw-bold">
+                                        {{ cliente.nombre }}
+                                        {% if cliente.no_exigir_abono %}
+                                        <span class="badge bg-light text-success border border-success" title="Sus citas se confirman sin pedir abono">
+                                            <i class="bi bi-hand-thumbs-up"></i> Sin abono
+                                        </span>
+                                        {% endif %}
+                                    </div>
                                     {% if cliente.fecha_nacimiento %}
                                     <small class="text-muted">
                                         <i class="bi bi-cake"></i> {{ cliente.fecha_nacimiento|date:"d/m/Y" }}
@@ -80,9 +87,19 @@
                                     {% endif %}
                                 </td>
                                 <td class="align-middle">
-                                    <a href="/admin/clientes/cliente/{{ cliente.id }}/change/" target="_blank" class="btn btn-sm btn-outline-primary">
-                                        <i class="bi bi-eye"></i> Ver
-                                    </a>
+                                    <!-- Cliente de confianza: sus citas se confirman sin pedir abono -->
+                                    <form method="post" action="{% url 'public:cliente_no_exigir_abono' negocio.slug cliente.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        {% if cliente.no_exigir_abono %}
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary" title="Volver a pedir abono cuando el servicio lo requiera">
+                                            <i class="bi bi-cash-coin"></i> Pedir abono
+                                        </button>
+                                        {% else %}
+                                        <button type="submit" class="btn btn-sm btn-outline-success" title="Sus próximas citas quedan confirmadas sin pedir anticipo">
+                                            <i class="bi bi-hand-thumbs-up"></i> No exigir abono
+                                        </button>
+                                        {% endif %}
+                                    </form>
                                 </td>
                             </tr>
                             {% endfor %}

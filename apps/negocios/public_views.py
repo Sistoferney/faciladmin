@@ -204,6 +204,10 @@ def agendar_cita(request, slug):
                     cliente.referencia_direccion = referencia_direccion
                     cliente.save()
 
+                # Clientes de confianza (el dueño marcó "no exigir abono"):
+                # la cita queda confirmada sin pedir anticipo
+                exige_abono = servicio.requiere_pago_abono and not cliente.no_exigir_abono
+
                 # Crear la cita
                 cita = Cita.objects.create(
                     negocio=negocio,
@@ -211,13 +215,13 @@ def agendar_cita(request, slug):
                     servicio=servicio,
                     fecha_hora=fecha_hora,
                     duracion_minutos=servicio.duracion_minutos,
-                    estado='pendiente_abono' if servicio.requiere_pago_abono else 'confirmada',
+                    estado='pendiente_abono' if exige_abono else 'confirmada',
                     origen='web',
                     notas_cliente=notas
                 )
 
                 # RF-49, RF-50: Crear registro de abono si el servicio lo requiere
-                if servicio.requiere_pago_abono:
+                if exige_abono:
                     from apps.abonos.models import Abono
                     Abono.objects.create(
                         cita=cita,
@@ -235,7 +239,7 @@ def agendar_cita(request, slug):
             # No duplicar la llamada aquí
 
             # Mensaje de éxito
-            if servicio.requiere_pago_abono:
+            if exige_abono:
                 messages.success(
                     request,
                     f'¡Cita agendada! Te hemos enviado la información de pago a {telefono}. '
