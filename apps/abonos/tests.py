@@ -363,3 +363,164 @@ class PagoYComprobanteTests(TestCase):
         self.assertContains(resp, 'id="mediosPago"')
         self.assertContains(resp, 'name="nequi"')
         self.assertContains(resp, 'name="qr_pago"')
+
+
+class FormatoPesosTests(TestCase):
+
+    def test_pesos(self):
+        from apps.core.formato import pesos
+        self.assertEqual(pesos(20000), '$20.000')
+        self.assertEqual(pesos(1500000), '$1.500.000')
+        self.assertEqual(pesos(None), '')
+
+    def test_parsear_monto(self):
+        from decimal import Decimal
+        from apps.core.formato import parsear_monto
+        for texto in ['50.000', '$ 50.000', '50000', ' 50 000 ']:
+            self.assertEqual(parsear_monto(texto), Decimal(50000), texto)
+        self.assertIsNone(parsear_monto(''))
+        self.assertIsNone(parsear_monto('abc'))
+
+
+@override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+@patch('apps.citas.signals.enviar_confirmacion_cita', create=True)
+@patch('apps.notificaciones.models.Notificacion.enviar', return_value={'success': True})
+class MontoPagadoYSaldoTests(TestCase):
+    """
+    El cliente puede pagar más que el abono o el total; el dueño registra lo
+    recibido y el sistema calcula lo que falta cobrar en el local.
+    Servicio de $50.000 con abono exigido de $20.000.
+    """
+
+    def setUp(self):
+        self.admin = Usuario.objects.create_user(
+            telefono='3000000000', password='x', nombre='Admin', email='a@a.com'
+        )
+        self.negocio = Negocio.objects.create(administrador=self.admin, nombre='Spa', telefono='3000000000')
+        self.servicio = Servicio.objects.create(
+            negocio=self.negocio, nombre='Masaje', precio=50000, duracion_minutos=60,
+            requiere_abono=True, monto_abono=20000,
+        )
+        self.cliente = Cliente.objects.create(
+            negocio=self.negocio, nombre='Ana', telefono='3001111111', email='ana@correo.com'
+        )
+        self.cita = Cita.objects.create(
+            negocio=self.negocio, cliente=self.cliente, servicio=self.servicio,
+            fecha_hora=timezone.now() + timedelta(days=4), duracion_minutos=60,
+            estado='pendiente_abono',
+        )
+        self.abono = Abono.objects.create(
+            cita=self.cita, monto=20000, metodo_pago='transferencia', estado='pendiente',
+            fecha_limite=timezone.now() + timedelta(days=2),
+        )
+        self.client.force_login(self.admin)
+
+    def _confirmar(self, monto, desde='abonos'):
+        if desde == 'abonos':
+            url = reverse('public:abono_confirmar', args=[self.negocio.slug, self.abono.id])
+            datos = {}
+        else:
+            url = reverse('public:cita_confirmar', args=[self.negocio.slug, self.cita.id])
+            datos = {'modo': 'pago'}
+        if monto is not None:
+            datos['monto_pagado'] = monto
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(url, datos)
+        self.cita = Cita.objects.get(pk=self.cita.pk)
+
+    def test_pago_solo_del_abono(self, *mocks):
+        self._confirmar('20.000')
+        self.assertEqual(self.cita.monto_pagado, 20000)
+        self.assertEqual(self.cita.saldo_pendiente, 30000)
+        self.assertFalse(self.cita.pagado_completo)
+
+    def test_pago_mayor_al_abono(self, *mocks):
+        self._confirmar('$ 35.000', desde='agenda')
+        self.assertEqual(self.cita.saldo_pendiente, 15000)
+
+    def test_pago_total(self, *mocks):
+        self._confirmar('50000')
+        self.assertTrue(self.cita.pagado_completo)
+        self.assertEqual(self.cita.saldo_pendiente, 0)
+
+    def test_pago_mayor_al_precio_no_deja_saldo_negativo(self, *mocks):
+        self._confirmar('55.000')  # propina
+        self.assertEqual(self.cita.saldo_pendiente, 0)
+        self.assertEqual(self.cita.monto_pagado, 55000)
+
+    def test_sin_monto_usa_lo_reportado_por_el_cliente(self, *mocks):
+        self.abono.monto_reportado = 50000
+        self.abono.save()
+        self._confirmar(None)
+        self.assertTrue(self.cita.pagado_completo)
+
+    def test_sin_monto_ni_reporte_usa_el_exigido(self, *mocks):
+        self._confirmar(None)
+        self.assertEqual(self.cita.monto_pagado, 20000)
+
+    def test_abonos_confirmados_antes_del_cambio(self, *mocks):
+        # Confirmados sin registrar monto_pagado: se asume el exigido
+        Abono.objects.filter(pk=self.abono.pk).update(estado='confirmado', monto_pagado=None)
+        cita = Cita.objects.get(pk=self.cita.pk)
+        self.assertEqual(cita.monto_pagado, 20000)
+        self.assertEqual(cita.saldo_pendiente, 30000)
+
+    def test_exonerado_paga_todo_en_el_local(self, *mocks):
+        self.abono.exonerar(self.admin)
+        cita = Cita.objects.get(pk=self.cita.pk)
+        self.assertEqual(cita.monto_pagado, 0)
+        self.assertEqual(cita.saldo_pendiente, 50000)
+
+    def test_saldo_se_recalcula_si_cambia_el_servicio(self, *mocks):
+        self._confirmar('20000')
+        otro = Servicio.objects.create(negocio=self.negocio, nombre='Facial', precio=80000, duracion_minutos=60)
+        self.cita.servicio = otro
+        self.cita.save()
+        self.assertEqual(Cita.objects.get(pk=self.cita.pk).saldo_pendiente, 60000)
+
+    def test_pantallas_del_dueno(self, *mocks):
+        # Al confirmar: campo "¿Cuánto recibiste?" con botón para el total
+        resp = self.client.get(reverse('public:abono_confirmar', args=[self.negocio.slug, self.abono.id]))
+        self.assertContains(resp, '¿Cuánto recibiste?')
+        self.assertContains(resp, "value='50000'")
+
+        self._confirmar('20000')
+        # Al completar la cita: cuánto cobrar
+        resp = self.client.get(reverse('public:cita_completar', args=[self.negocio.slug, self.cita.id]))
+        self.assertContains(resp, 'Cobra al cliente')
+        self.assertContains(resp, '$30.000')
+        # En Abonos: lo recibido y el saldo
+        resp = self.client.get(reverse('public:abonos_admin', args=[self.negocio.slug]) + '?estado=todos')
+        self.assertContains(resp, 'Saldo: $30.000')
+
+    def test_agenda_muestra_resumen_de_pago(self, *mocks):
+        self._confirmar('20000')
+        fecha = timezone.localtime(self.cita.fecha_hora).date()
+        resp = self.client.get(reverse('public:admin_agenda', args=[self.negocio.slug]), {'fecha': fecha.isoformat()})
+        self.assertContains(resp, 'Saldo por cobrar: $30.000')
+
+    def test_mensaje_al_cliente_con_saldo(self, *mocks):
+        from apps.notificaciones.models import Notificacion
+        self._confirmar('20000')
+        mensaje = Notificacion.objects.get(cita=self.cita, tipo='confirmacion_abono').mensaje
+        self.assertIn('Pagaste: $20.000', mensaje)
+        self.assertIn('Por pagar en tu cita: $30.000', mensaje)
+
+    def test_cliente_reporta_lo_que_pago(self, *mocks):
+        self.client.logout()
+        session = self.client.session
+        session['clientes_verificados'] = {str(self.negocio.id): self.cliente.id}
+        session.save()
+        with patch('apps.notificaciones.services.NotificacionService.enviar_push'):
+            self.client.post(
+                reverse('public:subir_comprobante', args=[self.negocio.slug, self.cita.id]),
+                {'comprobante': _imagen(), 'monto_reportado': '50.000'},
+            )
+        self.abono.refresh_from_db()
+        self.assertEqual(self.abono.monto_reportado, 50000)
+        # Mis citas muestra la opción de pagar el total
+        self.abono.comprobante = None
+        self.abono.save()
+        resp = self.client.get(reverse('public:mis_citas', args=[self.negocio.slug]))
+        self.assertContains(resp, 'Valor total')
+        self.assertContains(resp, '$50.000')

@@ -1,0 +1,24 @@
+{% load formato %}
+{% comment %}
+Campo "¿Cuánto recibiste?" al confirmar un pago (dentro del <form>).
+Variable: abono. Se prellena con lo que reportó el cliente o con el abono exigido.
+{% endcomment %}
+{% with precio=abono.cita.servicio.precio %}
+<div class="mb-3 text-start">
+    <label class="form-label fw-bold" for="monto_pagado_{{ abono.id }}">¿Cuánto recibiste?</label>
+    <div class="input-group">
+        <span class="input-group-text">$</span>
+        <input type="text" inputmode="numeric" class="form-control" name="monto_pagado"
+               id="monto_pagado_{{ abono.id }}"
+               value="{% firstof abono.monto_reportado|floatformat:0 abono.monto|floatformat:0 %}">
+        <button type="button" class="btn btn-outline-primary"
+                onclick="document.getElementById('monto_pagado_{{ abono.id }}').value='{{ precio|floatformat:0 }}'">
+            Pagó el total
+        </button>
+    </div>
+    <small class="text-muted">
+        Abono exigido: {{ abono.monto|pesos }} · Valor del servicio: {{ precio|pesos }}
+        {% if abono.monto_reportado %}<br><i class="bi bi-person"></i> El cliente indicó que pagó {{ abono.monto_reportado|pesos }}{% endif %}
+    </small>
+</div>
+{% endwith %}

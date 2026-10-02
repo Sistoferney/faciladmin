@@ -1,4 +1,4 @@
-{% load whatsapp %}
+{% load whatsapp formato %}
 {% comment %}
 Bloque de pago del abono de una cita (confirmación y Mis citas).
 Variables: cita, negocio. Usa cita.abono.
@@ -14,7 +14,7 @@ Variables: cita, negocio. Usa cita.abono.
     {% elif abono.comprobante %}
         <h6><i class="bi bi-hourglass-split me-2"></i>Comprobante enviado</h6>
         <p class="small mb-2">
-            {{ negocio.nombre }} está revisando tu pago de <strong>${{ abono.monto|floatformat:0 }}</strong>.
+            {{ negocio.nombre }} está revisando tu pago de <strong>{% firstof abono.monto_reportado|pesos abono.monto|pesos %}</strong>.
             Te avisaremos cuando quede confirmado.
         </p>
     {% else %}
@@ -22,12 +22,27 @@ Variables: cita, negocio. Usa cita.abono.
     {% endif %}
 
     {% if not abono.comprobante or abono.estado == 'rechazado' %}
-    <p class="h4 text-center my-2">
-        ${{ abono.monto|floatformat:0 }}
-        <button type="button" class="btn btn-sm btn-link p-0 align-baseline" data-copiar="{{ abono.monto|floatformat:0 }}" title="Copiar monto">
-            <i class="bi bi-copy"></i>
-        </button>
-    </p>
+    <div class="d-flex justify-content-around text-center my-2">
+        <div>
+            <div class="small text-muted">Abono mínimo</div>
+            <div class="h4 mb-0">{{ abono.monto|pesos }}</div>
+            <button type="button" class="btn btn-sm btn-link p-0" data-copiar="{{ abono.monto|floatformat:0 }}">
+                <i class="bi bi-copy"></i> Copiar
+            </button>
+        </div>
+        {% if cita.servicio.precio > abono.monto %}
+        <div>
+            <div class="small text-muted">Valor total</div>
+            <div class="h4 mb-0">{{ cita.servicio.precio|pesos }}</div>
+            <button type="button" class="btn btn-sm btn-link p-0" data-copiar="{{ cita.servicio.precio|floatformat:0 }}">
+                <i class="bi bi-copy"></i> Copiar
+            </button>
+        </div>
+        {% endif %}
+    </div>
+    {% if cita.servicio.precio > abono.monto %}
+    <p class="small text-center text-muted mb-2">Puedes pagar el abono o el valor total si prefieres; lo que falte lo pagas en tu cita.</p>
+    {% endif %}
     <p class="small text-center mb-3">
         <i class="bi bi-clock-history"></i>
         {% if abono.estado == 'vencido' %}
@@ -89,6 +104,11 @@ Variables: cita, negocio. Usa cita.abono.
                    onchange="this.form.querySelector('.datos-comprobante').hidden = false;">
         </label>
         <div class="datos-comprobante" hidden>
+            <div class="input-group input-group-sm mb-2">
+                <span class="input-group-text">¿Cuánto pagaste? $</span>
+                <input type="text" inputmode="numeric" name="monto_reportado" class="form-control"
+                       value="{{ abono.monto|floatformat:0 }}" required>
+            </div>
             <input type="text" name="numero_referencia" class="form-control form-control-sm mb-2"
                    placeholder="Número de referencia o aprobación (opcional)" maxlength="100">
             <button type="submit" class="btn btn-success w-100">

@@ -55,8 +55,9 @@
                 <form method="post" class="mb-3">
                     {% csrf_token %}
                     <input type="hidden" name="modo" value="pago">
+                    {% include 'admin_panel/_monto_recibido.html' %}
                     <button type="submit" class="btn btn-success w-100">
-                        <i class="bi bi-cash-coin"></i> Recibí el abono — Confirmar pago
+                        <i class="bi bi-cash-coin"></i> Confirmar pago
                     </button>
                 </form>
 

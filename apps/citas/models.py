@@ -203,6 +203,24 @@ class Cita(models.Model):
         """Obtiene el monto de abono requerido"""
         return self.servicio.precio_abono
 
+    @property
+    def monto_pagado(self):
+        """Lo que el cliente ya pagó por adelantado (abono confirmado)"""
+        abono = getattr(self, 'abono', None)
+        return abono.monto_recibido if abono else 0
+
+    @property
+    def saldo_pendiente(self):
+        """
+        Lo que falta por cobrar en el local: precio actual del servicio menos lo
+        pagado. Nunca negativo (si pagó de más, p. ej. propina, queda en 0).
+        """
+        return max(self.servicio.precio - self.monto_pagado, 0)
+
+    @property
+    def pagado_completo(self):
+        return self.monto_pagado > 0 and self.saldo_pendiente == 0
+
     @classmethod
     def obtener_disponibilidad(cls, negocio, fecha, servicio):
         """

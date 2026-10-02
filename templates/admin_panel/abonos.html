@@ -1,5 +1,5 @@
 {% extends 'admin_panel/base_admin.html' %}
-{% load whatsapp %}
+{% load whatsapp formato %}
 
 {% block page_title %}Gestión de Abonos{% endblock %}
 
@@ -60,7 +60,21 @@
                                     <div>{{ abono.cita.servicio.nombre }}</div>
                                     <small class="text-muted">{{ abono.cita.fecha_hora|date:"d/m H:i" }}</small>
                                 </td>
-                                <td class="align-middle"><strong>${{ abono.monto }}</strong></td>
+                                <td class="align-middle">
+                                    {% if abono.estado == 'confirmado' %}
+                                        <strong>{{ abono.monto_recibido|pesos }}</strong>
+                                        {% if abono.cita.pagado_completo %}
+                                            <br><span class="badge bg-success">Pagado completo</span>
+                                        {% else %}
+                                            <br><small class="text-muted">Saldo: {{ abono.cita.saldo_pendiente|pesos }}</small>
+                                        {% endif %}
+                                    {% else %}
+                                        <strong>{{ abono.monto|pesos }}</strong>
+                                        {% if abono.monto_reportado %}
+                                            <br><small class="text-primary" title="Lo que el cliente indicó al enviar el comprobante">Reportó {{ abono.monto_reportado|pesos }}</small>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
                                 <td class="align-middle">
                                     {% if abono.metodo_pago == 'transferencia' %}
                                         <i class="bi bi-bank text-primary"></i> Transferencia

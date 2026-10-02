@@ -6,6 +6,7 @@ from django.utils import timezone
 from datetime import datetime, time, timedelta
 from .models import Notificacion
 from .services import elegir_canal
+from apps.core.formato import pesos
 from apps.citas.models import Cita
 from apps.abonos.models import Abono
 
@@ -250,6 +251,15 @@ def enviar_notificacion_confirmacion_abono(cita_id):
         if not canal:
             return
 
+        # Lo pagado y lo que falta (puede haber pagado más que el abono o el total)
+        if cita.pagado_completo:
+            resumen_pago = f'💰 Pagaste el total: {pesos(cita.monto_pagado)}'
+        else:
+            resumen_pago = (
+                f'💰 Pagaste: {pesos(cita.monto_pagado)}\n'
+                f'💵 Por pagar en tu cita: {pesos(cita.saldo_pendiente)}'
+            )
+
         mensaje = f"""
 ¡Hola {cliente.nombre}!
 
@@ -258,6 +268,7 @@ def enviar_notificacion_confirmacion_abono(cita_id):
 📅 Fecha: {timezone.localtime(cita.fecha_hora).strftime('%d/%m/%Y')}
 🕐 Hora: {timezone.localtime(cita.fecha_hora).strftime('%H:%M')}
 ✂️ Servicio: {cita.servicio.nombre}
+{resumen_pago}
 
 📍 {negocio.nombre}
 {negocio.direccion}

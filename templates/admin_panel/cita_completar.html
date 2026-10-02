@@ -1,4 +1,5 @@
 {% extends 'admin_panel/base_admin.html' %}
+{% load formato %}
 
 {% block page_title %}Completar Cita{% endblock %}
 
@@ -32,10 +33,25 @@
                             <strong><i class="bi bi-clock"></i> Hora:</strong> {{ cita.fecha_hora|date:"H:i" }}
                         </p>
                         <p class="mb-0">
-                            <strong><i class="bi bi-currency-dollar"></i> Precio:</strong> ${{ cita.servicio.precio }}
+                            <strong><i class="bi bi-currency-dollar"></i> Precio:</strong> {{ cita.servicio.precio|pesos }}
+                            {% if cita.monto_pagado %}
+                            <br><strong><i class="bi bi-wallet2"></i> Pagado por adelantado:</strong> {{ cita.monto_pagado|pesos }}
+                            {% endif %}
                         </p>
                     </div>
                 </div>
+
+                <!-- Lo que hay que cobrarle al cliente en el local -->
+                {% if cita.pagado_completo %}
+                <div class="alert alert-success text-center">
+                    <i class="bi bi-check-circle-fill"></i> <strong>Ya pagó el total.</strong> No hay nada por cobrar.
+                </div>
+                {% else %}
+                <div class="alert alert-warning text-center">
+                    <div class="small">Cobra al cliente</div>
+                    <div class="h3 mb-0">{{ cita.saldo_pendiente|pesos }}</div>
+                </div>
+                {% endif %}
 
                 <form method="post">
                     {% csrf_token %}

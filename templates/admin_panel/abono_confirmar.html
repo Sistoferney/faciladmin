@@ -50,6 +50,7 @@
 
                 <form method="POST">
                     {% csrf_token %}
+                    {% include 'admin_panel/_monto_recibido.html' %}
                     <div class="d-grid gap-2">
                         <button type="submit" class="btn btn-success btn-lg">
                             <i class="bi bi-check-circle"></i> Confirmar Abono

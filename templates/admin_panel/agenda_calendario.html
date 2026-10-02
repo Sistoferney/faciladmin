@@ -391,6 +391,7 @@
                 <p><strong>Cliente:</strong> <span id="modalCliente"></span></p>
                 <p><strong>Servicio:</strong> <span id="modalServicio"></span></p>
                 <p><strong>Estado:</strong> <span id="modalEstado" class="badge"></span></p>
+                <p><strong>Pago:</strong> <span id="modalPago"></span></p>
                 <hr>
                 <div id="modalAcciones">
                     <!-- Las acciones se cargarán dinámicamente según el estado -->
@@ -444,12 +445,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Si es continuación, usar clase especial
                 if (cita.es_continuacion) {
                     citaDiv.className = `cita-block ${cita.estado} cita-continuacion`;
-                    citaDiv.onclick = () => verCita(cita.id, cita.estado, cita.cliente, cita.servicio, cita.whatsapp);
+                    citaDiv.onclick = () => verCita(cita.id, cita.estado, cita.cliente, cita.servicio, cita.whatsapp, cita.pago);
                     citaDiv.title = `${cita.cliente} - ${cita.servicio} (Inicia a las ${cita.hora})`;
                     citaDiv.innerHTML = `<small><i class="bi bi-arrow-up"></i> Ocupado</small>`;
                 } else {
                     citaDiv.className = `cita-block ${cita.estado}`;
-                    citaDiv.onclick = () => verCita(cita.id, cita.estado, cita.cliente, cita.servicio, cita.whatsapp);
+                    citaDiv.onclick = () => verCita(cita.id, cita.estado, cita.cliente, cita.servicio, cita.whatsapp, cita.pago);
 
                     // Mostrar duración si es mayor a 30 minutos
                     const duracionText = cita.duracion > 30 ? ` (${cita.duracion}min)` : '';
@@ -567,10 +568,11 @@ function crearBloqueoDesdeSeleccion() {
     window.location.href = url.toString();
 }
 
-function verCita(citaId, estado, cliente, servicio, whatsapp) {
+function verCita(citaId, estado, cliente, servicio, whatsapp, pago) {
     // Actualizar información del modal
     document.getElementById('modalCliente').textContent = cliente;
     document.getElementById('modalServicio').textContent = servicio;
+    document.getElementById('modalPago').textContent = pago || '';
 
     // Actualizar estado con badge apropiado
     const modalEstado = document.getElementById('modalEstado');

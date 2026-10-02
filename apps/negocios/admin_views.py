@@ -14,6 +14,7 @@ from apps.servicios.models import Servicio
 from apps.clientes.models import Cliente
 from apps.citas.models import Cita
 from apps.abonos.models import Abono
+from apps.core.formato import parsear_monto, pesos
 from apps.core.whatsapp import enlace_negocio_a_cliente
 from apps.notificaciones.tasks import (
     enviar_notificacion_confirmacion_abono,
@@ -24,6 +25,25 @@ from apps.notificaciones.tasks import (
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def _resumen_pago(cita):
+    """Texto corto del estado de pago para el panel: qué se pagó y qué falta cobrar"""
+    if cita.pagado_completo:
+        return f'✅ Pagado completo ({pesos(cita.monto_pagado)})'
+    if cita.monto_pagado:
+        return f'Abonó {pesos(cita.monto_pagado)} · Saldo por cobrar: {pesos(cita.saldo_pendiente)}'
+    return f'Por cobrar: {pesos(cita.saldo_pendiente)}'
+
+
+def _mensaje_pago_confirmado(cita):
+    """'¡Pago confirmado! Ana abonó $20.000 · Saldo por cobrar: $30.000'"""
+    cita.abono.refresh_from_db()
+    if cita.pagado_completo:
+        detalle = f'pagó el total ({pesos(cita.monto_pagado)})'
+    else:
+        detalle = f'abonó {pesos(cita.monto_pagado)} · Saldo por cobrar: {pesos(cita.saldo_pendiente)}'
+    return f'¡Pago confirmado! {cita.cliente.nombre} {detalle}.'
 
 
 def admin_required(view_func):
@@ -194,7 +214,7 @@ def agenda_admin(request, slug):
         negocio=negocio,
         fecha_hora__gte=fecha_inicio_semana,
         fecha_hora__lte=fecha_fin_semana
-    ).select_related('cliente', 'servicio').order_by('fecha_hora')
+    ).select_related('cliente', 'servicio', 'abono').order_by('fecha_hora')
 
     # Obtener bloqueos de la semana
     bloqueos_semana = BloqueoAgenda.objects.filter(
@@ -226,6 +246,7 @@ def agenda_admin(request, slug):
             'duracion': duracion_minutos,
             # Botón para escribirle al cliente por WhatsApp desde el detalle
             'whatsapp': enlace_negocio_a_cliente(cita),
+            'pago': _resumen_pago(cita),
         }
 
         # Marcar todos los slots que ocupa esta cita
@@ -245,12 +266,8 @@ def agenda_admin(request, slug):
             else:
                 # Marcar este slot como continuación de la cita anterior
                 calendario_grid[celda_key]['citas'].append({
-                    'id': cita.id,
-                    'cliente': cita.cliente.nombre,
+                    **cita_data,
                     'servicio': f"(Continuación) {cita.servicio.nombre}",
-                    'estado': cita.estado,
-                    'hora': fecha_hora_local.strftime('%H:%M'),
-                    'duracion': duracion_minutos,
                     'es_continuacion': True,
                 })
 
@@ -691,15 +708,11 @@ def cita_confirmar(request, slug, cita_id):
             messages.success(request, f'Cita de {cita.cliente.nombre} confirmada sin abono. Le avisaremos al cliente.')
 
         elif abono_por_resolver:
-            abono_por_resolver.estado = 'confirmado'
-            abono_por_resolver.confirmado_por = request.user
-            abono_por_resolver.fecha_confirmacion = timezone.now()
-            abono_por_resolver.save()
-            cita.estado = 'confirmada'
-            cita.save()
+            abono_por_resolver.confirmar_pago(request.user, parsear_monto(request.POST.get('monto_pagado')))
+            cita.refresh_from_db()
             # "✅ Tu pago ha sido confirmado. Tu cita está asegurada"
             programar_notificacion(enviar_notificacion_confirmacion_abono, cita.id)
-            messages.success(request, f'¡Abono confirmado! Cita de {cita.cliente.nombre} confirmada.')
+            messages.success(request, _mensaje_pago_confirmado(cita))
 
         else:
             cita.estado = 'confirmada'
@@ -828,18 +841,12 @@ def abono_confirmar(request, slug, abono_id):
     abono = get_object_or_404(Abono, id=abono_id, cita__negocio=negocio)
 
     if request.method == 'POST':
-        abono.estado = 'confirmado'
-        abono.save()
-
-        # Actualizar estado de la cita a confirmada
-        if abono.cita.estado == 'pendiente_abono':
-            abono.cita.estado = 'confirmada'
-            abono.cita.save()
+        abono.confirmar_pago(request.user, parsear_monto(request.POST.get('monto_pagado')))
 
         # "✅ Tu pago ha sido confirmado. Tu cita está asegurada"
         programar_notificacion(enviar_notificacion_confirmacion_abono, abono.cita.id)
 
-        messages.success(request, f'¡Abono confirmado! Cita de {abono.cita.cliente.nombre} confirmada.')
+        messages.success(request, _mensaje_pago_confirmado(abono.cita))
         return redirect('public:abonos_admin', slug=slug)
 
     context = {

@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 from functools import wraps
 import calendar
 import re
+from apps.core.formato import parsear_monto, pesos
 from .disponibilidad import horarios_disponibles, esta_disponible
 from .models import Negocio
 from apps.servicios.models import Servicio
@@ -763,6 +764,9 @@ def subir_comprobante(request, slug, cita_id):
 
     abono.comprobante = archivo
     abono.numero_referencia = request.POST.get('numero_referencia', '').strip()[:100]
+    # Lo que dice haber pagado (puede ser más que el abono o el total);
+    # el dueño lo verifica contra el comprobante al confirmar
+    abono.monto_reportado = parsear_monto(request.POST.get('monto_reportado'))
     abono.fecha_pago = timezone.now()
     if abono.estado == 'rechazado':
         # Nuevo intento: vuelve a revisión del dueño
@@ -774,12 +778,12 @@ def subir_comprobante(request, slug, cita_id):
         try:
             from apps.notificaciones.services import NotificacionService
             fecha = timezone.localtime(cita.fecha_hora)
-            monto = f'{abono.monto:,.0f}'.replace(',', '.')  # 20000 -> 20.000
+            monto = pesos(abono.monto_reportado or abono.monto)
             NotificacionService().enviar_push(
                 cliente=cita.cliente,
                 titulo='Comprobante de abono recibido',
                 mensaje=(
-                    f'{cita.cliente.nombre} envió el comprobante de ${monto} '
+                    f'{cita.cliente.nombre} envió el comprobante de {monto} '
                     f'para {cita.servicio.nombre} el {fecha.strftime("%d/%m/%Y a las %H:%M")}.\n'
                     'Revísalo en Abonos para confirmar la cita.'
                 ),

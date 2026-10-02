@@ -39,7 +39,18 @@ class Abono(models.Model):
     )
 
     # RF-49: Monto del abono
-    monto = models.DecimalField('Monto del abono', max_digits=10, decimal_places=2)
+    monto = models.DecimalField('Monto del abono', max_digits=10, decimal_places=2)  # Exigido
+
+    # Lo que realmente se pagó: el cliente puede abonar más o pagar el total.
+    # monto_reportado lo indica el cliente al enviar el comprobante (orientativo);
+    # monto_pagado lo registra el dueño al confirmar (es el que cuenta).
+    monto_reportado = models.DecimalField(
+        'Monto reportado por el cliente', max_digits=10, decimal_places=2, null=True, blank=True
+    )
+    monto_pagado = models.DecimalField(
+        'Monto recibido', max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text='Lo que el dueño confirmó haber recibido (puede ser más que el abono exigido)'
+    )
 
     # RF-50, RF-51: Método de pago
     metodo_pago = models.CharField(
@@ -115,9 +126,35 @@ class Abono(models.Model):
         self.cita.confirmar_abono(usuario)
 
     @property
+    def monto_recibido(self):
+        """Lo efectivamente recibido: solo cuenta si el dueño confirmó el pago"""
+        if self.estado != 'confirmado':
+            return 0
+        # Abonos confirmados antes de registrar el monto real: se asume el exigido
+        return self.monto_pagado if self.monto_pagado is not None else self.monto
+
+    @property
     def por_pagar(self):
         """El cliente aún debe pagar o enviar comprobante (incluye pago rechazado o vencido)"""
         return self.estado in ('pendiente', 'vencido', 'rechazado')
+
+    def confirmar_pago(self, usuario, monto_pagado=None):
+        """
+        El dueño confirma que recibió el pago. monto_pagado es lo que realmente
+        llegó (puede ser más que el abono, o el total del servicio); si no se
+        indica, se usa lo que reportó el cliente o, en su defecto, el exigido.
+        """
+        from django.utils import timezone
+
+        self.estado = 'confirmado'
+        self.confirmado_por = usuario
+        self.fecha_confirmacion = timezone.now()
+        self.monto_pagado = monto_pagado or self.monto_reportado or self.monto
+        self.save()
+
+        if self.cita.estado == 'pendiente_abono':
+            self.cita.estado = 'confirmada'
+            self.cita.save()
 
     def exonerar(self, usuario, nota=''):
         """
