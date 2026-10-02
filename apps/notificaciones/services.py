@@ -218,9 +218,15 @@ class NotificacionService:
                     logger.error(f"Error enviando push a suscripción {suscripcion.id}: {str(e)}")
                     # Si la suscripción expiró o es inválida, marcarla como inactiva
                     # IMPORTANTE: Verificar que e.response no sea None antes de acceder a status_code
-                    if hasattr(e, 'response') and e.response is not None and e.response.status_code in [404, 410]:
+                    respuesta = getattr(e, 'response', None)
+                    if respuesta is not None and respuesta.status_code in [404, 410]:
                         suscripcion.desactivar()
                         logger.info(f"Suscripción {suscripcion.id} marcada como inactiva (endpoint inválido)")
+                    elif respuesta is not None and respuesta.status_code == 403 and 'VAPID' in (respuesta.text or ''):
+                        # Creada con otra clave VAPID (el servidor cambió sus claves):
+                        # nunca va a funcionar. El navegador la renueva sola al abrir la app.
+                        suscripcion.desactivar()
+                        logger.info(f"Suscripción {suscripcion.id} marcada como inactiva (clave VAPID distinta)")
                     suscripciones_fallidas.append(suscripcion.id)
                     continue
                 except Exception as e:

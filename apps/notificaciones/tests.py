@@ -440,3 +440,51 @@ class EnvioDeTareasTests(TestCase):
 
         tarea.delay.assert_called_once_with(123)
         tarea.assert_not_called()
+
+
+@patch('apps.citas.signals.enviar_confirmacion_cita', create=True)
+@patch('py_vapid.Vapid.from_pem')
+class SuscripcionClaveVapidAnteriorTests(TestCase):
+    """
+    Suscripciones creadas con otra clave VAPID responden 403 para siempre:
+    se desactivan para dejar de intentarlo (el navegador se resuscribe solo).
+    """
+
+    def test_403_por_clave_vapid_desactiva_la_suscripcion(self, *mocks):
+        from unittest.mock import MagicMock
+        from pywebpush import WebPushException
+        from .models import UsuarioPushSubscription
+        from .services import NotificacionService
+
+        negocio, servicio, cliente = _crear_base()
+        sub = UsuarioPushSubscription.objects.create(
+            user=negocio.administrador, negocio=negocio,
+            endpoint='https://push/admin', auth='a', p256dh='p',
+        )
+        cita = Cita.objects.create(
+            negocio=negocio, cliente=cliente, servicio=servicio,
+            fecha_hora=_local(timezone.localdate() + timedelta(days=2), 10),
+            duracion_minutos=30, estado='confirmada',
+        )
+        respuesta = MagicMock(status_code=403, text='the VAPID credentials in the authorization header do not correspond')
+        with patch('pywebpush.webpush', side_effect=WebPushException('Push failed: 403', response=respuesta)):
+            resultado = NotificacionService().enviar_push(cliente, 'T', 'M', cita=cita, enviar_a_admin=True)
+
+        self.assertFalse(resultado['success'])
+        sub.refresh_from_db()
+        self.assertFalse(sub.activa)
+
+    def test_otro_403_no_desactiva(self, *mocks):
+        from unittest.mock import MagicMock
+        from pywebpush import WebPushException
+        from .services import NotificacionService
+
+        negocio, _, cliente = _crear_base()
+        sub = ClientePushSubscription.objects.create(
+            cliente=cliente, endpoint='https://push/c', auth='a', p256dh='p'
+        )
+        respuesta = MagicMock(status_code=403, text='rate limited')
+        with patch('pywebpush.webpush', side_effect=WebPushException('403', response=respuesta)):
+            NotificacionService().enviar_push(cliente, 'T', 'M')
+        sub.refresh_from_db()
+        self.assertTrue(sub.activa)

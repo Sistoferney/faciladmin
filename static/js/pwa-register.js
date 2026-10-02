@@ -323,7 +323,8 @@ async function requestNotificationPermission() {
 /**
  * Se suscribe a notificaciones push
  */
-async function subscribeToPushNotifications() {
+// interactivo=false: verificación automática al cargar la página, sin avisos
+async function subscribeToPushNotifications({ interactivo = true } = {}) {
     try {
         // Verificar soporte
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -333,17 +334,6 @@ async function subscribeToPushNotifications() {
 
         // Obtener registro del Service Worker
         const registration = await navigator.serviceWorker.ready;
-
-        // Verificar si ya está suscrito
-        let subscription = await registration.pushManager.getSubscription();
-
-        if (subscription) {
-            console.log('[PWA] Ya está suscrito a push notifications');
-            // Reenviar al servidor (crea o actualiza): cubre suscripciones que no
-            // se pudieron guardar antes, p. ej. cliente aún no identificado
-            await savePushSubscription(subscription);
-            return subscription;
-        }
 
         // Obtener clave pública VAPID del servidor
         const response = await fetch('/api/notificaciones/push/vapid-key/');
@@ -358,6 +348,26 @@ async function subscribeToPushNotifications() {
         // Convertir clave VAPID a formato Uint8Array
         const applicationServerKey = urlBase64ToUint8Array(publicKey);
 
+        // Verificar si ya está suscrito
+        let subscription = await registration.pushManager.getSubscription();
+
+        // Si la suscripción se creó con otra clave VAPID (el servidor cambió sus
+        // claves), el servidor no puede enviarle nada (403): rehacerla
+        if (subscription && !mismaClaveVapid(subscription, applicationServerKey)) {
+            console.log('[PWA] Suscripción con clave VAPID anterior: renovando');
+            await subscription.unsubscribe();
+            subscription = null;
+        }
+
+        if (subscription) {
+            // Reenviar al servidor solo si hace falta (crea o actualiza): nunca se
+            // guardó para esta app, cambió, o quedó pendiente (cliente no identificado)
+            if (necesitaGuardarse(subscription)) {
+                await savePushSubscription(subscription, interactivo);
+            }
+            return subscription;
+        }
+
         // Suscribirse
         subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
@@ -367,7 +377,7 @@ async function subscribeToPushNotifications() {
         console.log('[PWA] Suscrito a push notifications:', subscription);
 
         // Enviar suscripción al servidor
-        await savePushSubscription(subscription);
+        await savePushSubscription(subscription, interactivo);
 
         return subscription;
 
@@ -378,9 +388,35 @@ async function subscribeToPushNotifications() {
 }
 
 /**
+ * Compara la clave VAPID con la que se creó la suscripción y la actual del servidor
+ */
+function mismaClaveVapid(subscription, claveActual) {
+    const clave = subscription.options && subscription.options.applicationServerKey;
+    if (!clave) {
+        return true;  // El navegador no informa la clave: no se puede comparar
+    }
+    const anterior = new Uint8Array(clave);
+    return anterior.length === claveActual.length && anterior.every((b, i) => b === claveActual[i]);
+}
+
+/**
+ * El panel del dueño y la mini-página guardan la suscripción por separado
+ * (dueño / cliente), aunque en un mismo navegador sea la misma.
+ */
+function claveSuscripcionGuardada() {
+    const app = window.location.pathname.includes('/admin/') ? 'panel' : 'cliente';
+    return `push_guardada_${app}`;
+}
+
+function necesitaGuardarse(subscription) {
+    return localStorage.getItem(claveSuscripcionGuardada()) !== subscription.endpoint ||
+        Boolean(localStorage.getItem('pending_push_subscription'));
+}
+
+/**
  * Guarda la suscripción en el servidor
  */
-async function savePushSubscription(subscription) {
+async function savePushSubscription(subscription, interactivo = true) {
     try {
         // Obtener slug del negocio de la URL
         const negocio_slug = window.location.pathname.split('/')[1] || null;
@@ -408,6 +444,7 @@ async function savePushSubscription(subscription) {
 
             if (data.success) {
                 console.log('[PWA] Suscripción de admin guardada en servidor');
+                localStorage.setItem(claveSuscripcionGuardada(), subscription.endpoint);
                 console.log('[PWA] Negocio:', data.negocio);
                 localStorage.setItem('push_subscribed', 'true');
                 localStorage.setItem('push_negocio', negocio_slug);
@@ -443,12 +480,15 @@ async function savePushSubscription(subscription) {
         if (data.success) {
             console.log('[PWA] Suscripción guardada en servidor');
             localStorage.setItem('push_subscribed', 'true');
+            localStorage.setItem(claveSuscripcionGuardada(), subscription.endpoint);
             // Limpiar suscripción pendiente si existía
             localStorage.removeItem('pending_push_subscription');
         } else if (data.codigo === 'identificacion_requerida') {
             // Reintentar automáticamente cuando el cliente se identifique
             localStorage.setItem('pending_push_subscription', negocio_slug);
-            if (!window.location.pathname.includes('/mis-citas/')) {
+            // Solo avisar si la persona tocó "activar notificaciones"; en la
+            // verificación automática al cargar la página no interrumpir
+            if (interactivo && !window.location.pathname.includes('/mis-citas/')) {
                 alert(data.error);
                 window.location.href = `/${negocio_slug}/mis-citas/`;
             }
@@ -939,10 +979,12 @@ function showUnblockInstructions() {
  * requiere un toque del usuario (necesario en iPhone para pedir permiso).
  */
 window.addEventListener('load', () => {
-    const pendiente = localStorage.getItem('pending_push_subscription');
-    const esAdmin = window.location.pathname.includes('/admin/');
-    if (pendiente && !esAdmin && 'Notification' in window && Notification.permission === 'granted') {
-        subscribeToPushNotifications();
+    // Con permiso ya concedido no se pregunta nada al usuario: solo se verifica
+    // que la suscripción sea válida (clave VAPID actual) y esté guardada.
+    // Cubre: suscripción pendiente de un cliente que se acaba de identificar,
+    // y suscripciones viejas tras un cambio de claves VAPID del servidor.
+    if ('Notification' in window && 'PushManager' in window && Notification.permission === 'granted') {
+        subscribeToPushNotifications({ interactivo: false });
     }
 });
 
