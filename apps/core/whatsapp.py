@@ -50,3 +50,19 @@ def enlace_negocio_a_cliente(cita):
         f'{cita.servicio.nombre} del {fecha.strftime("%d/%m/%Y a las %H:%M")}.'
     )
     return enlace_whatsapp(cita.cliente.telefono, texto)
+
+
+def enlace_comprobante(cita):
+    """El cliente envía por WhatsApp el comprobante de su abono (adjunta la captura)"""
+    from django.utils import timezone
+    abono = getattr(cita, 'abono', None)
+    if abono is None:
+        return ''
+    fecha = timezone.localtime(cita.fecha_hora)
+    monto = f'{abono.monto:,.0f}'.replace(',', '.')  # 20000 -> 20.000
+    texto = (
+        f'Hola {cita.negocio.nombre}, te envío el comprobante del abono de '
+        f'${monto} para mi cita de {cita.servicio.nombre} del '
+        f'{fecha.strftime("%d/%m/%Y a las %H:%M")}.'
+    )
+    return enlace_whatsapp(contacto_negocio(cita.negocio), texto)

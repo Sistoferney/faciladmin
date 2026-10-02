@@ -62,6 +62,10 @@ class ConfiguracionNegocioForm(forms.ModelForm):
             'numero_cuenta',
             'clabe',
             'titular_cuenta',
+            'nequi',
+            'daviplata',
+            'llave_breb',
+            'qr_pago',
 
             # Estado
             'esta_activo',
@@ -172,6 +176,16 @@ class ConfiguracionNegocioForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': 'Nombre del titular'
             }),
+            'nequi': forms.TextInput(attrs={
+                'class': 'form-control', 'placeholder': '300 123 4567', 'inputmode': 'tel'
+            }),
+            'daviplata': forms.TextInput(attrs={
+                'class': 'form-control', 'placeholder': '300 123 4567', 'inputmode': 'tel'
+            }),
+            'llave_breb': forms.TextInput(attrs={
+                'class': 'form-control', 'placeholder': 'Ej: 3001234567 o @minegocio'
+            }),
+            'qr_pago': forms.ClearableFileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
             'esta_activo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'acepta_reservas_online': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
@@ -291,6 +305,12 @@ class ConfiguracionNegocioForm(forms.ModelForm):
                 )
 
         return instance
+
+    def clean_qr_pago(self):
+        qr = self.cleaned_data.get('qr_pago')
+        if qr and hasattr(qr, 'size') and qr.size > 2 * 1024 * 1024:
+            raise forms.ValidationError('La imagen del QR no debe superar 2 MB.')
+        return qr
 
     def clean(self):
         """Validar horarios de apertura y cierre, y confirmación de número de cuenta"""

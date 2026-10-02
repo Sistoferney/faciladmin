@@ -114,6 +114,11 @@ class Abono(models.Model):
         # Confirmar la cita asociada
         self.cita.confirmar_abono(usuario)
 
+    @property
+    def por_pagar(self):
+        """El cliente aún debe pagar o enviar comprobante (incluye pago rechazado o vencido)"""
+        return self.estado in ('pendiente', 'vencido', 'rechazado')
+
     def exonerar(self, usuario, nota=''):
         """
         El dueño confirma la cita sin cobrar el abono (cliente de confianza).

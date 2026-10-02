@@ -14,6 +14,12 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def _enlace_mis_citas(negocio):
+    """Enlace absoluto a "Mis citas", donde el cliente paga y envía el comprobante"""
+    from django.conf import settings
+    return f"{getattr(settings, 'SITE_URL', '').rstrip('/')}/{negocio.slug}/mis-citas/"
+
+
 @shared_task
 def enviar_confirmacion_cita(cita_id):
     """
@@ -51,16 +57,14 @@ Gracias por tu preferencia.
             if cita.requiere_abono:
                 info_abono = f"""
 
-⚠️ IMPORTANTE: Esta cita requiere un abono de ${cita.monto_abono}
+⚠️ IMPORTANTE: Esta cita requiere un abono de ${int(cita.abono.monto)}
 
-Datos para transferencia:
-🏦 Banco: {negocio.banco}
-💳 Cuenta: {negocio.numero_cuenta}
-👤 Titular: {negocio.titular_cuenta}
+Puedes pagar por:
+{negocio.texto_medios_pago()}
 
-Fecha límite de pago: {timezone.localtime(cita.fecha_limite_abono).strftime('%d/%m/%Y %H:%M')}
+Fecha límite de pago: {timezone.localtime(cita.abono.fecha_limite).strftime('%d/%m/%Y %H:%M')}
 
-Por favor, envía tu comprobante de pago para confirmar tu cita.
+📎 Envía tu comprobante aquí: {_enlace_mis_citas(negocio)}
                 """.strip()
                 mensaje += info_abono
 
@@ -208,12 +212,10 @@ Recordatorio de pago de abono para tu cita:
 
 ⏰ Fecha límite: {timezone.localtime(abono.fecha_limite).strftime('%d/%m/%Y %H:%M')}
 
-Datos para transferencia:
-🏦 Banco: {negocio.banco}
-💳 Cuenta: {negocio.numero_cuenta}
-👤 Titular: {negocio.titular_cuenta}
+Puedes pagar por:
+{negocio.texto_medios_pago()}
 
-Por favor, envía tu comprobante de pago lo antes posible.
+📎 Envía tu comprobante aquí: {_enlace_mis_citas(negocio)}
 
 {negocio.nombre}
         """.strip()

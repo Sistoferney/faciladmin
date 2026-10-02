@@ -50,6 +50,7 @@
                 </div>
 
                 {% if abono %}
+                {% include 'admin_panel/_comprobante.html' %}
                 <!-- Opción 1: recibió el pago -->
                 <form method="post" class="mb-3">
                     {% csrf_token %}

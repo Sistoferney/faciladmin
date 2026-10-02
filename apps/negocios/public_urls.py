@@ -56,6 +56,7 @@ urlpatterns = [
     path('<slug:slug>/mis-citas/', public_views.mis_citas, name='mis_citas'),
     path('<slug:slug>/mis-citas/<int:cita_id>/editar/', public_views.editar_cita_cliente, name='editar_cita_cliente'),
     path('<slug:slug>/mis-citas/<int:cita_id>/cancelar/', public_views.cancelar_cita_cliente, name='cancelar_cita_cliente'),
+    path('<slug:slug>/mis-citas/<int:cita_id>/comprobante/', public_views.subir_comprobante, name='subir_comprobante'),
 
     # API para disponibilidad
     path('<slug:slug>/api/disponibilidad/', public_views.disponibilidad_api, name='disponibilidad_api'),

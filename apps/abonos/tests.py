@@ -1,10 +1,11 @@
 """
 Tests de abonos: al vencer, el dueño decide si confirma el pago o cancela la cita
 """
+import tempfile
 from datetime import timedelta
 from unittest.mock import patch
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -214,3 +215,151 @@ class ConfirmarSinAbonoTests(TestCase):
         cita = Cita.objects.exclude(pk=self.cita.pk).get(cliente=self.cliente)
         self.assertEqual(cita.estado, 'pendiente_abono')
         self.assertTrue(Abono.objects.filter(cita=cita).exists())
+
+
+def _imagen(nombre='comprobante.png', tamano=(10, 10)):
+    from io import BytesIO
+    from PIL import Image
+    from django.core.files.uploadedfile import SimpleUploadedFile
+    buffer = BytesIO()
+    Image.new('RGB', tamano, 'white').save(buffer, 'PNG')
+    return SimpleUploadedFile(nombre, buffer.getvalue(), content_type='image/png')
+
+
+@override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+@patch('apps.citas.signals.enviar_confirmacion_cita', create=True)
+class PagoYComprobanteTests(TestCase):
+    """
+    El cliente ve los medios de pago del negocio, y envía el comprobante
+    desde la app; el dueño lo revisa en Abonos.
+    """
+
+    def setUp(self):
+        self.admin = Usuario.objects.create_user(
+            telefono='3000000000', password='x', nombre='Admin', email='a@a.com'
+        )
+        self.negocio = Negocio.objects.create(
+            administrador=self.admin, nombre='Spa', telefono='3000000000',
+            nequi='3001112233', llave_breb='@spa', banco='Bancolombia', numero_cuenta='123456789',
+            whatsapp='3009998888',
+        )
+        servicio = Servicio.objects.create(
+            negocio=self.negocio, nombre='Masaje', precio=50000, duracion_minutos=60,
+            requiere_abono=True, monto_abono=20000,
+        )
+        self.cliente = Cliente.objects.create(negocio=self.negocio, nombre='Ana', telefono='3001111111')
+        self.cita = Cita.objects.create(
+            negocio=self.negocio, cliente=self.cliente, servicio=servicio,
+            fecha_hora=timezone.now() + timedelta(days=4), duracion_minutos=60,
+            estado='pendiente_abono',
+        )
+        self.abono = Abono.objects.create(
+            cita=self.cita, monto=20000, metodo_pago='transferencia', estado='pendiente',
+            fecha_limite=timezone.now() + timedelta(days=2),
+        )
+        self.url_subir = reverse('public:subir_comprobante', args=[self.negocio.slug, self.cita.id])
+
+    def _identificar_cliente(self):
+        session = self.client.session
+        session['clientes_verificados'] = {str(self.negocio.id): self.cliente.id}
+        session.save()
+
+    def test_confirmacion_muestra_medios_de_pago(self, *mocks):
+        self._identificar_cliente()
+        resp = self.client.get(reverse('public:confirmacion_cita', args=[self.negocio.slug, self.cita.id]))
+        self.assertContains(resp, 'Nequi:')
+        self.assertContains(resp, 'data-copiar="3001112233"')
+        self.assertContains(resp, 'Llave Bre-B:')
+        self.assertContains(resp, 'data-copiar="123456789"')
+        self.assertContains(resp, 'Enviar comprobante')
+        self.assertContains(resp, 'https://wa.me/573009998888?text=')
+        self.assertNotContains(resp, 'CLABE')
+        self.assertNotContains(resp, 'Daviplata:')  # no configurado
+
+    def test_mis_citas_muestra_bloque_de_pago(self, *mocks):
+        self._identificar_cliente()
+        resp = self.client.get(reverse('public:mis_citas', args=[self.negocio.slug]))
+        self.assertContains(resp, 'Paga tu abono para confirmar la cita')
+
+    @patch('apps.notificaciones.services.NotificacionService.enviar_push', return_value={'success': True})
+    def test_subir_comprobante(self, enviar_push, *mocks):
+        self._identificar_cliente()
+        with self.captureOnCommitCallbacks(execute=True):
+            resp = self.client.post(self.url_subir, {
+                'comprobante': _imagen(), 'numero_referencia': 'M12345',
+            })
+        self.assertRedirects(resp, reverse('public:mis_citas', args=[self.negocio.slug]))
+        self.abono.refresh_from_db()
+        self.assertTrue(self.abono.comprobante)
+        self.assertEqual(self.abono.numero_referencia, 'M12345')
+        self.assertIsNotNone(self.abono.fecha_pago)
+        # Aviso al dueño que lo lleva a Abonos
+        kwargs = enviar_push.call_args.kwargs
+        self.assertTrue(kwargs['enviar_a_admin'])
+        self.assertEqual(kwargs['url'], f'/{self.negocio.slug}/admin/abonos/')
+
+        # Mis citas ahora indica que está en revisión
+        resp = self.client.get(reverse('public:mis_citas', args=[self.negocio.slug]))
+        self.assertContains(resp, 'Comprobante enviado')
+
+        # El dueño lo ve en Abonos
+        self.client.force_login(self.admin)
+        resp = self.client.get(reverse('public:abonos_admin', args=[self.negocio.slug]))
+        self.assertContains(resp, 'Ver comprobante')
+
+    def test_sin_identificarse_no_puede_subir(self, *mocks):
+        self.client.post(self.url_subir, {'comprobante': _imagen()})
+        self.abono.refresh_from_db()
+        self.assertFalse(self.abono.comprobante)
+
+    def test_rechaza_archivo_que_no_es_imagen(self, *mocks):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        self._identificar_cliente()
+        falso = SimpleUploadedFile('comprobante.png', b'no soy una imagen', content_type='image/png')
+        self.client.post(self.url_subir, {'comprobante': falso})
+        self.abono.refresh_from_db()
+        self.assertFalse(self.abono.comprobante)
+
+    @patch('apps.notificaciones.services.NotificacionService.enviar_push', return_value={'success': True})
+    def test_nuevo_comprobante_tras_rechazo_vuelve_a_revision(self, *mocks):
+        self.abono.estado = 'rechazado'
+        self.abono.notas_admin = 'No se ve el monto'
+        self.abono.save()
+        self._identificar_cliente()
+        resp = self.client.get(reverse('public:mis_citas', args=[self.negocio.slug]))
+        self.assertContains(resp, 'No pudimos validar tu pago')
+        self.assertContains(resp, 'No se ve el monto')
+
+        self.client.post(self.url_subir, {'comprobante': _imagen()})
+        self.abono.refresh_from_db()
+        self.assertEqual(self.abono.estado, 'pendiente')
+
+    def test_abono_ya_confirmado_no_acepta_comprobante(self, *mocks):
+        self.abono.estado = 'confirmado'
+        self.abono.save()
+        self._identificar_cliente()
+        self.client.post(self.url_subir, {'comprobante': _imagen()})
+        self.abono.refresh_from_db()
+        self.assertFalse(self.abono.comprobante)
+
+    def test_texto_medios_pago_en_mensajes(self, *mocks):
+        texto = self.negocio.texto_medios_pago()
+        self.assertIn('Nequi: 3001112233', texto)
+        self.assertIn('Llave Bre-B: @spa', texto)
+        self.assertIn('Bancolombia: 123456789', texto)
+        self.assertNotIn('Daviplata', texto)
+
+    def test_whatsapp_comprobante_con_monto(self, *mocks):
+        from urllib.parse import unquote
+        from apps.core.whatsapp import enlace_comprobante
+        enlace = unquote(enlace_comprobante(self.cita))
+        self.assertIn('Hola Spa, te envío el comprobante del abono de $20.000', enlace)
+
+    def test_configuracion_muestra_medios_aunque_negocio_no_exija_abono(self, *mocks):
+        # El servicio pide abono, aunque el negocio no lo pida en general
+        self.assertFalse(self.negocio.requiere_abono)
+        self.client.force_login(self.admin)
+        resp = self.client.get(reverse('public:admin_configuracion', args=[self.negocio.slug]))
+        self.assertContains(resp, 'id="mediosPago"')
+        self.assertContains(resp, 'name="nequi"')
+        self.assertContains(resp, 'name="qr_pago"')

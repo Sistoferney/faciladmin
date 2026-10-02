@@ -198,6 +198,22 @@
     <!-- PWA Service Worker -->
     <script src="{% static 'js/pwa-register.js' %}"></script>
 
+    <script>
+        // Botones "Copiar" (datos de pago): copian el valor de data-copiar
+        document.addEventListener('click', async function(e) {
+            const boton = e.target.closest('[data-copiar]');
+            if (!boton) return;
+            const original = boton.innerHTML;
+            try {
+                await navigator.clipboard.writeText(boton.dataset.copiar);
+                boton.innerHTML = '<i class="bi bi-check2"></i> Copiado';
+            } catch (err) {
+                // Sin permiso de portapapeles: mostrar el valor para copiarlo a mano
+                window.prompt('Copia este dato:', boton.dataset.copiar);
+            }
+            setTimeout(() => { boton.innerHTML = original; }, 1500);
+        });
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

@@ -101,7 +101,7 @@ class NotificacionService:
             logger.error(f"Error enviando email: {str(e)}")
             return {'success': False, 'error': str(e)}
 
-    def enviar_push(self, cliente, titulo, mensaje, cita=None, enviar_a_admin=False):
+    def enviar_push(self, cliente, titulo, mensaje, cita=None, enviar_a_admin=False, url=None):
         """
         Enviar notificación push (PWA)
         Gratis, no requiere Twilio
@@ -112,6 +112,7 @@ class NotificacionService:
             mensaje: Cuerpo de la notificación
             cita: Cita relacionada (opcional)
             enviar_a_admin: Si True, también envía al dueño del negocio
+            url: Página a abrir al tocar la notificación (por defecto agenda o Mis citas)
         """
         try:
             from .models import ClientePushSubscription, UsuarioPushSubscription
@@ -154,7 +155,9 @@ class NotificacionService:
                 payload['tag'] = f'cita-{cita.id}'
                 # Al tocar la notificación: el dueño va a su agenda y el cliente
                 # a sus citas (cada uno dentro de su app instalada)
-                if enviar_a_admin:
+                if url:
+                    payload['url'] = url
+                elif enviar_a_admin:
                     payload['url'] = f'/{cita.negocio.slug}/admin/agenda/'
                 else:
                     payload['url'] = f'/{cita.negocio.slug}/mis-citas/'

@@ -416,8 +416,17 @@
                             </div>
                         </div>
 
+                    </div>
+
+                    <!-- Siempre visible: un servicio puede pedir abono aunque el negocio no lo pida en general -->
+                    <div id="mediosPago">
                         <hr class="my-4">
-                        <h6 class="mb-3">Información Bancaria</h6>
+                        <h6 class="mb-1">Medios de pago para recibir abonos</h6>
+                        <p class="small text-muted mb-3">
+                            Se muestran al cliente cuando reserva un servicio que pide abono.
+                            Configura solo los que uses.
+                        </p>
+                        <h6 class="small fw-bold text-uppercase text-muted">Cuenta bancaria</h6>
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
@@ -454,6 +463,37 @@
                                     <div class="text-danger small">{{ form.clabe.errors }}</div>
                                 {% endif %}
                             </div>
+                        </div>
+
+                        <h6 class="small fw-bold text-uppercase text-muted mt-2">Billeteras y pagos inmediatos</h6>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">{{ form.nequi.label }}</label>
+                                {{ form.nequi }}
+                                <small class="text-muted">{{ form.nequi.help_text }}</small>
+                                {% if form.nequi.errors %}<div class="text-danger small">{{ form.nequi.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">{{ form.daviplata.label }}</label>
+                                {{ form.daviplata }}
+                                <small class="text-muted">{{ form.daviplata.help_text }}</small>
+                                {% if form.daviplata.errors %}<div class="text-danger small">{{ form.daviplata.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">{{ form.llave_breb.label }}</label>
+                                {{ form.llave_breb }}
+                                <small class="text-muted">{{ form.llave_breb.help_text }}</small>
+                                {% if form.llave_breb.errors %}<div class="text-danger small">{{ form.llave_breb.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">{{ form.qr_pago.label }}</label>
+                            {% if negocio.qr_pago %}
+                            <div class="mb-2"><img src="{{ negocio.qr_pago.url }}" alt="QR actual" style="max-width: 140px;" class="border rounded"></div>
+                            {% endif %}
+                            {{ form.qr_pago }}
+                            <small class="text-muted">{{ form.qr_pago.help_text }}. Máximo 2 MB.</small>
+                            {% if form.qr_pago.errors %}<div class="text-danger small">{{ form.qr_pago.errors }}</div>{% endif %}
                         </div>
                     </div>
                 </div>
@@ -582,7 +622,8 @@ document.addEventListener('DOMContentLoaded', function() {
         'personalizacion': ['logo', 'imagen_portada', 'color_primario', 'color_secundario'],
         'horarios': ['horario_apertura', 'horario_cierre', 'dia_lunes', 'dia_martes', 'dia_miercoles', 'dia_jueves', 'dia_viernes', 'dia_sabado', 'dia_domingo'],
         'abonos': ['requiere_abono', 'porcentaje_abono', 'monto_abono_fijo',
-                   'banco', 'numero_cuenta', 'clabe', 'titular_cuenta'],
+                   'banco', 'numero_cuenta', 'clabe', 'titular_cuenta',
+                   'nequi', 'daviplata', 'llave_breb', 'qr_pago'],
         'redes': ['facebook', 'instagram', 'twitter', 'esta_activo', 'acepta_reservas_online']
     };
 

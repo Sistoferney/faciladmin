@@ -98,43 +98,18 @@
                             {% endif %}
                         </div>
 
-                        <!-- Información de Abono (si aplica) -->
-                        {% if cita.requiere_abono %}
-                        <div class="alert alert-warning text-start">
-                            <h6><i class="bi bi-exclamation-triangle me-2"></i>Información de Abono</h6>
-                            <p class="small mb-2">
-                                Para confirmar tu cita, debes realizar un abono de:
-                            </p>
-                            <p class="h4 text-center mb-3">${{ cita.monto_abono }}</p>
-
-                            <hr>
-
-                            <p class="small mb-2"><strong>Datos para Transferencia:</strong></p>
-                            <p class="small mb-1">
-                                <strong>Banco:</strong> {{ negocio.banco }}<br>
-                                <strong>Cuenta:</strong> {{ negocio.numero_cuenta }}<br>
-                                <strong>CLABE:</strong> {{ negocio.clabe }}<br>
-                                <strong>Titular:</strong> {{ negocio.titular_cuenta }}
-                            </p>
-
-                            <hr>
-
-                            <p class="small mb-0">
-                                <i class="bi bi-clock-history me-1"></i>
-                                <strong>Fecha límite de pago:</strong><br>
-                                {{ cita.fecha_limite_abono|date:"d/m/Y H:i" }}
-                            </p>
-                        </div>
+                        <!-- Pago del abono (si aplica): medios de pago y envío del comprobante -->
+                        {% if cita.requiere_abono and cita.abono.por_pagar %}
+                        {% include 'minipagina/_pago_abono.html' %}
                         {% endif %}
 
                         <!-- Próximos Pasos -->
                         <div class="alert alert-info text-start">
                             <h6><i class="bi bi-info-circle me-2"></i>Próximos Pasos</h6>
                             <ol class="small mb-0 ps-3">
-                                <li>Recibirás un mensaje de confirmación en WhatsApp</li>
-                                {% if cita.requiere_abono %}
-                                <li>Realiza el abono y envía el comprobante</li>
-                                <li>Esperaremos tu abono para confirmar la cita</li>
+                                {% if cita.requiere_abono and cita.abono.por_pagar %}
+                                <li>Paga el abono y envía el comprobante desde aquí o desde "Mis citas"</li>
+                                <li>{{ negocio.nombre }} lo revisará y te avisaremos cuando tu cita quede confirmada</li>
                                 {% endif %}
                                 <li>Te enviaremos un recordatorio 24 horas antes</li>
                                 <li>¡Nos vemos en tu cita!</li>

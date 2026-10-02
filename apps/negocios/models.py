@@ -107,6 +107,41 @@ class Negocio(models.Model):
     clabe = models.CharField('Número de cuenta bancaria', max_length=50, blank=True)
     titular_cuenta = models.CharField('Titular de la cuenta', max_length=200, blank=True)
 
+    # Otros medios de pago (opcionales): el cliente solo ve los configurados
+    nequi = models.CharField('Nequi', max_length=20, blank=True, help_text='Número de celular de Nequi')
+    daviplata = models.CharField('Daviplata', max_length=20, blank=True, help_text='Número de celular de Daviplata')
+    llave_breb = models.CharField(
+        'Llave Bre-B', max_length=100, blank=True,
+        help_text='Tu llave para pagos inmediatos (celular, cédula, correo o alfanumérica)'
+    )
+    qr_pago = models.ImageField(
+        'Código QR de pago', upload_to='negocios/qr_pago/', blank=True, null=True,
+        help_text='Imagen del QR de tu banco o billetera para que el cliente escanee y pague'
+    )
+
+    @property
+    def tiene_medios_pago(self):
+        """Si configuró al menos un medio para recibir abonos"""
+        return any([self.numero_cuenta, self.nequi, self.daviplata, self.llave_breb, self.qr_pago])
+
+    def texto_medios_pago(self):
+        """Medios de pago configurados, en texto para mensajes (email/SMS/WhatsApp)"""
+        lineas = []
+        if self.nequi:
+            lineas.append(f'📱 Nequi: {self.nequi}')
+        if self.daviplata:
+            lineas.append(f'📱 Daviplata: {self.daviplata}')
+        if self.llave_breb:
+            lineas.append(f'⚡ Llave Bre-B: {self.llave_breb}')
+        if self.numero_cuenta:
+            cuenta = f'🏦 {self.banco or "Cuenta"}: {self.numero_cuenta}'
+            if self.titular_cuenta:
+                cuenta += f' (Titular: {self.titular_cuenta})'
+            lineas.append(cuenta)
+        if self.qr_pago:
+            lineas.append('🔳 También puedes pagar con el código QR en la app')
+        return '\n'.join(lineas)
+
     # Personalización de mini página
     logo = models.ImageField('Logo', upload_to='negocios/logos/', blank=True, null=True)
     imagen_portada = models.ImageField('Imagen de portada', upload_to='negocios/portadas/', blank=True, null=True)

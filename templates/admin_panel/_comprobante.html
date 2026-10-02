@@ -1,0 +1,13 @@
+{% comment %}Comprobante de abono enviado por el cliente. Variable: abono{% endcomment %}
+{% if abono.comprobante %}
+<div class="mb-4 text-center">
+    <p class="mb-2"><strong><i class="bi bi-image"></i> Comprobante enviado por el cliente</strong>
+        {% if abono.fecha_pago %}<br><small class="text-muted">el {{ abono.fecha_pago|date:"d/m/Y H:i" }}</small>{% endif %}
+    </p>
+    <a href="{{ abono.comprobante.url }}" target="_blank" rel="noopener">
+        <img src="{{ abono.comprobante.url }}" alt="Comprobante de pago" class="img-fluid border rounded" style="max-height: 420px;">
+    </a>
+</div>
+{% else %}
+<p class="text-muted small"><i class="bi bi-info-circle"></i> El cliente aún no ha enviado comprobante por la app (puede haberlo enviado por WhatsApp).</p>
+{% endif %}

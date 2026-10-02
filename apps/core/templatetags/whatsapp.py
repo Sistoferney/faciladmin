@@ -27,3 +27,8 @@ def whatsapp_cliente_a_negocio(cita):
 @register.simple_tag
 def whatsapp_negocio_a_cliente(cita):
     return whatsapp.enlace_negocio_a_cliente(cita)
+
+
+@register.simple_tag
+def whatsapp_comprobante(cita):
+    return whatsapp.enlace_comprobante(cita)

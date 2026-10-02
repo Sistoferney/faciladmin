@@ -487,7 +487,7 @@ def mis_citas(request, slug):
         citas = Cita.objects.filter(
             cliente=cliente,
             negocio=negocio
-        ).select_related('servicio').order_by('-fecha_hora')
+        ).select_related('servicio', 'abono').order_by('-fecha_hora')
 
         # Separar citas en futuras y pasadas
         ahora = timezone.now()
@@ -719,6 +719,81 @@ def cancelar_cita_cliente(request, slug, cita_id):
     }
 
     return render(request, 'minipagina/cancelar_cita.html', context)
+
+
+TAMANO_MAXIMO_COMPROBANTE = 5 * 1024 * 1024  # 5 MB (capturas de pantalla / fotos)
+
+
+@ratelimit(key='ip', rate='10/h', method='POST', block=True)
+@require_http_methods(["POST"])
+def subir_comprobante(request, slug, cita_id):
+    """
+    El cliente envía la foto/captura del comprobante de su abono.
+    El abono queda en "Por revisar" para el dueño, que recibe un aviso push.
+    Rate limit: 10 envíos por hora por IP
+    """
+    from django.core.exceptions import ValidationError
+    from django.forms import ImageField
+
+    negocio = get_object_or_404(Negocio, slug=slug, esta_activo=True)
+    cita = get_object_or_404(Cita, id=cita_id, negocio=negocio)
+
+    if not _cliente_puede_gestionar(request, cita):
+        messages.error(request, 'Ingresa tu número de teléfono para gestionar tus citas.')
+        return redirect('public:mis_citas', slug=slug)
+
+    abono = getattr(cita, 'abono', None)
+    if abono is None or abono.estado not in ('pendiente', 'vencido', 'rechazado'):
+        messages.info(request, 'Esta cita no tiene un abono pendiente.')
+        return redirect('public:mis_citas', slug=slug)
+
+    archivo = request.FILES.get('comprobante')
+    if not archivo:
+        messages.error(request, 'Selecciona la foto o captura de tu comprobante.')
+        return redirect('public:mis_citas', slug=slug)
+    if archivo.size > TAMANO_MAXIMO_COMPROBANTE:
+        messages.error(request, 'La imagen es muy pesada (máximo 5 MB). Intenta con una captura de pantalla.')
+        return redirect('public:mis_citas', slug=slug)
+    try:
+        # Verifica que sea una imagen real (Pillow), no solo por la extensión
+        archivo = ImageField().clean(archivo)
+    except ValidationError:
+        messages.error(request, 'El archivo no es una imagen válida. Envía una foto o captura del comprobante.')
+        return redirect('public:mis_citas', slug=slug)
+
+    abono.comprobante = archivo
+    abono.numero_referencia = request.POST.get('numero_referencia', '').strip()[:100]
+    abono.fecha_pago = timezone.now()
+    if abono.estado == 'rechazado':
+        # Nuevo intento: vuelve a revisión del dueño
+        abono.estado = 'pendiente'
+    abono.save()
+
+    # Avisar al dueño (al confirmarse la transacción; si falla no afecta al cliente)
+    def avisar_dueno():
+        try:
+            from apps.notificaciones.services import NotificacionService
+            fecha = timezone.localtime(cita.fecha_hora)
+            monto = f'{abono.monto:,.0f}'.replace(',', '.')  # 20000 -> 20.000
+            NotificacionService().enviar_push(
+                cliente=cita.cliente,
+                titulo='Comprobante de abono recibido',
+                mensaje=(
+                    f'{cita.cliente.nombre} envió el comprobante de ${monto} '
+                    f'para {cita.servicio.nombre} el {fecha.strftime("%d/%m/%Y a las %H:%M")}.\n'
+                    'Revísalo en Abonos para confirmar la cita.'
+                ),
+                cita=cita,
+                enviar_a_admin=True,
+                url=f'/{negocio.slug}/admin/abonos/',
+            )
+        except Exception:
+            logger.exception('Error avisando comprobante de la cita %s', cita.id)
+
+    transaction.on_commit(avisar_dueno)
+
+    messages.success(request, f'¡Listo! Enviamos tu comprobante a {negocio.nombre}. Te avisaremos cuando confirmen tu pago.')
+    return redirect('public:mis_citas', slug=slug)
 
 
 def manifest_admin(request, slug):

@@ -1,0 +1,108 @@
+{% load whatsapp %}
+{% comment %}
+Bloque de pago del abono de una cita (confirmación y Mis citas).
+Variables: cita, negocio. Usa cita.abono.
+- Pendiente/vencido/rechazado sin comprobante: medios de pago + enviar comprobante
+- Con comprobante en revisión: aviso de que el negocio lo está revisando
+{% endcomment %}
+{% with abono=cita.abono %}
+<div class="alert {% if abono.estado == 'rechazado' %}alert-danger{% else %}alert-warning{% endif %} text-start pago-abono">
+    {% if abono.estado == 'rechazado' %}
+        <h6><i class="bi bi-exclamation-octagon me-2"></i>No pudimos validar tu pago</h6>
+        {% if abono.notas_admin %}<p class="small mb-2">Motivo: {{ abono.notas_admin }}</p>{% endif %}
+        <p class="small mb-2">Puedes enviar un nuevo comprobante:</p>
+    {% elif abono.comprobante %}
+        <h6><i class="bi bi-hourglass-split me-2"></i>Comprobante enviado</h6>
+        <p class="small mb-2">
+            {{ negocio.nombre }} está revisando tu pago de <strong>${{ abono.monto|floatformat:0 }}</strong>.
+            Te avisaremos cuando quede confirmado.
+        </p>
+    {% else %}
+        <h6><i class="bi bi-wallet2 me-2"></i>Paga tu abono para confirmar la cita</h6>
+    {% endif %}
+
+    {% if not abono.comprobante or abono.estado == 'rechazado' %}
+    <p class="h4 text-center my-2">
+        ${{ abono.monto|floatformat:0 }}
+        <button type="button" class="btn btn-sm btn-link p-0 align-baseline" data-copiar="{{ abono.monto|floatformat:0 }}" title="Copiar monto">
+            <i class="bi bi-copy"></i>
+        </button>
+    </p>
+    <p class="small text-center mb-3">
+        <i class="bi bi-clock-history"></i>
+        {% if abono.estado == 'vencido' %}
+            El plazo venció el {{ abono.fecha_limite|date:"d/m/Y H:i" }}, pero aún puedes enviarlo.
+        {% else %}
+            Antes del {{ abono.fecha_limite|date:"d/m/Y H:i" }}
+        {% endif %}
+    </p>
+
+    {% if negocio.tiene_medios_pago %}
+    <ul class="list-unstyled small mb-3">
+        {% if negocio.nequi %}
+        <li class="d-flex justify-content-between align-items-center border-bottom py-2">
+            <span><strong>Nequi:</strong> {{ negocio.nequi }}</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-copiar="{{ negocio.nequi }}"><i class="bi bi-copy"></i> Copiar</button>
+        </li>
+        {% endif %}
+        {% if negocio.daviplata %}
+        <li class="d-flex justify-content-between align-items-center border-bottom py-2">
+            <span><strong>Daviplata:</strong> {{ negocio.daviplata }}</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-copiar="{{ negocio.daviplata }}"><i class="bi bi-copy"></i> Copiar</button>
+        </li>
+        {% endif %}
+        {% if negocio.llave_breb %}
+        <li class="d-flex justify-content-between align-items-center border-bottom py-2">
+            <span><strong>Llave Bre-B:</strong> {{ negocio.llave_breb }}</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-copiar="{{ negocio.llave_breb }}"><i class="bi bi-copy"></i> Copiar</button>
+        </li>
+        {% endif %}
+        {% if negocio.numero_cuenta %}
+        <li class="d-flex justify-content-between align-items-center border-bottom py-2">
+            <span>
+                <strong>{{ negocio.banco|default:"Cuenta bancaria" }}:</strong> {{ negocio.numero_cuenta }}
+                {% if negocio.titular_cuenta %}<br><span class="text-muted">Titular: {{ negocio.titular_cuenta }}</span>{% endif %}
+            </span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-copiar="{{ negocio.numero_cuenta }}"><i class="bi bi-copy"></i> Copiar</button>
+        </li>
+        {% endif %}
+    </ul>
+    {% if negocio.qr_pago %}
+    <div class="text-center mb-3">
+        <p class="small mb-1">O escanea el código QR:</p>
+        <img src="{{ negocio.qr_pago.url }}" alt="Código QR de pago de {{ negocio.nombre }}" class="img-fluid border rounded" style="max-width: 200px;">
+    </div>
+    {% endif %}
+    {% else %}
+    <p class="small mb-3">Escríbele a {{ negocio.nombre }} para conocer los datos de pago.</p>
+    {% endif %}
+    {% endif %}
+
+    <!-- Enviar comprobante desde la app -->
+    <form method="post" enctype="multipart/form-data"
+          action="{% url 'public:subir_comprobante' negocio.slug cita.id %}" class="mb-2">
+        {% csrf_token %}
+        <label class="btn btn-primary w-100 mb-2">
+            <i class="bi bi-paperclip"></i>
+            {% if abono.comprobante and abono.estado != 'rechazado' %}Cambiar comprobante{% else %}Enviar comprobante{% endif %}
+            <input type="file" name="comprobante" accept="image/*" hidden required
+                   onchange="this.form.querySelector('.datos-comprobante').hidden = false;">
+        </label>
+        <div class="datos-comprobante" hidden>
+            <input type="text" name="numero_referencia" class="form-control form-control-sm mb-2"
+                   placeholder="Número de referencia o aprobación (opcional)" maxlength="100">
+            <button type="submit" class="btn btn-success w-100">
+                <i class="bi bi-send"></i> Enviar a {{ negocio.nombre }}
+            </button>
+        </div>
+    </form>
+
+    <!-- Alternativa: enviarlo por WhatsApp -->
+    {% whatsapp_comprobante cita as enlace_comprobante %}
+    {% if enlace_comprobante %}
+    <a href="{{ enlace_comprobante }}" target="_blank" rel="noopener" class="btn btn-outline-success btn-sm w-100">
+        <i class="bi bi-whatsapp"></i> O envíalo por WhatsApp
+    </a>
+    {% endif %}
+</div>
+{% endwith %}
