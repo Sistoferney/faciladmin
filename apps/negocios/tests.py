@@ -446,3 +446,31 @@ class SesionPersistentePWATests(TestCase):
         self.assertContains(resp, 'id="install-banner-ios"')
         self.assertContains(resp, 'Instalar en mi computador')
         self.assertNotContains(resp, 'install-pwa-banner')
+
+    def test_portada_muestra_mis_citas_al_cliente_reconocido(self, *mocks):
+        url = reverse('public:minipagina', args=[self.negocio.slug])
+        boton = 'bi-list-check'
+
+        # Visitante desconocido: solo "Agendar Cita"
+        self.assertNotContains(self.client.get(url), boton)
+
+        # Cliente reconocido con una cita próxima: botón con contador
+        self.client.post(self.url_mis_citas, {'telefono': '3001111111'})
+        resp = self.client.get(url)
+        self.assertContains(resp, boton)
+        self.assertContains(resp, 'title="Citas próximas">1</span>')
+
+        # Sin citas próximas (pasadas o canceladas): botón sin contador
+        self.cita.estado = 'cancelada'
+        self.cita.save()
+        resp = self.client.get(url)
+        self.assertContains(resp, boton)
+        self.assertNotContains(resp, 'title="Citas próximas"')
+
+    def test_portada_cliente_reconocido_sin_citas(self, *mocks):
+        self.cita.delete()
+        session = self.client.session
+        session['clientes_verificados'] = {str(self.negocio.id): self.cliente.id}
+        session.save()
+        resp = self.client.get(reverse('public:minipagina', args=[self.negocio.slug]))
+        self.assertNotContains(resp, 'bi-list-check')

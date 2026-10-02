@@ -13,9 +13,19 @@
     <div class="position-absolute bottom-0 start-0 w-100 d-flex align-items-end pb-4"
          style="background: linear-gradient(to top, rgba(0,0,0,0.5), transparent);">
         <div class="container text-center">
-            <a href="{% url 'public:agendar' negocio.slug %}" class="btn btn-light px-4 py-2">
+            <a href="{% url 'public:agendar' negocio.slug %}" class="btn btn-light px-4 py-2 m-1">
                 <i class="bi bi-calendar-check me-2"></i> Agendar Cita
             </a>
+            {% if tiene_citas %}
+            <!-- Cliente reconocido en este dispositivo con citas en el sistema -->
+            <a href="{% url 'public:mis_citas' negocio.slug %}" class="btn btn-outline-light px-4 py-2 m-1 position-relative">
+                <i class="bi bi-list-check me-2"></i> Mis Citas
+                {% if citas_proximas %}
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                      title="Citas próximas">{{ citas_proximas }}</span>
+                {% endif %}
+            </a>
+            {% endif %}
         </div>
     </div>
 </section>

@@ -91,9 +91,22 @@ def minipagina_negocio(request, slug):
         esta_activo=True
     ).order_by('orden', 'nombre')
 
+    # Cliente reconocido en este dispositivo (agendó o se identificó antes):
+    # si tiene citas, mostrar "Mis citas" junto a "Agendar Cita"
+    cliente = _cliente_verificado(request, negocio)
+    tiene_citas = bool(cliente) and Cita.objects.filter(cliente=cliente, negocio=negocio).exists()
+    citas_proximas = Cita.objects.filter(
+        cliente=cliente,
+        negocio=negocio,
+        fecha_hora__gte=timezone.now(),
+        estado__in=['pendiente_abono', 'confirmada'],
+    ).count() if tiene_citas else 0
+
     context = {
         'negocio': negocio,
         'servicios': servicios,
+        'tiene_citas': tiene_citas,
+        'citas_proximas': citas_proximas,
         'title': f'{negocio.nombre} - Agenda tu Cita',
     }
 
