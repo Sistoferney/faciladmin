@@ -424,3 +424,9 @@ class SesionPersistentePWATests(TestCase):
         resp = self.client.get('/sw.js')
         self.assertEqual(resp['Cache-Control'], 'no-cache')
         self.assertIn('faciladmin-v5', resp.content.decode())
+
+    def test_confirmacion_ofrece_boton_de_recordatorios(self, *mocks):
+        self.client.post(self.url_mis_citas, {'telefono': '3001111111'})
+        resp = self.client.get(reverse('public:confirmacion_cita', args=[self.negocio.slug, self.cita.id]))
+        self.assertContains(resp, 'id="btn-activar-recordatorios"')
+        self.assertNotContains(resp, 'confirm(')

@@ -303,6 +303,9 @@ async function subscribeToPushNotifications() {
 
         if (subscription) {
             console.log('[PWA] Ya está suscrito a push notifications');
+            // Reenviar al servidor (crea o actualiza): cubre suscripciones que no
+            // se pudieron guardar antes, p. ej. cliente aún no identificado
+            await savePushSubscription(subscription);
             return subscription;
         }
 
@@ -343,12 +346,6 @@ async function subscribeToPushNotifications() {
  */
 async function savePushSubscription(subscription) {
     try {
-        // Obtener teléfono del cliente (puede estar en localStorage o sessionStorage)
-        // después de que el cliente agendó una cita
-        const telefono = localStorage.getItem('cliente_telefono') ||
-                        sessionStorage.getItem('cliente_telefono') ||
-                        null;
-
         // Obtener slug del negocio de la URL
         const negocio_slug = window.location.pathname.split('/')[1] || null;
 
@@ -386,17 +383,14 @@ async function savePushSubscription(subscription) {
             return data.success;
         }
 
-        // Para clientes, validar que tengamos teléfono y negocio
-        if (!telefono || !negocio_slug) {
-            console.warn('[PWA] No se puede guardar suscripción de cliente: falta teléfono o negocio_slug');
-            console.warn('[PWA] Teléfono:', telefono, 'Negocio:', negocio_slug);
-
-            // Guardar suscripción en localStorage para intentar más tarde
-            localStorage.setItem('pending_push_subscription', JSON.stringify(subscription.toJSON()));
-
+        if (!negocio_slug) {
+            console.warn('[PWA] No se puede guardar suscripción de cliente: falta negocio_slug');
             return false;
         }
 
+        // El servidor identifica al cliente por la sesión (al agendar o en "Mis citas").
+        // No se envía el teléfono: en iPhone la app instalada no comparte
+        // localStorage con Safari y el servidor no debe confiar en él.
         const response = await fetch('/api/notificaciones/push/subscribe/', {
             method: 'POST',
             headers: {
@@ -404,7 +398,6 @@ async function savePushSubscription(subscription) {
             },
             body: JSON.stringify({
                 subscription: subscription.toJSON(),
-                telefono: telefono,
                 negocio_slug: negocio_slug
             })
         });
@@ -416,6 +409,13 @@ async function savePushSubscription(subscription) {
             localStorage.setItem('push_subscribed', 'true');
             // Limpiar suscripción pendiente si existía
             localStorage.removeItem('pending_push_subscription');
+        } else if (data.codigo === 'identificacion_requerida') {
+            // Reintentar automáticamente cuando el cliente se identifique
+            localStorage.setItem('pending_push_subscription', negocio_slug);
+            if (!window.location.pathname.includes('/mis-citas/')) {
+                alert(data.error);
+                window.location.href = `/${negocio_slug}/mis-citas/`;
+            }
         } else {
             console.error('[PWA] Error guardando suscripción:', data.error);
         }
@@ -889,6 +889,19 @@ function showUnblockInstructions() {
         }
     });
 }
+
+/**
+ * Reintentar una suscripción de cliente que quedó pendiente porque aún no se
+ * había identificado (ver savePushSubscription). Ya hay permiso, así que no
+ * requiere un toque del usuario (necesario en iPhone para pedir permiso).
+ */
+window.addEventListener('load', () => {
+    const pendiente = localStorage.getItem('pending_push_subscription');
+    const esAdmin = window.location.pathname.includes('/admin/');
+    if (pendiente && !esAdmin && 'Notification' in window && Notification.permission === 'granted') {
+        subscribeToPushNotifications();
+    }
+});
 
 /**
  * Mostrar indicador al cargar la página si es PWA instalada

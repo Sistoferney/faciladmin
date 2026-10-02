@@ -2,42 +2,28 @@
 
 {% block extra_js %}
 <script>
-    // Guardar teléfono del cliente en localStorage para notificaciones push
+    // Ofrecer activar recordatorios con un botón: iOS solo permite pedir el
+    // permiso de notificaciones como respuesta directa a un toque del usuario.
+    // (En Safari de iPhone sin instalar la app, Notification no existe y no se muestra)
     document.addEventListener('DOMContentLoaded', function() {
-        // Guardar teléfono del cliente
-        const clienteTelefono = '{{ cita.cliente.telefono }}';
-        if (clienteTelefono) {
-            localStorage.setItem('cliente_telefono', clienteTelefono);
-            console.log('[PWA] Teléfono del cliente guardado:', clienteTelefono);
+        if (!('Notification' in window) || !('PushManager' in window) || !window.PWA) {
+            return;
         }
-
-        // Solicitar permiso para notificaciones push después de 3 segundos
-        // (dar tiempo al usuario para leer la confirmación)
-        setTimeout(function() {
-            if ('Notification' in window && 'PushManager' in window) {
-                if (Notification.permission === 'default') {
-                    // Mostrar mensaje amigable antes de pedir permiso
-                    if (confirm('¿Quieres recibir notificaciones sobre tus citas? Te enviaremos recordatorios y actualizaciones importantes.')) {
-                        if (window.PWA && window.PWA.requestNotificationPermission) {
-                            window.PWA.requestNotificationPermission()
-                                .then(granted => {
-                                    if (granted) {
-                                        console.log('[PWA] Cliente suscrito a notificaciones push');
-                                    }
-                                });
-                        }
-                    }
-                } else if (Notification.permission === 'granted') {
-                    // Ya tiene permisos, suscribirse directamente
-                    if (window.PWA && window.PWA.subscribeToPushNotifications) {
-                        window.PWA.subscribeToPushNotifications()
-                            .then(() => {
-                                console.log('[PWA] Cliente suscrito a notificaciones push');
-                            });
-                    }
-                }
-            }
-        }, 3000);
+        if (Notification.permission === 'granted') {
+            // Ya tiene permiso: asociar la suscripción a este cliente
+            window.PWA.subscribeToPushNotifications();
+            return;
+        }
+        if (Notification.permission === 'default') {
+            const tarjeta = document.getElementById('activar-recordatorios');
+            tarjeta.style.display = '';
+            document.getElementById('btn-activar-recordatorios').addEventListener('click', async function() {
+                const activado = await window.PWA.requestNotificationPermission();
+                tarjeta.innerHTML = activado
+                    ? '<i class="bi bi-bell-fill text-success"></i> Recordatorios activados'
+                    : 'No se activaron las notificaciones. Puedes activarlas más tarde.';
+            });
+        }
     });
 </script>
 {% endblock %}
@@ -58,6 +44,13 @@
                         <p class="lead text-muted mb-4">
                             Tu reserva ha sido registrada exitosamente
                         </p>
+
+                        <div id="activar-recordatorios" class="alert alert-info mb-4" style="display: none;">
+                            <p class="mb-2">¿Quieres recibir un recordatorio antes de tu cita?</p>
+                            <button type="button" id="btn-activar-recordatorios" class="btn btn-primary btn-sm">
+                                <i class="bi bi-bell"></i> Activar recordatorios
+                            </button>
+                        </div>
 
                         <!-- Detalles de la Cita -->
                         <div class="bg-light rounded p-4 mb-4 text-start">

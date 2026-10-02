@@ -37,36 +37,39 @@ def subscribe_push(request):
                 'error': 'No se recibió información de suscripción'
             }, status=400)
 
-        # Obtener información del cliente
-        telefono = data.get('telefono')
         negocio_slug = data.get('negocio_slug')
         user_agent = request.META.get('HTTP_USER_AGENT', '')
 
-        # Validar que tengamos teléfono y negocio para asociar la suscripción
-        if not telefono or not negocio_slug:
+        if not negocio_slug:
             return JsonResponse({
                 'success': False,
-                'error': 'Se requiere teléfono y negocio_slug para suscribirse'
+                'error': 'Se requiere negocio_slug para suscribirse'
             }, status=400)
 
-        # Buscar el cliente
-        from apps.clientes.models import Cliente
         from apps.negocios.models import Negocio
+        from apps.negocios.public_views import _cliente_verificado
         from .models import ClientePushSubscription
 
         try:
             negocio = Negocio.objects.get(slug=negocio_slug)
-            cliente = Cliente.objects.get(negocio=negocio, telefono=telefono)
         except Negocio.DoesNotExist:
             return JsonResponse({
                 'success': False,
                 'error': 'Negocio no encontrado'
             }, status=404)
-        except Cliente.DoesNotExist:
+
+        # El cliente se toma de la sesión (se identificó al agendar o en
+        # "Mis citas"), no de un teléfono enviado por el navegador: así nadie
+        # puede suscribirse a las notificaciones de otra persona.
+        # En iPhone la app instalada no comparte almacenamiento con Safari,
+        # por eso el cliente debe identificarse una vez dentro de la app.
+        cliente = _cliente_verificado(request, negocio)
+        if not cliente:
             return JsonResponse({
                 'success': False,
-                'error': 'Cliente no encontrado'
-            }, status=404)
+                'codigo': 'identificacion_requerida',
+                'error': 'Ingresa tu teléfono en "Mis citas" para activar las notificaciones'
+            }, status=403)
 
         # Crear o actualizar la suscripción
         try:

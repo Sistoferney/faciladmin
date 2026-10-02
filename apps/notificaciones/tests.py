@@ -166,3 +166,48 @@ class TareasProgramadasTests(TestCase):
         self.cliente.save()
         sugerir_proximas_citas()
         self.assertEqual(Notificacion.objects.filter(tipo='sugerencia_cita').count(), 1)
+
+
+class SuscripcionPushClienteTests(TestCase):
+    """
+    La suscripción push del cliente usa la sesión, no un teléfono enviado
+    por el navegador (en iPhone la app no comparte localStorage con Safari).
+    """
+    SUB = {'endpoint': 'https://push.example/abc', 'keys': {'auth': 'a', 'p256dh': 'p'}}
+
+    def setUp(self):
+        self.negocio, _, self.cliente = _crear_base()
+        self.url = '/api/notificaciones/push/subscribe/'
+
+    def _post(self, **extra):
+        import json
+        return self.client.post(
+            self.url,
+            json.dumps({'subscription': self.SUB, 'negocio_slug': self.negocio.slug, **extra}),
+            content_type='application/json',
+        )
+
+    def test_sin_identificarse_pide_ir_a_mis_citas(self):
+        resp = self._post()
+        self.assertEqual(resp.status_code, 403)
+        self.assertEqual(resp.json()['codigo'], 'identificacion_requerida')
+        self.assertFalse(ClientePushSubscription.objects.exists())
+
+    def test_no_acepta_telefono_ajeno_sin_sesion(self):
+        # Antes bastaba con enviar el teléfono de otra persona
+        resp = self._post(telefono='3001111111')
+        self.assertEqual(resp.status_code, 403)
+        self.assertFalse(ClientePushSubscription.objects.exists())
+
+    def test_cliente_identificado_se_suscribe(self):
+        session = self.client.session
+        session['clientes_verificados'] = {str(self.negocio.id): self.cliente.id}
+        session.save()
+        resp = self._post()
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(ClientePushSubscription.objects.filter(
+            cliente=self.cliente, endpoint=self.SUB['endpoint']).exists())
+
+        # Reenviar la misma suscripción no la duplica
+        self._post()
+        self.assertEqual(ClientePushSubscription.objects.count(), 1)
