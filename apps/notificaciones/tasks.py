@@ -367,11 +367,16 @@ def programar_notificacion(tarea, *args):
     from django.db import transaction
 
     def ejecutar():
-        try:
-            if getattr(settings, 'CELERY_TASK_ALWAYS_EAGER', False):
-                tarea(*args)
-            else:
+        if not getattr(settings, 'CELERY_TASK_ALWAYS_EAGER', False):
+            try:
                 tarea.delay(*args)
+                return
+            except Exception:
+                # Redis/worker no disponible: no perder la notificación,
+                # enviarla en este mismo momento
+                logger.exception('No se pudo encolar %s%s; se envía directamente', tarea.name, args)
+        try:
+            tarea(*args)
         except Exception:
             logger.exception('Error enviando notificación %s%s', tarea.name, args)
 

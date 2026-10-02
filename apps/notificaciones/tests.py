@@ -400,3 +400,43 @@ class BotonWhatsappEnPushTests(TestCase):
     def test_cliente_recibe_boton_para_escribir_al_negocio(self, webpush, *mocks):
         payload = self._payload(webpush, a_admin=False)
         self.assertTrue(payload['whatsapp'].startswith('https://wa.me/573009998888?text='))
+
+
+class EnvioDeTareasTests(TestCase):
+    """
+    Las tareas deben usar la app de Celery del proyecto también en el servidor
+    web (config/__init__.py). Si no, .delay() usa localhost y falla.
+    """
+
+    def test_tareas_usan_la_configuracion_del_proyecto(self):
+        from django.conf import settings
+        from .tasks import enviar_confirmacion_cita
+        self.assertEqual(enviar_confirmacion_cita.app.main, 'faciladmin')
+        self.assertEqual(enviar_confirmacion_cita.app.conf.broker_url, settings.CELERY_BROKER_URL)
+
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=False)
+    def test_si_redis_falla_se_envia_directamente(self):
+        from unittest.mock import MagicMock
+        from .tasks import programar_notificacion
+        tarea = MagicMock(name='tarea')
+        tarea.name = 'tarea_prueba'
+        tarea.delay.side_effect = ConnectionRefusedError('Connection refused')
+
+        with self.captureOnCommitCallbacks(execute=True):
+            programar_notificacion(tarea, 123)
+
+        tarea.delay.assert_called_once_with(123)
+        tarea.assert_called_once_with(123)
+
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=False)
+    def test_con_redis_disponible_solo_se_encola(self):
+        from unittest.mock import MagicMock
+        from .tasks import programar_notificacion
+        tarea = MagicMock(name='tarea')
+        tarea.name = 'tarea_prueba'
+
+        with self.captureOnCommitCallbacks(execute=True):
+            programar_notificacion(tarea, 123)
+
+        tarea.delay.assert_called_once_with(123)
+        tarea.assert_not_called()

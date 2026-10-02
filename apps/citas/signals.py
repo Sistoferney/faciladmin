@@ -4,7 +4,6 @@ Signals para el modelo Cita
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.conf import settings
-from django.db import transaction
 from .models import Cita
 import logging
 
@@ -20,23 +19,11 @@ def cita_creada(sender, instance, created, **kwargs):
     if not created:
         return
 
-    def enviar():
-        try:
-            # Enviar confirmación al cliente
-            from apps.notificaciones.tasks import enviar_confirmacion_cita
-
-            # Si Celery está en modo EAGER o hay error de conexión, ejecutar directamente
-            if getattr(settings, 'CELERY_TASK_ALWAYS_EAGER', False):
-                enviar_confirmacion_cita(instance.id)
-            else:
-                enviar_confirmacion_cita.delay(instance.id)
-        except Exception as e:
-            # Si falla (por ejemplo, Redis no disponible), solo registrar el error
-            logger.warning(f"No se pudo enviar confirmación de cita: {e}")
-
-    # Esperar a que termine la transacción: así el worker encuentra la cita
-    # y el abono ya creados (ver agendar_cita)
-    transaction.on_commit(enviar)
+    # Confirmación al cliente y aviso al dueño. Se envía al terminar la
+    # transacción (así el worker encuentra la cita y el abono ya creados) y,
+    # si Redis/worker fallan, se envía directamente en vez de perderse.
+    from apps.notificaciones.tasks import enviar_confirmacion_cita, programar_notificacion
+    programar_notificacion(enviar_confirmacion_cita, instance.id)
 
 
 @receiver(post_save, sender=Cita)
