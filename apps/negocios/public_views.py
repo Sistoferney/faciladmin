@@ -293,7 +293,18 @@ def disponibilidad_api(request, slug):
     except (Servicio.DoesNotExist, ValueError):
         return JsonResponse({'error': 'Parámetros inválidos'}, status=400)
 
-    horarios = horarios_disponibles(negocio, fecha_obj, servicio.duracion_minutos)
+    # Al editar una cita, su propio horario no debe contar como ocupado.
+    # Solo se acepta si la cita es del cliente identificado en esta sesión.
+    excluir_cita_id = None
+    cita_id = request.GET.get('cita')
+    if cita_id and cita_id.isdigit():
+        cita = Cita.objects.filter(id=cita_id, negocio=negocio).first()
+        if cita and _cliente_puede_gestionar(request, cita):
+            excluir_cita_id = cita.id
+
+    horarios = horarios_disponibles(
+        negocio, fecha_obj, servicio.duracion_minutos, excluir_cita_id=excluir_cita_id
+    )
     return JsonResponse({'horarios': horarios})
 
 

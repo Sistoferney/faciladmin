@@ -327,3 +327,37 @@ class DisponibilidadTests(TestCase):
             {'servicio': self.servicio.id, 'year': self.fecha.year, 'month': self.fecha.month},
         )
         self.assertIn(self.fecha.isoformat(), resp.json()['fechas'])
+
+    def test_api_libera_horario_de_cita_propia_al_editar(self, *mocks):
+        propia = self._cita('10:00')
+        url = reverse('public:disponibilidad_api', args=[self.negocio.slug])
+        params = {'fecha': self.fecha.isoformat(), 'servicio': self.servicio.id, 'cita': propia.id}
+
+        # Sin identificarse, el parámetro se ignora (no revela nada de citas ajenas)
+        self.assertNotIn('10:00', self.client.get(url, params).json()['horarios'])
+
+        session = self.client.session
+        session['clientes_verificados'] = {str(self.negocio.id): self.cliente.id}
+        session.save()
+        self.assertIn('10:00', self.client.get(url, params).json()['horarios'])
+
+    def test_api_no_libera_horario_de_cita_ajena(self, *mocks):
+        otro = Cliente.objects.create(negocio=self.negocio, nombre='Otro', telefono='3003333333')
+        ajena = self._cita('10:00', cliente=otro)
+        session = self.client.session
+        session['clientes_verificados'] = {str(self.negocio.id): self.cliente.id}
+        session.save()
+        resp = self.client.get(
+            reverse('public:disponibilidad_api', args=[self.negocio.slug]),
+            {'fecha': self.fecha.isoformat(), 'servicio': self.servicio.id, 'cita': ajena.id},
+        )
+        self.assertNotIn('10:00', resp.json()['horarios'])
+
+    def test_pagina_editar_carga_selector_de_horarios(self, *mocks):
+        propia = self._cita('10:00')
+        session = self.client.session
+        session['clientes_verificados'] = {str(self.negocio.id): self.cliente.id}
+        session.save()
+        resp = self.client.get(reverse('public:editar_cita_cliente', args=[self.negocio.slug, propia.id]))
+        self.assertContains(resp, '<select class="form-select"\n                                    id="hora"')
+        self.assertContains(resp, 'data-actual="10:00"')

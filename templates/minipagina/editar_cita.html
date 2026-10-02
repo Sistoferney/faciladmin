@@ -103,14 +103,16 @@
                         <!-- Seleccionar hora -->
                         <div class="mb-4">
                             <label for="hora" class="form-label">Nueva Hora <span class="text-danger">*</span></label>
-                            <input type="time"
-                                   class="form-control"
-                                   id="hora"
-                                   name="hora"
-                                   value="{{ cita.fecha_hora|date:'H:i' }}"
-                                   step="1800"
-                                   required>
-                            <div class="form-text">Horarios cada 30 minutos (ej. 10:00 o 10:30), dentro del horario de atención</div>
+                            <select class="form-select"
+                                    id="hora"
+                                    name="hora"
+                                    data-actual="{{ cita.fecha_hora|date:'H:i' }}"
+                                    data-fecha-actual="{{ cita.fecha_hora|date:'Y-m-d' }}"
+                                    data-servicio-actual="{{ cita.servicio.id }}"
+                                    required>
+                                <option value="">Cargando horarios...</option>
+                            </select>
+                            <div class="form-text" id="horaAyuda">Solo se muestran los horarios disponibles</div>
                         </div>
 
                         <!-- Notas -->
@@ -147,15 +149,72 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Validar que la fecha sea al menos 24 horas en el futuro
     const fechaInput = document.getElementById('fecha');
     const horaInput = document.getElementById('hora');
+    const servicioInput = document.getElementById('servicio');
+    const horaAyuda = document.getElementById('horaAyuda');
+
+    // Fecha en formato YYYY-MM-DD según la hora local del navegador
+    // (toISOString usa UTC y de noche adelantaría un día)
+    function fechaLocal(d) {
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
 
     // Establecer fecha mínima (mañana)
     const manana = new Date();
     manana.setDate(manana.getDate() + 1);
-    const minDate = manana.toISOString().split('T')[0];
-    fechaInput.setAttribute('min', minDate);
+    fechaInput.setAttribute('min', fechaLocal(manana));
+
+    // Cargar los horarios disponibles para la fecha y servicio elegidos.
+    // Se envía el id de la cita para que su horario actual no cuente como ocupado.
+    function cargarHorarios() {
+        const fecha = fechaInput.value;
+        horaInput.innerHTML = '';
+        if (!fecha) {
+            horaInput.add(new Option('Primero elige una fecha', ''));
+            return;
+        }
+        horaInput.add(new Option('Cargando horarios...', ''));
+
+        const params = new URLSearchParams({
+            fecha: fecha,
+            servicio: servicioInput.value,
+            cita: '{{ cita.id }}'
+        });
+        fetch(`{% url 'public:disponibilidad_api' negocio.slug %}?${params}`)
+            .then(r => r.json())
+            .then(data => {
+                const limite = new Date(Date.now() + 24 * 60 * 60 * 1000);
+                const horarios = (data.horarios || []).filter(h => new Date(`${fecha}T${h}`) >= limite);
+
+                horaInput.innerHTML = '';
+                if (!horarios.length) {
+                    horaInput.add(new Option('No hay horarios disponibles este día', ''));
+                    horaAyuda.textContent = 'Prueba con otra fecha';
+                    return;
+                }
+                horaInput.add(new Option('Selecciona una hora', ''));
+                horarios.forEach(h => horaInput.add(new Option(h, h)));
+                horaAyuda.textContent = 'Solo se muestran los horarios disponibles';
+
+                // Preseleccionar la hora actual si sigue siendo la misma fecha y servicio
+                const actual = horaInput.dataset.actual;
+                if (fecha === horaInput.dataset.fechaActual &&
+                    servicioInput.value === horaInput.dataset.servicioActual &&
+                    horarios.includes(actual)) {
+                    horaInput.value = actual;
+                }
+            })
+            .catch(() => {
+                horaInput.innerHTML = '';
+                horaInput.add(new Option('No se pudieron cargar los horarios', ''));
+                horaAyuda.textContent = 'Revisa tu conexión e intenta de nuevo';
+            });
+    }
+
+    fechaInput.addEventListener('change', cargarHorarios);
+    servicioInput.addEventListener('change', cargarHorarios);
+    cargarHorarios();
 
     // Validar antes de enviar
     document.getElementById('formEditarCita').addEventListener('submit', function(e) {
