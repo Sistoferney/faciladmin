@@ -17,6 +17,10 @@ class UsuarioManager(BaseUserManager):
         if not telefono:
             raise ValueError('El teléfono es obligatorio')
 
+        # Guardar siempre en formato único (+573001234567)
+        from .telefonos import normalizar_telefono
+        telefono = normalizar_telefono(telefono) or telefono
+
         # Normalizar email si se proporciona
         if 'email' in extra_fields and extra_fields['email']:
             extra_fields['email'] = self.normalize_email(extra_fields['email'])

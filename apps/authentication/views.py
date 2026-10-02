@@ -13,6 +13,7 @@ from django.conf import settings
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from .models import Usuario, TokenRecuperacion
+from .telefonos import filtrar_por_telefono
 
 
 @method_decorator(
@@ -106,7 +107,11 @@ class SolicitarRecuperacionView(View):
         )
 
         try:
-            usuario = Usuario.objects.get(telefono=telefono, esta_activo=True)
+            # Mismo número en cualquier formato (ver telefonos.py)
+            coincidencias = filtrar_por_telefono(Usuario.objects.filter(esta_activo=True), telefono)
+            if not coincidencias:
+                raise Usuario.DoesNotExist
+            usuario = coincidencias[0]
 
             # Invalidar tokens anteriores del usuario (opcional, por seguridad)
             TokenRecuperacion.objects.filter(

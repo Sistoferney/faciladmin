@@ -17,6 +17,7 @@ from .models import (
 )
 from apps.negocios.models import Negocio
 from apps.authentication.models import Usuario
+from apps.authentication.telefonos import normalizar_telefono, telefono_registrado
 
 import logging
 from django.db import transaction
@@ -37,12 +38,20 @@ def registro_negocio(request):
             messages.error(request, 'Todos los campos son obligatorios')
             return render(request, 'suscripciones/registro.html')
 
-        # Validar que el teléfono no exista (identificador único)
-        if RegistroNegocio.objects.filter(telefono=telefono).exists():
+        # Guardar el teléfono en formato único (+573001234567): así cualquier
+        # variante del mismo número se reconoce como el mismo (ver telefonos.py)
+        telefono_normalizado = normalizar_telefono(telefono)
+        if not telefono_normalizado:
+            messages.error(request, 'El número de teléfono no es válido. Ejemplo: 300 123 4567')
+            return render(request, 'suscripciones/registro.html')
+        telefono = telefono_normalizado
+
+        # Validar que el teléfono no exista en ningún formato (identificador único)
+        if telefono_registrado(RegistroNegocio.objects.all(), telefono):
             messages.error(request, 'Este teléfono ya está registrado. Si ya validaste tu email, revisa tu bandeja de entrada.')
             return render(request, 'suscripciones/registro.html')
 
-        if Usuario.objects.filter(telefono=telefono).exists():
+        if telefono_registrado(Usuario.objects.all(), telefono):
             messages.error(request, 'Este teléfono ya tiene una cuenta activa. Intenta iniciar sesión.')
             return render(request, 'suscripciones/registro.html')
 
@@ -148,7 +157,7 @@ def validar_email(request, token):
             return render(request, 'suscripciones/activar_cuenta.html', {'registro': registro})
 
         # Verificar si el usuario ya existe (por teléfono, que es el identificador único)
-        if Usuario.objects.filter(telefono=registro.telefono).exists():
+        if telefono_registrado(Usuario.objects.all(), registro.telefono):
             messages.error(
                 request,
                 'Este teléfono ya tiene una cuenta activa. '
@@ -212,7 +221,7 @@ def validar_email(request, token):
                 registro.save()
 
             # Login automático
-            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+            login(request, user, backend='apps.authentication.backends.TelefonoBackend')
 
             # Enviar email de bienvenida
             try:

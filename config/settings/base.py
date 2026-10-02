@@ -82,6 +82,13 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Custom User Model
 AUTH_USER_MODEL = 'authentication.Usuario'
 
+# Login por teléfono en cualquier formato (ver apps/authentication/telefonos.py).
+# ModelBackend se mantiene para no cerrar las sesiones ya iniciadas con él.
+AUTHENTICATION_BACKENDS = [
+    'apps.authentication.backends.TelefonoBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {

@@ -31,7 +31,7 @@ class ActivarCuentaTests(TestCase):
     def test_activacion_crea_cuenta_y_redirige_al_panel(self):
         resp = self.client.post(self.url, self.datos)
 
-        negocio = Negocio.objects.get(administrador__telefono='3005555555')
+        negocio = Negocio.objects.get(administrador__telefono='+573005555555')
         self.assertRedirects(resp, reverse('core:dashboard_redirect'), target_status_code=302)
         self.assertTrue(Suscripcion.objects.filter(negocio=negocio, estado='trial').exists())
         self.registro.refresh_from_db()
