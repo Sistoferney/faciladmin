@@ -66,8 +66,12 @@ def verificar_abonos_pendientes():
     ).update(estado='vencido')
 
     # La cita NO se cancela automáticamente: el dueño decide si confirma
-    # un pago tardío o cancela la cita (desde Abonos > Por revisar)
+    # un pago tardío o cancela la cita (desde Abonos > Por revisar).
+    # Solo se avisa si la cita aún no ha pasado y sigue esperando el abono:
+    # de citas pasadas ya no hay nada que decidir.
+    ahora = timezone.now()
     for abono in abonos_vencidos:
-        _avisar_admin_abono_vencido(abono)
+        if abono.cita.fecha_hora > ahora and abono.cita.estado == 'pendiente_abono':
+            _avisar_admin_abono_vencido(abono)
 
     return f"Verificados {abonos_pendientes.count()} abonos. {count_vencidos} marcados como vencidos."

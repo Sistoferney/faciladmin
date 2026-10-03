@@ -524,3 +524,37 @@ class MontoPagadoYSaldoTests(TestCase):
         resp = self.client.get(reverse('public:mis_citas', args=[self.negocio.slug]))
         self.assertContains(resp, 'Valor total')
         self.assertContains(resp, '$50.000')
+
+
+@patch('apps.citas.signals.enviar_confirmacion_cita', create=True)
+class AvisoAbonoVencidoSoloCitasFuturasTests(TestCase):
+
+    def setUp(self):
+        admin = Usuario.objects.create_user(telefono='3000000000', password='x', nombre='A', email='a@a.com')
+        self.negocio = Negocio.objects.create(administrador=admin, nombre='Spa', telefono='3000000000')
+        self.servicio = Servicio.objects.create(negocio=self.negocio, nombre='M', precio=50000, duracion_minutos=60)
+        self.cliente = Cliente.objects.create(negocio=self.negocio, nombre='Ana', telefono='3001111111')
+
+    def _abono_vencido(self, dias_cita):
+        cita = Cita.objects.create(
+            negocio=self.negocio, cliente=self.cliente, servicio=self.servicio,
+            fecha_hora=timezone.now() + timedelta(days=dias_cita), duracion_minutos=60,
+            estado='pendiente_abono',
+        )
+        return Abono.objects.create(
+            cita=cita, monto=20000, metodo_pago='transferencia', estado='pendiente',
+            fecha_limite=timezone.now() - timedelta(hours=1),
+        )
+
+    @patch('apps.notificaciones.services.NotificacionService.enviar_push', return_value={'success': True})
+    def test_no_avisa_abonos_de_citas_pasadas(self, enviar_push, *mocks):
+        pasada = self._abono_vencido(-10)
+        futura = self._abono_vencido(1)
+        verificar_abonos_pendientes()
+
+        pasada.refresh_from_db()
+        futura.refresh_from_db()
+        self.assertEqual(pasada.estado, 'vencido')  # el estado sí se actualiza
+        self.assertEqual(futura.estado, 'vencido')
+        self.assertEqual(enviar_push.call_count, 1)  # solo se avisa la futura
+        self.assertEqual(enviar_push.call_args.kwargs['cita'], futura.cita)

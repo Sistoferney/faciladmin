@@ -474,3 +474,16 @@ class SesionPersistentePWATests(TestCase):
         session.save()
         resp = self.client.get(reverse('public:minipagina', args=[self.negocio.slug]))
         self.assertNotContains(resp, 'bi-list-check')
+
+    def test_alcance_del_service_worker_coincide_con_cada_app(self, *mocks):
+        # Android asigna las notificaciones (y el contador del ícono) a la app
+        # instalada cuyo alcance contiene el del Service Worker
+        slug = self.negocio.slug
+        resp = self.client.get(reverse('public:minipagina', args=[slug]))
+        self.assertContains(resp, f"window.PWA_SCOPE = '/{slug}/';")
+        self.assertEqual(self.client.get(reverse('public:manifest_minipagina', args=[slug])).json()['scope'], f'/{slug}/')
+
+        self.client.force_login(self.admin)
+        resp = self.client.get(reverse('public:admin_dashboard', args=[slug]))
+        self.assertContains(resp, f"window.PWA_SCOPE = '/{slug}/admin/';")
+        self.assertEqual(self.client.get(reverse('public:manifest_admin', args=[slug])).json()['scope'], f'/{slug}/admin/')

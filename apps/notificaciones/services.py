@@ -10,6 +10,16 @@ import json
 
 logger = logging.getLogger(__name__)
 
+# Entrega de los push:
+# - ttl: Google guarda el mensaje hasta 24 h si el celular está en reposo o sin
+#   conexión. Con el valor por defecto de pywebpush (0) lo descartaba si no
+#   podía entregarlo en ese instante.
+# - Urgency high: Android lo entrega aunque esté ahorrando batería (Doze).
+OPCIONES_ENTREGA_PUSH = {
+    'ttl': 24 * 60 * 60,
+    'headers': {'Urgency': 'high'},
+}
+
 
 def elegir_canal(cliente):
     """
@@ -204,7 +214,8 @@ class NotificacionService:
                         vapid_private_key=vapid,
                         vapid_claims={
                             'sub': f"mailto:{settings.WEBPUSH_SETTINGS.get('VAPID_ADMIN_EMAIL', 'admin@faciladmin.com')}"
-                        }
+                        },
+                        **OPCIONES_ENTREGA_PUSH,
                     )
                     enviados += 1
 

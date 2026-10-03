@@ -2,6 +2,12 @@
 
 ## Resumen de la Implementación
 
+> **Importante — Android:** Chrome para Android **no soporta** `navigator.setAppBadge`.
+> En Android el número del ícono lo calcula el launcher (MIUI, One UI, Pixel...)
+> contando las notificaciones que **esa app instalada** tiene en la bandeja.
+> Para que se asignen a la app (y no a Chrome), el Service Worker debe tener
+> el **mismo alcance** que la app instalada (ver "Alcance del Service Worker").
+
 Se ha implementado el **Badge API** para mostrar un contador de notificaciones en el ícono de la PWA instalada, similar al comportamiento de las aplicaciones de redes sociales.
 
 ## Archivos Modificados
@@ -58,6 +64,40 @@ Los templates ya tenían configurado:
 - ✓ Service Worker registrado ([pwa-register.js](static/js/pwa-register.js#L18))
 - ✓ Meta tags para PWA
 
+## Alcance del Service Worker
+
+Cada app instalada registra su propio Service Worker (`/sw.js`) con el mismo
+alcance que su manifest:
+
+| App | Alcance (manifest y Service Worker) |
+|-----|-------------------------------------|
+| Panel del dueño | `/<negocio>/admin/` |
+| Mini-página (cliente) | `/<negocio>/` |
+
+Las plantillas lo indican con `window.PWA_SCOPE` antes de cargar `pwa-register.js`.
+
+- Android asigna cada notificación a la app cuyo alcance contiene el del Service
+  Worker. Con el alcance anterior (`/`, todo el sitio) no coincidía con ninguna
+  app: las notificaciones aparecían como de **Chrome** y el contador se sumaba
+  al ícono de Chrome.
+- Panel y mini-página tienen suscripciones push separadas aunque estén en el
+  mismo navegador.
+- Migración: al abrir la app se elimina el Service Worker antiguo de alcance `/`
+  y su suscripción; el servidor desactiva esa suscripción cuando Google responde 410.
+- Al abrir la app se cierran sus notificaciones de la bandeja, así el contador
+  de Android vuelve a cero (como WhatsApp).
+
+## Entrega de los push
+
+Los push se envían con `ttl` de 24 horas y `Urgency: high`
+(`OPCIONES_ENTREGA_PUSH` en `apps/notificaciones/services.py`). Con el valor por
+defecto de pywebpush (TTL 0), Google descartaba el mensaje si el celular estaba
+en reposo.
+
+**Xiaomi (MIUI) y otros con ahorro de batería agresivo:** si las notificaciones
+no llegan aunque el permiso esté concedido, en *Ajustes → Aplicaciones → Chrome*
+poner **Ahorro de batería: Sin restricciones** (y activar *Inicio automático*).
+
 ## Cómo Funciona
 
 ### Flujo de Notificaciones
@@ -106,7 +146,7 @@ console.log('Badge API soportada:', 'setAppBadge' in navigator);
 ```
 
 **Nota:** El Badge API solo está soportado en:
-- ✅ Chrome/Edge 81+ en Android
+- ⚠️ Android: no hay `setAppBadge`; el launcher muestra el número de notificaciones de la app
 - ✅ Chrome/Edge 81+ en Windows/macOS (solo en PWA instalada)
 - ✅ iPhone/iPad con iOS 16.4+ (solo app instalada en pantalla de inicio y con permiso de notificaciones)
 - ❌ Firefox (no soportado)
@@ -207,8 +247,8 @@ if (PWA.isPWAInstalled()) {
 
 | Plataforma | Soporte | Notas |
 |-----------|---------|-------|
-| Chrome Android | ✅ Sí | Desde v81 |
-| Edge Android | ✅ Sí | Desde v81 |
+| Chrome Android | ⚠️ Vía launcher | No soporta setAppBadge: el launcher cuenta las notificaciones de la app |
+| Edge Android | ⚠️ Vía launcher | Igual que Chrome Android |
 | Chrome Desktop | ✅ Sí | Solo PWA instalada |
 | Edge Desktop | ✅ Sí | Solo PWA instalada |
 | Safari iOS / iPadOS | ✅ Sí | iOS 16.4+, solo app en pantalla de inicio con permiso de notificaciones |

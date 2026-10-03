@@ -1209,6 +1209,7 @@ def test_enviar_push_admin(request):
     from pywebpush import webpush, WebPushException
     from py_vapid import Vapid
     from django.conf import settings
+    from apps.notificaciones.services import OPCIONES_ENTREGA_PUSH
     import json
 
     # Obtener todas las suscripciones activas de administradores
@@ -1250,7 +1251,8 @@ def test_enviar_push_admin(request):
                 vapid_private_key=vapid,
                 vapid_claims={
                     'sub': f"mailto:{settings.WEBPUSH_SETTINGS.get('VAPID_ADMIN_EMAIL', 'admin@faciladmin.com')}"
-                }
+                },
+                **OPCIONES_ENTREGA_PUSH,
             )
 
             enviados += 1

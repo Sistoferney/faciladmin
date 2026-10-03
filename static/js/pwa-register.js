@@ -3,19 +3,108 @@
  * Registra el Service Worker y maneja la instalación
  */
 
+// Registro del Service Worker de esta app (ver alcanceServiceWorker).
+// Las funciones de push esperan esta promesa para usar el registro correcto.
+let registroServiceWorker = null;
+
 // Detectar si el navegador soporta PWA
 if ('serviceWorker' in navigator) {
     // Registrar Service Worker cuando la página cargue
     window.addEventListener('load', () => {
-        registerServiceWorker();
+        registroServiceWorker = registerServiceWorker();
     });
+}
+
+/**
+ * Registro activo del Service Worker de esta app (panel o mini-página).
+ * No usa navigator.serviceWorker.ready porque durante la migración podría
+ * devolver el registro antiguo de alcance '/'.
+ */
+async function obtenerRegistro() {
+    let registro = registroServiceWorker ? await registroServiceWorker : null;
+    if (!registro) {
+        registro = await navigator.serviceWorker.getRegistration(alcanceServiceWorker());
+    }
+    if (!registro) {
+        return navigator.serviceWorker.ready;
+    }
+    if (!registro.active) {
+        // Esperar a que termine de activarse (el SW hace skipWaiting al instalarse)
+        const trabajador = registro.installing || registro.waiting;
+        if (trabajador) {
+            await new Promise((resolver) => {
+                trabajador.addEventListener('statechange', () => {
+                    if (trabajador.state === 'activated') resolver();
+                });
+            });
+        }
+    }
+    return registro;
 }
 
 /**
  * Registra el Service Worker
  */
-function registerServiceWorker() {
-    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+/**
+ * Alcance del Service Worker = alcance de la app instalada (manifest):
+ * - Panel del dueño: /<negocio>/admin/
+ * - Mini-página:     /<negocio>/
+ * Android asigna cada notificación a la app instalada cuyo alcance contiene
+ * el del Service Worker. Con alcance '/' (todo el sitio) no coincidía con
+ * ninguna app y se mostraban como notificaciones de Chrome (sin contador en
+ * el ícono de la app). Además, panel y mini-página tienen ahora suscripciones
+ * push separadas aunque estén en el mismo navegador.
+ */
+function alcanceServiceWorker() {
+    if (window.PWA_SCOPE) {
+        return window.PWA_SCOPE;
+    }
+    const partes = window.location.pathname.split('/').filter(Boolean);
+    if (!partes.length) {
+        return '/';
+    }
+    return partes[1] === 'admin' ? `/${partes[0]}/admin/` : `/${partes[0]}/`;
+}
+
+/**
+ * Elimina el Service Worker antiguo registrado para todo el sitio ('/') y su
+ * suscripción push. El servidor desactiva esa suscripción la próxima vez que
+ * intente usarla (Google responde 410), así no hay notificaciones duplicadas.
+ */
+async function eliminarServiceWorkerAntiguo() {
+    const registros = await navigator.serviceWorker.getRegistrations();
+    for (const registro of registros) {
+        if (registro.scope === `${window.location.origin}/`) {
+            try {
+                const suscripcion = await registro.pushManager.getSubscription();
+                if (suscripcion) {
+                    await suscripcion.unsubscribe();
+                }
+            } catch (e) {
+                console.log('[PWA] No se pudo cancelar la suscripción antigua:', e);
+            }
+            await registro.unregister();
+            console.log('[PWA] Service Worker antiguo (alcance /) eliminado');
+        }
+    }
+}
+
+async function registerServiceWorker() {
+    const alcance = alcanceServiceWorker();
+    if (alcance !== '/') {
+        try {
+            await eliminarServiceWorkerAntiguo();
+        } catch (e) {
+            console.log('[PWA] Error revisando Service Workers antiguos:', e);
+        }
+    }
+
+    // Recargar cuando el nuevo SW tome control
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        window.location.reload();
+    });
+
+    return navigator.serviceWorker.register('/sw.js', { scope: alcance })
         .then((registration) => {
             console.log('[PWA] Service Worker registrado:', registration.scope);
 
@@ -27,10 +116,13 @@ function registerServiceWorker() {
             // Manejar actualizaciones del SW
             registration.addEventListener('updatefound', () => {
                 const newWorker = registration.installing;
+                // Solo es "nueva versión" si este registro ya tenía un SW activo;
+                // la primera instalación (p. ej. al migrar desde el alcance '/') no
+                const esActualizacion = Boolean(registration.active);
                 console.log('[PWA] Nueva versión detectada');
 
                 newWorker.addEventListener('statechange', () => {
-                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    if (esActualizacion && newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                         // Hay una nueva versión disponible
                         console.log('[PWA] Nueva versión lista para instalar');
 
@@ -49,15 +141,13 @@ function registerServiceWorker() {
                     }
                 });
             });
+            return registration;
         })
         .catch((error) => {
             console.error('[PWA] Error registrando Service Worker:', error);
+            return null;
         });
 
-    // Recargar cuando el nuevo SW tome control
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-        window.location.reload();
-    });
 }
 
 /**
@@ -333,7 +423,7 @@ async function subscribeToPushNotifications({ interactivo = true } = {}) {
         }
 
         // Obtener registro del Service Worker
-        const registration = await navigator.serviceWorker.ready;
+        const registration = await obtenerRegistro();
 
         // Obtener clave pública VAPID del servidor
         const response = await fetch('/api/notificaciones/push/vapid-key/');
@@ -602,7 +692,26 @@ function limpiarBadgeSiVisible() {
     }
     // Pequeño retraso para que el usuario alcance a ver que había notificaciones
     clearTimeout(limpiarBadgeTimeout);
-    limpiarBadgeTimeout = setTimeout(clearNotificationBadge, 2000);
+    limpiarBadgeTimeout = setTimeout(() => {
+        clearNotificationBadge();
+        cerrarNotificacionesDeEstaApp();
+    }, 2000);
+}
+
+/**
+ * En Android el número del ícono es la cantidad de notificaciones de la app en
+ * la bandeja (el launcher lo calcula; Chrome Android no soporta setAppBadge).
+ * Al abrir la app se cierran sus notificaciones y el contador vuelve a cero.
+ * El registro es de esta app (panel o mini-página), así que no toca las de la otra.
+ */
+async function cerrarNotificacionesDeEstaApp() {
+    try {
+        const registro = await obtenerRegistro();
+        const notificaciones = await registro.getNotifications();
+        notificaciones.forEach((n) => n.close());
+    } catch (e) {
+        console.log('[PWA] No se pudieron cerrar las notificaciones:', e);
+    }
 }
 
 if (isPWAInstalled()) {
@@ -809,7 +918,7 @@ async function diagnosticarNotificaciones() {
     console.log('\n4️⃣ Suscripción Push:');
     if ('serviceWorker' in navigator && 'PushManager' in window) {
         try {
-            const registration = await navigator.serviceWorker.ready;
+            const registration = await obtenerRegistro();
             const subscription = await registration.pushManager.getSubscription();
 
             if (subscription) {

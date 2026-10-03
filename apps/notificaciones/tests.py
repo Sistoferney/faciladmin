@@ -488,3 +488,19 @@ class SuscripcionClaveVapidAnteriorTests(TestCase):
             NotificacionService().enviar_push(cliente, 'T', 'M')
         sub.refresh_from_db()
         self.assertTrue(sub.activa)
+
+
+@patch('apps.citas.signals.enviar_confirmacion_cita', create=True)
+@patch('py_vapid.Vapid.from_pem')
+@patch('pywebpush.webpush')
+class OpcionesEntregaPushTests(TestCase):
+
+    def test_push_con_ttl_y_prioridad_alta(self, webpush, *mocks):
+        from .services import NotificacionService
+        _, _, cliente = _crear_base()
+        ClientePushSubscription.objects.create(cliente=cliente, endpoint='https://push/c', auth='a', p256dh='p')
+        NotificacionService().enviar_push(cliente, 'T', 'M')
+        kwargs = webpush.call_args.kwargs
+        # Con TTL 0 (valor por defecto) Google descartaba el mensaje si el celular estaba en reposo
+        self.assertEqual(kwargs['ttl'], 86400)
+        self.assertEqual(kwargs['headers'], {'Urgency': 'high'})
