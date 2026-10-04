@@ -60,6 +60,16 @@ class SeguimientoPorFrecuenciaTests(TestCase):
         self.assertEqual(self._estado(self._cliente_con_visita(44)), '+recordar')
         self.assertEqual(self._estado(self._cliente_con_visita(45)), 'recuperar+recordar')
 
+    def test_umbrales_dependen_de_la_frecuencia_de_cada_servicio(self, *mocks):
+        # Servicio cada 20 días: recordatorio a los 22, por recuperar a los 30
+        cada_20 = Servicio.objects.create(
+            negocio=self.negocio, nombre='Cejas', precio=15000, duracion_minutos=30, frecuencia_dias=20
+        )
+        self.assertEqual(self._estado(self._cliente_con_visita(21, cada_20)), '')
+        self.assertEqual(self._estado(self._cliente_con_visita(22, cada_20)), '+recordar')
+        self.assertEqual(self._estado(self._cliente_con_visita(29, cada_20)), '+recordar')
+        self.assertEqual(self._estado(self._cliente_con_visita(30, cada_20)), 'recuperar+recordar')
+
     def test_servicio_sin_frecuencia(self, *mocks):
         self.assertEqual(self._estado(self._cliente_con_visita(60, self.sin_frecuencia)), '')
         self.assertEqual(self._estado(self._cliente_con_visita(90, self.sin_frecuencia)), 'recuperar')
