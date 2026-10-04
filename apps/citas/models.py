@@ -86,6 +86,8 @@ class Cita(models.Model):
 
     # RF-55: Fecha límite de pago (mínimo 2 días antes)
     fecha_limite_abono = models.DateTimeField('Fecha límite de abono', null=True, blank=True)
+    # Recordatorio al cliente 2 horas antes de la cita (tarea cada 15 min)
+    recordatorio_2h_enviado = models.BooleanField('Recordatorio 2 h enviado', default=False)
 
     # Confirmación
     confirmada_por_admin = models.BooleanField('Confirmada por admin', default=False)

@@ -176,6 +176,63 @@ Te esperamos.
 
 
 @shared_task
+def enviar_recordatorios_2h():
+    """
+    Recordatorio al cliente 2 horas antes de su cita. Se ejecuta cada 15 minutos
+    (beat) y toma las citas confirmadas que empiezan en las próximas 2 horas y
+    aún no tienen este recordatorio. No aplica a citas agendadas hace menos de
+    30 minutos: el cliente acaba de recibir la confirmación.
+    (Una web app no puede programar notificaciones locales con la app cerrada:
+    por eso lo envía el servidor.)
+    """
+    ahora = timezone.now()
+    citas = Cita.objects.filter(
+        estado='confirmada',
+        fecha_hora__gt=ahora,
+        fecha_hora__lte=ahora + timedelta(hours=2),
+        recordatorio_2h_enviado=False,
+        fecha_creacion__lte=ahora - timedelta(minutes=30),
+    ).select_related('cliente', 'negocio', 'servicio')
+
+    enviados = 0
+    for cita in citas:
+        # Se marca antes de enviar: con la tarea cada 15 min no se repite
+        Cita.objects.filter(pk=cita.pk).update(recordatorio_2h_enviado=True)
+
+        cliente = cita.cliente
+        negocio = cita.negocio
+        canal = elegir_canal(cliente)
+        if not canal:
+            continue
+
+        hora = timezone.localtime(cita.fecha_hora).strftime('%H:%M')
+        mensaje = f"""
+¡Hola {cliente.nombre}!
+
+Te recordamos que tu cita es hoy a las {hora}.
+
+✂️ Servicio: {cita.servicio.nombre}
+📍 {negocio.nombre}
+{negocio.direccion}
+
+¡Te esperamos!
+        """.strip()
+
+        notificacion = Notificacion.objects.create(
+            cliente=cliente,
+            cita=cita,
+            tipo='recordatorio_2h',
+            canal=canal,
+            asunto=f'Tu cita es hoy - {negocio.nombre}',
+            mensaje=mensaje
+        )
+        if notificacion.enviar().get('success'):
+            enviados += 1
+
+    return f"Enviados {enviados} recordatorios de 2 horas"
+
+
+@shared_task
 def enviar_recordatorio_abono(abono_id, momento):
     """
     RF-56: Enviar recordatorios de pago de abono

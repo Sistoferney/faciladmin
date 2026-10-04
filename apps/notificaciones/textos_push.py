@@ -21,6 +21,12 @@ def hora_corta(fecha_hora):
     return f'{hora}:{local.minute:02d} {sufijo}'
 
 
+def a_la_hora(fecha_hora):
+    """'a la 1:30 p. m.' / 'a las 3:00 p. m.'"""
+    articulo = 'la' if timezone.localtime(fecha_hora).hour % 12 == 1 else 'las'
+    return f'a {articulo} {hora_corta(fecha_hora)}'
+
+
 def fecha_corta(fecha_hora, con_hora=True):
     """'sáb 5 oct, 1:30 p. m.' (hora de Colombia)"""
     local = timezone.localtime(fecha_hora)
@@ -90,7 +96,8 @@ def push_cliente(tipo, cita, negocio, asunto=''):
 
     textos = {
         'confirmacion_cita': confirmacion,
-        'recordatorio_cita': f'Te esperamos mañana a la {hora_corta(cita.fecha_hora)} para tu {servicio}.',
+        'recordatorio_cita': f'Te esperamos mañana {a_la_hora(cita.fecha_hora)} para tu {servicio}.',
+        'recordatorio_2h': f'Tu cita de {servicio} es hoy {a_la_hora(cita.fecha_hora)}. ¡Te esperamos!',
         'recordatorio_abono': f'Recuerda pagar el abono de tu cita del {dia} para confirmarla.',
         'confirmacion_abono': f'Recibimos tu pago. Tu cita del {fecha} está confirmada.',
         'cancelacion': f'Tu cita de {servicio} del {fecha} fue cancelada.',

@@ -69,6 +69,16 @@ def _olvidar_cliente(request, negocio):
         request.session[SESION_CLIENTES_VERIFICADOS] = verificados
 
 
+def _aviso_cita_hoy(citas_futuras):
+    """'Tu cita de Masaje es hoy a las 3:00 p. m.' para la primera cita de hoy, o None"""
+    from apps.notificaciones.textos_push import a_la_hora
+    hoy = timezone.localdate()
+    for cita in sorted(citas_futuras or [], key=lambda c: c.fecha_hora):
+        if timezone.localtime(cita.fecha_hora).date() == hoy:
+            return f'Tu cita de {cita.servicio.nombre} es hoy {a_la_hora(cita.fecha_hora)}.'
+    return None
+
+
 def _cliente_puede_gestionar(request, cita):
     """
     Verifica que la cita pertenezca al cliente identificado en esta sesión.
@@ -519,6 +529,8 @@ def mis_citas(request, slug):
         'telefono': cliente.telefono if cliente else None,
         'citas_futuras': citas_futuras,
         'citas_pasadas': citas_pasadas,
+        # Aviso destacado si tiene una cita hoy (respaldo del recordatorio de 2 horas)
+        'aviso_cita_hoy': _aviso_cita_hoy(citas_futuras),
         'title': f'Mis Citas - {negocio.nombre}',
     }
 

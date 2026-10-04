@@ -22,6 +22,10 @@ app.conf.beat_schedule = {
         'task': 'apps.notificaciones.tasks.enviar_recordatorios_citas',
         'schedule': crontab(hour=10, minute=0),  # Todos los días a las 10:00 AM
     },
+    'recordatorios-2h': {
+        'task': 'apps.notificaciones.tasks.enviar_recordatorios_2h',
+        'schedule': crontab(minute='*/15'),  # Cada 15 minutos: citas en las próximas 2 horas
+    },
     'verificar-abonos-pendientes': {
         'task': 'apps.abonos.tasks.verificar_abonos_pendientes',
         'schedule': crontab(hour=9, minute=0),  # Todos los días a las 9:00 AM

@@ -617,3 +617,72 @@ class DesactivarSuscripcionesAnterioresTests(TestCase):
         }), content_type='application/json')
         self.vieja_dueno.refresh_from_db()
         self.assertTrue(self.vieja_dueno.activa)
+
+
+@patch('apps.citas.signals.enviar_confirmacion_cita', create=True)
+@override_settings(TWILIO_ACCOUNT_SID='', TWILIO_AUTH_TOKEN='')
+class Recordatorio2HorasTests(TestCase):
+
+    def setUp(self):
+        self.negocio, self.servicio, self.cliente = _crear_base()
+
+    def _cita(self, en_minutos, estado='confirmada', creada_hace_min=120):
+        cita = Cita.objects.create(
+            negocio=self.negocio, cliente=self.cliente, servicio=self.servicio,
+            fecha_hora=timezone.now() + timedelta(minutes=en_minutos),
+            duracion_minutos=30, estado=estado,
+        )
+        Cita.objects.filter(pk=cita.pk).update(fecha_creacion=timezone.now() - timedelta(minutes=creada_hace_min))
+        return cita
+
+    @patch.object(Notificacion, 'enviar', return_value={'success': True})
+    def test_solo_citas_confirmadas_en_las_proximas_2_horas(self, *mocks):
+        from .tasks import enviar_recordatorios_2h
+        en_90 = self._cita(90)
+        en_3h = self._cita(180)
+        pendiente = self._cita(60, estado='pendiente_abono')
+        recien = self._cita(60, creada_hace_min=10)  # acaba de recibir la confirmación
+
+        enviar_recordatorios_2h()
+
+        enviadas = set(Notificacion.objects.filter(tipo='recordatorio_2h').values_list('cita_id', flat=True))
+        self.assertEqual(enviadas, {en_90.id})
+        for c, esperado in [(en_90, True), (en_3h, False), (pendiente, False), (recien, False)]:
+            c.refresh_from_db()
+            self.assertEqual(c.recordatorio_2h_enviado, esperado)
+
+    @patch.object(Notificacion, 'enviar', return_value={'success': True})
+    def test_no_se_repite(self, *mocks):
+        from .tasks import enviar_recordatorios_2h
+        self._cita(90)
+        enviar_recordatorios_2h()
+        enviar_recordatorios_2h()
+        self.assertEqual(Notificacion.objects.filter(tipo='recordatorio_2h').count(), 1)
+
+    def test_texto_push(self, *mocks):
+        from .textos_push import push_cliente
+        from datetime import date
+        cita = self._cita(90)
+        cita.fecha_hora = _local(date(2026, 10, 3), 15)
+        _, cuerpo = push_cliente('recordatorio_2h', cita, self.negocio)
+        self.assertEqual(cuerpo, 'Tu cita de Corte es hoy a las 3:00 p. m. ¡Te esperamos!')
+        cita.fecha_hora = _local(date(2026, 10, 3), 13)
+        _, cuerpo = push_cliente('recordatorio_2h', cita, self.negocio)
+        self.assertIn('es hoy a la 1:00 p. m.', cuerpo)
+
+    def test_aviso_cita_hoy_en_mis_citas(self, *mocks):
+        from django.urls import reverse
+        cita = self._cita(60)
+        if timezone.localtime(cita.fecha_hora).date() != timezone.localdate():
+            self.skipTest('La cita de prueba cae mañana (se ejecuta cerca de medianoche)')
+        session = self.client.session
+        session['clientes_verificados'] = {str(self.negocio.id): self.cliente.id}
+        session.save()
+        resp = self.client.get(reverse('public:mis_citas', args=[self.negocio.slug]))
+        self.assertContains(resp, 'Tu cita de Corte es hoy')
+
+    def test_programada_cada_15_minutos(self, *mocks):
+        from config.celery import app
+        tarea = app.conf.beat_schedule['recordatorios-2h']
+        self.assertEqual(tarea['task'], 'apps.notificaciones.tasks.enviar_recordatorios_2h')
+        self.assertEqual(tarea['schedule'].minute, {0, 15, 30, 45})

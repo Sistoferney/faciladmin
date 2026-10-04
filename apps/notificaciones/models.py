@@ -19,6 +19,7 @@ class Notificacion(models.Model):
     TIPO_CHOICES = [
         ('confirmacion_cita', 'Confirmación de cita'),  # RF-18
         ('recordatorio_cita', 'Recordatorio de cita'),  # RF-28
+        ('recordatorio_2h', 'Recordatorio 2 horas antes'),
         ('recordatorio_abono', 'Recordatorio de abono'),  # RF-56
         ('confirmacion_abono', 'Confirmación de abono'),  # RF-57
         ('cancelacion', 'Cancelación'),  # RF-57

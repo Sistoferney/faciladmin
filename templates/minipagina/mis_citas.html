@@ -80,6 +80,13 @@
                 </div>
             </div>
 
+            {% if aviso_cita_hoy %}
+            <div class="alert alert-success d-flex align-items-center shadow-sm">
+                <i class="bi bi-bell-fill fs-4 me-3"></i>
+                <div><strong>{{ aviso_cita_hoy }}</strong><br><small>¡Te esperamos en {{ negocio.nombre }}!</small></div>
+            </div>
+            {% endif %}
+
             {% if citas_futuras %}
             <!-- Citas próximas -->
             <h4 class="mb-3"><i class="bi bi-calendar-event text-success"></i> Citas Próximas</h4>
