@@ -29,6 +29,22 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def _avisar_cliente(cita, tarea, *args):
+    """
+    Avisa al cliente de un cambio en su cita solo si la cita aún no ha pasado
+    (no tiene sentido avisar que se canceló o confirmó una cita vencida).
+    Retorna True si se programó el aviso.
+    """
+    if cita.fecha_hora <= timezone.now():
+        return False
+    programar_notificacion(tarea, cita.id, *args)
+    return True
+
+
+def _aviso_al_dueno(avisado):
+    return ' Le avisaremos al cliente.' if avisado else ''
+
+
 def _volver(request, slug):
     """Vuelve a la pantalla desde donde se abrió la acción (?desde=abonos|pendientes)"""
     destinos = {
@@ -756,22 +772,22 @@ def cita_confirmar(request, slug, cita_id):
             if request.POST.get('no_exigir_mas'):
                 cita.cliente.no_exigir_abono = True
                 cita.cliente.save(update_fields=['no_exigir_abono'])
-            programar_notificacion(notificar_cambio_cita, cita.id, 'confirmada')
-            messages.success(request, f'Cita de {cita.cliente.nombre} confirmada sin abono. Le avisaremos al cliente.')
+            avisado = _avisar_cliente(cita, notificar_cambio_cita, 'confirmada')
+            messages.success(request, f'Cita de {cita.cliente.nombre} confirmada sin abono.{_aviso_al_dueno(avisado)}')
 
         elif abono_por_resolver:
             abono_por_resolver.confirmar_pago(request.user, parsear_monto(request.POST.get('monto_pagado')))
             cita.refresh_from_db()
             # "✅ Tu pago ha sido confirmado. Tu cita está asegurada"
-            programar_notificacion(enviar_notificacion_confirmacion_abono, cita.id)
+            _avisar_cliente(cita, enviar_notificacion_confirmacion_abono)
             messages.success(request, _mensaje_pago_confirmado(cita))
 
         else:
             cita.estado = 'confirmada'
             cita.save()
             pendientes.resolver(cita, tipos=['cita_nueva'])
-            programar_notificacion(notificar_cambio_cita, cita.id, 'confirmada')
-            messages.success(request, f'Cita de {cita.cliente.nombre} confirmada. Le avisaremos al cliente.')
+            avisado = _avisar_cliente(cita, notificar_cambio_cita, 'confirmada')
+            messages.success(request, f'Cita de {cita.cliente.nombre} confirmada.{_aviso_al_dueno(avisado)}')
 
         return _volver(request, slug)
 
@@ -841,8 +857,8 @@ def cita_cancelar(request, slug, cita_id):
         # Guarda el motivo en las notas internas de la cita y se lo avisa al cliente
         motivo = request.POST.get('motivo', '').strip()
         cita.cancelar(motivo)
-        programar_notificacion(notificar_cambio_cita, cita.id, 'cancelada', motivo)
-        messages.success(request, f'Cita de {cita.cliente.nombre} cancelada. Le avisaremos al cliente.')
+        avisado = _avisar_cliente(cita, notificar_cambio_cita, 'cancelada', motivo)
+        messages.success(request, f'Cita de {cita.cliente.nombre} cancelada.{_aviso_al_dueno(avisado)}')
         # Volver a abonos si se canceló desde ahí (abono vencido)
         return _volver(request, slug)
 
@@ -893,7 +909,7 @@ def abono_confirmar(request, slug, abono_id):
         abono.confirmar_pago(request.user, parsear_monto(request.POST.get('monto_pagado')))
 
         # "✅ Tu pago ha sido confirmado. Tu cita está asegurada"
-        programar_notificacion(enviar_notificacion_confirmacion_abono, abono.cita.id)
+        _avisar_cliente(abono.cita, enviar_notificacion_confirmacion_abono)
 
         messages.success(request, _mensaje_pago_confirmado(abono.cita))
         return redirect('public:abonos_admin', slug=slug)
@@ -924,7 +940,7 @@ def abono_rechazar(request, slug, abono_id):
         abono.save()
 
         # La cita no se cancela: el dueño decide (puede cancelarla desde la agenda)
-        programar_notificacion(notificar_cambio_cita, abono.cita.id, 'abono_rechazado', motivo)
+        _avisar_cliente(abono.cita, notificar_cambio_cita, 'abono_rechazado', motivo)
 
         messages.warning(request, f'Abono rechazado. El cliente {abono.cita.cliente.nombre} será notificado.')
         return redirect('public:abonos_admin', slug=slug)

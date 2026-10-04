@@ -292,6 +292,10 @@ def enviar_notificacion_confirmacion_abono(cita_id):
         cliente = cita.cliente
         negocio = cita.negocio
 
+        # No se avisan cambios de citas que ya pasaron
+        if cita.fecha_hora <= timezone.now():
+            return {'success': False, 'error': 'La cita ya pasó: no se avisa al cliente'}
+
         # Determinar canal
         canal = elegir_canal(cliente)
         if not canal:
@@ -369,6 +373,10 @@ def notificar_cambio_cita(cita_id, evento, motivo=''):
         cita = Cita.objects.select_related('cliente', 'negocio', 'servicio').get(id=cita_id)
     except Cita.DoesNotExist:
         return {'success': False, 'error': 'Cita no encontrada'}
+
+    # No se avisan cambios de citas que ya pasaron (p. ej. cancelar una vencida)
+    if cita.fecha_hora <= timezone.now():
+        return {'success': False, 'error': 'La cita ya pasó: no se avisa al cliente'}
 
     cliente = cita.cliente
     negocio = cita.negocio

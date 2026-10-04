@@ -667,3 +667,50 @@ class Recordatorio2HorasTests(TestCase):
         tarea = app.conf.beat_schedule['recordatorios-2h']
         self.assertEqual(tarea['task'], 'apps.notificaciones.tasks.enviar_recordatorios_2h')
         self.assertEqual(tarea['schedule'].minute, {0, 15, 30, 45})
+
+
+@patch('apps.citas.signals.enviar_confirmacion_cita', create=True)
+@override_settings(TWILIO_ACCOUNT_SID='', TWILIO_AUTH_TOKEN='')
+class SinAvisosDeCitasPasadasTests(TestCase):
+    """Cancelar o confirmar una cita que ya pasó no le avisa al cliente"""
+
+    def setUp(self):
+        from django.urls import reverse
+        self.reverse = reverse
+        self.negocio, self.servicio, self.cliente = _crear_base()
+        self.client.force_login(self.negocio.administrador)
+
+    def _cita(self, dias):
+        return Cita.objects.create(
+            negocio=self.negocio, cliente=self.cliente, servicio=self.servicio,
+            fecha_hora=timezone.now() + timedelta(days=dias), duracion_minutos=30, estado='confirmada',
+        )
+
+    def _cancelar(self, cita):
+        url = self.reverse('public:cita_cancelar', args=[self.negocio.slug, cita.id])
+        with self.captureOnCommitCallbacks(execute=True):
+            return self.client.post(url, {'motivo': 'No vino'}, follow=True)
+
+    @patch.object(Notificacion, 'enviar', return_value={'success': True})
+    def test_cancelar_cita_vencida_no_avisa(self, *mocks):
+        cita = self._cita(-20)
+        resp = self._cancelar(cita)
+        cita.refresh_from_db()
+        self.assertEqual(cita.estado, 'cancelada')
+        self.assertFalse(Notificacion.objects.filter(cita=cita).exists())
+        self.assertNotContains(resp, 'Le avisaremos al cliente')
+
+    @patch.object(Notificacion, 'enviar', return_value={'success': True})
+    def test_cancelar_cita_futura_si_avisa(self, *mocks):
+        cita = self._cita(3)
+        resp = self._cancelar(cita)
+        self.assertTrue(Notificacion.objects.filter(cita=cita, tipo='cancelacion').exists())
+        self.assertContains(resp, 'Le avisaremos al cliente')
+
+    @patch.object(Notificacion, 'enviar', return_value={'success': True})
+    def test_tareas_ignoran_citas_pasadas(self, *mocks):
+        from .tasks import notificar_cambio_cita, enviar_notificacion_confirmacion_abono
+        cita = self._cita(-5)
+        self.assertFalse(notificar_cambio_cita(cita.id, 'cancelada')['success'])
+        self.assertFalse(enviar_notificacion_confirmacion_abono(cita.id)['success'])
+        self.assertFalse(Notificacion.objects.filter(cita=cita).exists())
