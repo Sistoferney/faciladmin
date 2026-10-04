@@ -24,14 +24,10 @@
     <!-- Manifest -->
     <link rel="manifest" href="{% url 'public:manifest_admin' negocio.slug %}">
 
-    <!-- Icons -->
-    {% if negocio.logo %}
-        <link rel="icon" type="image/png" sizes="192x192" href="{{ negocio.logo.url }}">
-        <link rel="apple-touch-icon" href="{{ negocio.logo.url }}">
-    {% else %}
-        <link rel="icon" type="image/png" sizes="192x192" href="{% static 'images/faciladmin-logo.png' %}">
-        <link rel="apple-touch-icon" href="{% static 'images/faciladmin-logo.png' %}">
-    {% endif %}
+    <!-- Icons: el panel del dueño siempre usa la marca FacilAdmin (el logo del
+         negocio es para su mini-página, la que ven los clientes) -->
+    <link rel="icon" type="image/png" sizes="192x192" href="{% static 'images/faciladmin-icon-192.png' %}">
+    <link rel="apple-touch-icon" href="{% static 'images/apple-touch-icon.png' %}">
 
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -180,6 +176,14 @@
                 width: 260px;
             }
 
+            /* Fondo oscuro detrás del menú abierto: al tocarlo se cierra */
+            .sidebar-fondo {
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.4);
+                z-index: 999;  /* justo debajo del menú (1000) */
+            }
+
             .main-content {
                 margin-left: 0;
             }
@@ -212,6 +216,9 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
+    <!-- Fondo del menú en celular (se muestra con el menú abierto) -->
+    <div class="sidebar-fondo" id="sidebar-fondo" hidden onclick="cerrarSidebar()"></div>
+
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
@@ -398,9 +405,33 @@
     </script>
 
     <script>
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('show');
+        // Menú lateral en celular: se cierra al tocar fuera, al elegir una opción o con Esc
+        function abrirSidebar() {
+            document.getElementById('sidebar').classList.add('show');
+            document.getElementById('sidebar-fondo').hidden = false;
         }
+
+        function cerrarSidebar() {
+            document.getElementById('sidebar').classList.remove('show');
+            document.getElementById('sidebar-fondo').hidden = true;
+        }
+
+        function toggleSidebar() {
+            if (document.getElementById('sidebar').classList.contains('show')) {
+                cerrarSidebar();
+            } else {
+                abrirSidebar();
+            }
+        }
+
+        document.querySelectorAll('#sidebar a').forEach((enlace) => {
+            enlace.addEventListener('click', cerrarSidebar);
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') cerrarSidebar();
+        });
+        // Al volver con el botón "atrás" el navegador puede restaurar la página con el menú abierto
+        window.addEventListener('pageshow', cerrarSidebar);
     </script>
 
     {% block extra_js %}{% endblock %}

@@ -7,6 +7,7 @@ from django.contrib import messages
 from django.utils import timezone
 from django.http import JsonResponse, Http404
 from django.utils.html import escape
+from django.templatetags.static import static
 from django.views.decorators.http import require_http_methods
 from django_ratelimit.decorators import ratelimit
 from django.db import transaction
@@ -837,30 +838,20 @@ def manifest_admin(request, slug):
         "icons": []
     }
 
-    # Agregar iconos si el negocio tiene logo
-    if negocio.logo:
-        logo_url = request.build_absolute_uri(negocio.logo.url)
-        for size in [192, 512]:
-            manifest["icons"].append({
-                "src": logo_url,
-                "sizes": f"{size}x{size}",
-                "type": "image/png",
-                "purpose": "any maskable"
-            })
-    else:
-        # Si no hay logo, usar el logo de FacilAdmin como fallback
-        manifest["icons"] = [
-            {
-                "src": f"{site_url}/static/images/faciladmin-logo.png",
-                "sizes": "192x192",
-                "type": "image/png"
-            },
-            {
-                "src": f"{site_url}/static/images/faciladmin-logo.png",
-                "sizes": "512x512",
-                "type": "image/png"
-            }
-        ]
+    # La app del panel siempre usa el ícono de FacilAdmin (el logo del negocio
+    # es para la app de su mini-página, la de los clientes)
+    manifest["icons"] = [
+        {
+            "src": f"{site_url}{static('images/faciladmin-icon-192.png')}",
+            "sizes": "192x192",
+            "type": "image/png",
+        },
+        {
+            "src": f"{site_url}{static('images/faciladmin-icon-512.png')}",
+            "sizes": "512x512",
+            "type": "image/png",
+        },
+    ]
 
     return JsonResponse(manifest, content_type='application/manifest+json')
 

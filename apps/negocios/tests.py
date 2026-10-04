@@ -487,3 +487,17 @@ class SesionPersistentePWATests(TestCase):
         resp = self.client.get(reverse('public:admin_dashboard', args=[slug]))
         self.assertContains(resp, f"window.PWA_SCOPE = '/{slug}/admin/';")
         self.assertEqual(self.client.get(reverse('public:manifest_admin', args=[slug])).json()['scope'], f'/{slug}/admin/')
+
+    def test_panel_usa_icono_de_faciladmin_y_menu_se_cierra(self, *mocks):
+        # El logo del negocio es para su mini-página; el panel usa la marca FacilAdmin
+        manifest = self.client.get(reverse('public:manifest_admin', args=[self.negocio.slug])).json()
+        self.assertTrue(all('faciladmin-icon-' in i['src'] for i in manifest['icons']))
+        self.assertEqual({i['sizes'] for i in manifest['icons']}, {'192x192', '512x512'})
+
+        self.client.force_login(self.admin)
+        resp = self.client.get(reverse('public:admin_dashboard', args=[self.negocio.slug]))
+        self.assertContains(resp, 'images/faciladmin-icon-192.png')
+        self.assertContains(resp, 'images/apple-touch-icon.png')
+        # Fondo para cerrar el menú al tocar fuera
+        self.assertContains(resp, 'id="sidebar-fondo"')
+        self.assertContains(resp, 'function cerrarSidebar()')
