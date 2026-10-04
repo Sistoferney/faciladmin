@@ -103,7 +103,11 @@ class Notificacion(models.Model):
                 mensaje = f'{mensaje}\n\n💬 ¿Dudas? Escríbenos por WhatsApp: {enlace}'
 
         if self.canal == 'push':
-            resultado = service.enviar_push(self.cliente, self.asunto, mensaje, self.cita)
+            # Push: una frase corta (Chrome oculta como "posible spam" los textos
+            # largos con emojis, teléfonos y precios). El detalle está en la app.
+            from .textos_push import push_cliente
+            titulo, cuerpo = push_cliente(self.tipo, self.cita, self.cliente.negocio, self.asunto)
+            resultado = service.enviar_push(self.cliente, titulo, cuerpo, self.cita)
         elif self.canal == 'whatsapp':
             resultado = service.enviar_whatsapp(self.cliente.telefono.as_e164, mensaje)
         elif self.canal == 'sms':

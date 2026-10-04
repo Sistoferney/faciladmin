@@ -78,6 +78,7 @@ async function eliminarServiceWorkerAntiguo() {
             try {
                 const suscripcion = await registro.pushManager.getSubscription();
                 if (suscripcion) {
+                    recordarEndpointAnterior(suscripcion.endpoint);
                     await suscripcion.unsubscribe();
                 }
             } catch (e) {
@@ -445,6 +446,7 @@ async function subscribeToPushNotifications({ interactivo = true } = {}) {
         // claves), el servidor no puede enviarle nada (403): rehacerla
         if (subscription && !mismaClaveVapid(subscription, applicationServerKey)) {
             console.log('[PWA] Suscripción con clave VAPID anterior: renovando');
+            recordarEndpointAnterior(subscription.endpoint);
             await subscription.unsubscribe();
             subscription = null;
         }
@@ -478,6 +480,33 @@ async function subscribeToPushNotifications({ interactivo = true } = {}) {
 }
 
 /**
+ * Suscripciones canceladas en este dispositivo (migración o clave VAPID vieja).
+ * Se envían al servidor junto con la nueva para que las desactive: así no
+ * dependemos de que Google las rechace y no llegan notificaciones duplicadas.
+ */
+function recordarEndpointAnterior(endpoint) {
+    try {
+        const lista = JSON.parse(localStorage.getItem('push_endpoints_anteriores') || '[]');
+        if (!lista.includes(endpoint)) {
+            lista.push(endpoint);
+            localStorage.setItem('push_endpoints_anteriores', JSON.stringify(lista.slice(-5)));
+        }
+    } catch (e) { /* sin localStorage */ }
+}
+
+function endpointsAnteriores() {
+    try {
+        return JSON.parse(localStorage.getItem('push_endpoints_anteriores') || '[]');
+    } catch (e) {
+        return [];
+    }
+}
+
+function olvidarEndpointsAnteriores() {
+    try { localStorage.removeItem('push_endpoints_anteriores'); } catch (e) { /* sin localStorage */ }
+}
+
+/**
  * Compara la clave VAPID con la que se creó la suscripción y la actual del servidor
  */
 function mismaClaveVapid(subscription, claveActual) {
@@ -500,7 +529,8 @@ function claveSuscripcionGuardada() {
 
 function necesitaGuardarse(subscription) {
     return localStorage.getItem(claveSuscripcionGuardada()) !== subscription.endpoint ||
-        Boolean(localStorage.getItem('pending_push_subscription'));
+        Boolean(localStorage.getItem('pending_push_subscription')) ||
+        endpointsAnteriores().length > 0;
 }
 
 /**
@@ -526,7 +556,8 @@ async function savePushSubscription(subscription, interactivo = true) {
                 },
                 body: JSON.stringify({
                     subscription: subscription.toJSON(),
-                    negocio_slug: negocio_slug  // Enviar slug del negocio
+                    negocio_slug: negocio_slug,  // Enviar slug del negocio
+                    endpoints_anteriores: endpointsAnteriores()
                 })
             });
 
@@ -535,6 +566,7 @@ async function savePushSubscription(subscription, interactivo = true) {
             if (data.success) {
                 console.log('[PWA] Suscripción de admin guardada en servidor');
                 localStorage.setItem(claveSuscripcionGuardada(), subscription.endpoint);
+                olvidarEndpointsAnteriores();
                 console.log('[PWA] Negocio:', data.negocio);
                 localStorage.setItem('push_subscribed', 'true');
                 localStorage.setItem('push_negocio', negocio_slug);
@@ -561,7 +593,8 @@ async function savePushSubscription(subscription, interactivo = true) {
             },
             body: JSON.stringify({
                 subscription: subscription.toJSON(),
-                negocio_slug: negocio_slug
+                negocio_slug: negocio_slug,
+                endpoints_anteriores: endpointsAnteriores()
             })
         });
 
@@ -571,6 +604,7 @@ async function savePushSubscription(subscription, interactivo = true) {
             console.log('[PWA] Suscripción guardada en servidor');
             localStorage.setItem('push_subscribed', 'true');
             localStorage.setItem(claveSuscripcionGuardada(), subscription.endpoint);
+            olvidarEndpointsAnteriores();
             // Limpiar suscripción pendiente si existía
             localStorage.removeItem('pending_push_subscription');
         } else if (data.codigo === 'identificacion_requerida') {

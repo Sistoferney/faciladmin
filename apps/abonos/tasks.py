@@ -12,20 +12,19 @@ logger = logging.getLogger(__name__)
 def _avisar_admin_abono_vencido(abono):
     """Notifica por push al dueño que un abono venció sin pagarse"""
     from apps.notificaciones.services import NotificacionService
+    from apps.notificaciones.textos_push import push_dueno_abono_vencido
 
     cita = abono.cita
-    fecha = timezone.localtime(cita.fecha_hora)
+    titulo, mensaje = push_dueno_abono_vencido(cita)
     try:
         NotificacionService().enviar_push(
             cliente=cita.cliente,
-            titulo='Abono vencido',
-            mensaje=(
-                f'{cita.cliente.nombre} no pagó el abono de ${abono.monto} '
-                f'para {cita.servicio.nombre} el {fecha.strftime("%d/%m/%Y a las %H:%M")}.\n'
-                'Revisa Abonos para confirmar el pago o cancelar la cita.'
-            ),
+            titulo=titulo,
+            mensaje=mensaje,
             cita=cita,
             enviar_a_admin=True,
+            # Lleva directo a Abonos, donde el dueño decide qué hacer
+            url=f'/{cita.negocio.slug}/admin/abonos/',
         )
     except Exception:
         logger.exception('Error avisando abono vencido %s', abono.id)

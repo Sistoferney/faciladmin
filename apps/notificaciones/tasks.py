@@ -87,26 +87,15 @@ Fecha límite de pago: {timezone.localtime(cita.abono.fecha_limite).strftime('%d
             from .services import NotificacionService
             service = NotificacionService()
 
-            # Notificación para el admin/dueño
-            titulo_admin = "Nueva cita agendada"
-            mensaje_admin = f"""
-{cliente.nombre} ha agendado una cita:
-
-📅 {timezone.localtime(cita.fecha_hora).strftime('%d/%m/%Y')}
-🕐 {timezone.localtime(cita.fecha_hora).strftime('%H:%M')}
-✂️ {cita.servicio.nombre}
-💰 ${cita.servicio.precio}
-
-📞 Tel: {cliente.telefono}
-            """.strip()
-
-            # Enviar push al admin (si está suscrito)
+            # Aviso corto al dueño (el detalle está en la agenda al tocarlo)
+            from .textos_push import push_dueno_nueva_cita
+            titulo_admin, mensaje_admin = push_dueno_nueva_cita(cita)
             resultado_admin = service.enviar_push(
                 cliente=cliente,
                 titulo=titulo_admin,
                 mensaje=mensaje_admin,
                 cita=cita,
-                enviar_a_admin=True  # ← Importante: esto envía también al admin
+                enviar_a_admin=True
             )
 
             if resultado_admin.get('success'):

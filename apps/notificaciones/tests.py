@@ -504,3 +504,116 @@ class OpcionesEntregaPushTests(TestCase):
         # Con TTL 0 (valor por defecto) Google descartaba el mensaje si el celular estaba en reposo
         self.assertEqual(kwargs['ttl'], 86400)
         self.assertEqual(kwargs['headers'], {'Urgency': 'high'})
+
+
+class TextosPushCortosTests(TestCase):
+    """
+    Chrome Android oculta como "posible spam" los push largos con emojis,
+    teléfonos y precios: los push llevan una frase corta.
+    """
+
+    def setUp(self):
+        self.negocio, self.servicio, self.cliente = _crear_base()
+        self.cliente.nombre = 'Ana López'
+        self.cliente.save()
+        from datetime import date
+        # sábado 3 de octubre de 2026, 1:30 p. m.
+        self.cita = Cita.objects.create(
+            negocio=self.negocio, cliente=self.cliente, servicio=self.servicio,
+            fecha_hora=_local(date(2026, 10, 3), 13).replace(minute=30),
+            duracion_minutos=30, estado='confirmada',
+        )
+
+    def test_fecha_corta_en_espanol(self):
+        from .textos_push import fecha_corta
+        self.assertEqual(fecha_corta(self.cita.fecha_hora), 'sáb 3 oct, 1:30 p. m.')
+        self.assertEqual(fecha_corta(self.cita.fecha_hora, con_hora=False), 'sáb 3 oct')
+
+    def test_aviso_al_dueno_sin_telefono_precio_ni_emojis(self):
+        import re
+        from .textos_push import (push_dueno_nueva_cita, push_dueno_cita_cancelada,
+                                  push_dueno_abono_vencido, push_dueno_comprobante,
+                                  push_dueno_cita_modificada)
+        titulo, cuerpo = push_dueno_nueva_cita(self.cita)
+        self.assertEqual(titulo, 'Nueva cita')
+        self.assertEqual(cuerpo, 'Ana López · Corte · sáb 3 oct, 1:30 p. m.')
+        for funcion in (push_dueno_nueva_cita, push_dueno_cita_cancelada, push_dueno_abono_vencido,
+                        push_dueno_comprobante, push_dueno_cita_modificada):
+            _, texto = funcion(self.cita)
+            self.assertNotIn('3001111111', texto)
+            self.assertNotIn('$', texto)
+            self.assertIsNone(re.search('[\U0001F300-\U0001FAFF]', texto), texto)
+
+    def test_push_al_cliente_corto(self):
+        from .textos_push import push_cliente
+        titulo, cuerpo = push_cliente('confirmacion_cita', self.cita, self.negocio)
+        self.assertEqual(titulo, 'Spa')
+        self.assertEqual(cuerpo, 'Tu cita de Corte está confirmada para el sáb 3 oct, 1:30 p. m.')
+
+        self.cita.estado = 'pendiente_abono'
+        _, cuerpo = push_cliente('confirmacion_cita', self.cita, self.negocio)
+        self.assertIn('Recuerda pagar el abono', cuerpo)
+
+        _, cuerpo = push_cliente('recordatorio_cita', self.cita, self.negocio)
+        self.assertEqual(cuerpo, 'Te esperamos mañana a la 1:30 p. m. para tu Corte.')
+
+    @patch('apps.notificaciones.services.NotificacionService.enviar_push', return_value={'success': True})
+    def test_notificacion_push_usa_texto_corto_y_email_conserva_el_largo(self, enviar_push):
+        notif = Notificacion.objects.create(
+            cliente=self.cliente, cita=self.cita, tipo='confirmacion_cita', canal='push',
+            asunto='Confirmación de cita - Spa', mensaje='¡Hola Ana!\n\n📅 Fecha...\n💰 Precio: $10000',
+        )
+        notif.enviar()
+        args = enviar_push.call_args.args
+        self.assertEqual(args[1], 'Spa')
+        self.assertTrue(args[2].startswith('Tu cita de Corte está confirmada'))
+        self.assertNotIn('$', args[2])
+        # El mensaje completo queda guardado (y es el que va por email/SMS)
+        notif.refresh_from_db()
+        self.assertIn('Precio', notif.mensaje)
+
+
+class DesactivarSuscripcionesAnterioresTests(TestCase):
+    """
+    Al renovar su suscripción, el dispositivo informa las que canceló y el
+    servidor las desactiva (en ambas tablas), sin esperar a que Google las rechace.
+    """
+    SUB = {'endpoint': 'https://push/nueva', 'keys': {'auth': 'a', 'p256dh': 'p'}}
+
+    def setUp(self):
+        from .models import UsuarioPushSubscription
+        self.negocio, _, self.cliente = _crear_base()
+        self.vieja_dueno = UsuarioPushSubscription.objects.create(
+            user=self.negocio.administrador, negocio=self.negocio,
+            endpoint='https://push/vieja', auth='a', p256dh='p',
+        )
+        # El SW antiguo compartía la suscripción entre panel y mini-página
+        self.vieja_cliente = ClientePushSubscription.objects.create(
+            cliente=self.cliente, endpoint='https://push/vieja', auth='a', p256dh='p'
+        )
+        self.otra = ClientePushSubscription.objects.create(
+            cliente=self.cliente, endpoint='https://push/otro-dispositivo', auth='a', p256dh='p'
+        )
+
+    def test_suscripcion_del_dueno_desactiva_las_anteriores(self):
+        import json
+        self.client.force_login(self.negocio.administrador)
+        resp = self.client.post('/api/notificaciones/push/subscribe-admin/', json.dumps({
+            'subscription': self.SUB, 'negocio_slug': self.negocio.slug,
+            'endpoints_anteriores': ['https://push/vieja'],
+        }), content_type='application/json')
+        self.assertEqual(resp.status_code, 200)
+        for sub in (self.vieja_dueno, self.vieja_cliente, self.otra):
+            sub.refresh_from_db()
+        self.assertFalse(self.vieja_dueno.activa)
+        self.assertFalse(self.vieja_cliente.activa)
+        self.assertTrue(self.otra.activa)  # otro dispositivo: no se toca
+
+    def test_sin_anteriores_no_desactiva_nada(self):
+        import json
+        self.client.force_login(self.negocio.administrador)
+        self.client.post('/api/notificaciones/push/subscribe-admin/', json.dumps({
+            'subscription': self.SUB, 'negocio_slug': self.negocio.slug,
+        }), content_type='application/json')
+        self.vieja_dueno.refresh_from_db()
+        self.assertTrue(self.vieja_dueno.activa)

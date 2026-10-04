@@ -584,9 +584,6 @@ def editar_cita_cliente(request, slug, cita_id):
                 messages.error(request, 'La nueva fecha debe ser con al menos 24 horas de anticipación.')
                 return redirect('public:editar_cita_cliente', slug=slug, cita_id=cita_id)
 
-            # Guardar cambios anteriores para notificación
-            fecha_anterior = cita.fecha_hora
-            servicio_anterior = cita.servicio
 
             with transaction.atomic():
                 # Bloquear el negocio para evitar reservas simultáneas del mismo horario
@@ -611,22 +608,9 @@ def editar_cita_cliente(request, slug, cita_id):
                 from apps.notificaciones.services import NotificacionService
                 service = NotificacionService()
 
-                titulo_admin = "Cita modificada por cliente"
-                mensaje_admin = f"""
-{cita.cliente.nombre} ha modificado su cita:
-
-ANTES:
-📅 {timezone.localtime(fecha_anterior).strftime('%d/%m/%Y')}
-🕐 {timezone.localtime(fecha_anterior).strftime('%H:%M')}
-✂️ {servicio_anterior.nombre}
-
-AHORA:
-📅 {timezone.localtime(nueva_fecha_hora).strftime('%d/%m/%Y')}
-🕐 {timezone.localtime(nueva_fecha_hora).strftime('%H:%M')}
-✂️ {servicio.nombre}
-💰 ${servicio.precio}
-📞 Tel: {cita.cliente.telefono}
-                """.strip()
+                # Aviso corto (Chrome oculta como spam los textos largos con emojis/teléfonos)
+                from apps.notificaciones.textos_push import push_dueno_cita_modificada
+                titulo_admin, mensaje_admin = push_dueno_cita_modificada(cita)
 
                 service.enviar_push(
                     cliente=cita.cliente,
@@ -700,18 +684,11 @@ def cancelar_cita_cliente(request, slug, cita_id):
             from apps.notificaciones.services import NotificacionService
             service = NotificacionService()
 
-            titulo_admin = "Cita cancelada por cliente"
-            mensaje_admin = f"""
-{cita.cliente.nombre} ha cancelado su cita:
-
-📅 {timezone.localtime(cita.fecha_hora).strftime('%d/%m/%Y')}
-🕐 {timezone.localtime(cita.fecha_hora).strftime('%H:%M')}
-✂️ {cita.servicio.nombre}
-📞 Tel: {cita.cliente.telefono}
-            """.strip()
-
+            # Aviso corto (Chrome oculta como spam los textos largos con emojis/teléfonos)
+            from apps.notificaciones.textos_push import push_dueno_cita_cancelada
+            titulo_admin, mensaje_admin = push_dueno_cita_cancelada(cita)
             if motivo:
-                mensaje_admin += f"\n\n💬 Motivo: {motivo}"
+                mensaje_admin += f' · Motivo: {motivo[:80]}'
 
             service.enviar_push(
                 cliente=cita.cliente,
@@ -790,16 +767,12 @@ def subir_comprobante(request, slug, cita_id):
     def avisar_dueno():
         try:
             from apps.notificaciones.services import NotificacionService
-            fecha = timezone.localtime(cita.fecha_hora)
-            monto = pesos(abono.monto_reportado or abono.monto)
+            from apps.notificaciones.textos_push import push_dueno_comprobante
+            titulo, mensaje = push_dueno_comprobante(cita)
             NotificacionService().enviar_push(
                 cliente=cita.cliente,
-                titulo='Comprobante de abono recibido',
-                mensaje=(
-                    f'{cita.cliente.nombre} envió el comprobante de {monto} '
-                    f'para {cita.servicio.nombre} el {fecha.strftime("%d/%m/%Y a las %H:%M")}.\n'
-                    'Revísalo en Abonos para confirmar la cita.'
-                ),
+                titulo=titulo,
+                mensaje=mensaje,
                 cita=cita,
                 enviar_a_admin=True,
                 url=f'/{negocio.slug}/admin/abonos/',

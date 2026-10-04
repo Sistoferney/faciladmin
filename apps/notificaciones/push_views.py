@@ -11,6 +11,29 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def _desactivar_endpoints_anteriores(data, endpoint_actual):
+    """
+    Desactiva las suscripciones que este mismo dispositivo canceló al renovar la
+    suya (migración del Service Worker o clave VAPID vieja), en las dos tablas:
+    el Service Worker antiguo compartía la suscripción entre panel y mini-página.
+    Los endpoints son secretos que solo conoce el dispositivo que los creó.
+    """
+    from .models import ClientePushSubscription, UsuarioPushSubscription
+
+    anteriores = data.get('endpoints_anteriores') or []
+    if not isinstance(anteriores, list):
+        return 0
+    anteriores = [e for e in anteriores[:5] if isinstance(e, str) and e and e != endpoint_actual]
+    if not anteriores:
+        return 0
+    total = 0
+    for modelo in (UsuarioPushSubscription, ClientePushSubscription):
+        total += modelo.objects.filter(endpoint__in=anteriores, activa=True).update(activa=False)
+    if total:
+        logger.info('Desactivadas %s suscripciones anteriores del mismo dispositivo', total)
+    return total
+
+
 @require_http_methods(["GET"])
 def get_vapid_public_key(request):
     """
@@ -78,6 +101,7 @@ def subscribe_push(request):
                 subscription_data=subscription_info,
                 user_agent=user_agent
             )
+            _desactivar_endpoints_anteriores(data, subscription.endpoint)
 
             return JsonResponse({
                 'success': True,
@@ -233,6 +257,7 @@ def subscribe_admin_push(request):
                 subscription_data=subscription_info,
                 user_agent=user_agent
             )
+            _desactivar_endpoints_anteriores(data, subscription.endpoint)
 
             return JsonResponse({
                 'success': True,
