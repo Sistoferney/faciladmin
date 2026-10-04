@@ -1,0 +1,65 @@
+{% extends 'admin_panel/base_admin.html' %}
+
+{% block page_title %}Dar de baja cliente{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-7 mx-auto">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="bi bi-person-dash"></i> Dar de baja a {{ cliente.nombre }}</h5>
+            </div>
+            <div class="card-body">
+                {% if citas_proximas %}
+                <!-- No se permite la baja con citas en pie: primero se cancelan -->
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>{{ cliente.nombre }} tiene {{ citas_proximas|length }} cita{{ citas_proximas|length|pluralize }} próxima{{ citas_proximas|length|pluralize }}.</strong>
+                    Para darlo de baja, primero cancélala{{ citas_proximas|length|pluralize }}.
+                </div>
+                <ul class="list-group mb-3">
+                    {% for cita in citas_proximas %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            {{ cita.servicio.nombre }} · {{ cita.fecha_hora|date:"D d/m/Y H:i" }}
+                            <span class="badge bg-secondary ms-1">{{ cita.get_estado_display }}</span>
+                        </span>
+                        <a href="{% url 'public:cita_cancelar' negocio.slug cita.id %}?desde=clientes" class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-x-circle"></i> Cancelar cita
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+                <a href="{% url 'public:admin_clientes' negocio.slug %}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Volver
+                </a>
+                {% else %}
+                <p>Al dar de baja a <strong>{{ cliente.nombre }}</strong>:</p>
+                <ul class="small">
+                    <li>No recibirá recordatorios, sugerencias ni promociones.</li>
+                    <li>No aparecerá en Clientes ni en "Clientes por recuperar".</li>
+                    <li>Su historial de citas y pagos se conserva.</li>
+                    <li>Puedes reactivarlo cuando quieras desde "Dados de baja". Si vuelve a agendar por su cuenta, se reactiva solo.</li>
+                </ul>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label" for="motivo">Motivo (opcional)</label>
+                        <input type="text" name="motivo" id="motivo" class="form-control" maxlength="200"
+                               placeholder="Ej: no quiere volver, se mudó de ciudad">
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'public:admin_clientes' negocio.slug %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-person-dash"></i> Dar de baja
+                        </button>
+                    </div>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -228,6 +228,10 @@ def agendar_cita(request, slug):
                     cliente.referencia_direccion = referencia_direccion
                     cliente.save()
 
+                # Si estaba dado de baja y vuelve a agendar por su cuenta, se reactiva
+                if not cliente.esta_activo:
+                    cliente.reactivar()
+
                 # Clientes de confianza (el dueño marcó "no exigir abono"):
                 # la cita queda confirmada sin pedir anticipo
                 exige_abono = servicio.requiere_pago_abono and not cliente.no_exigir_abono

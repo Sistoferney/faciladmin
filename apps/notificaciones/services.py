@@ -31,6 +31,10 @@ def elegir_canal(cliente):
     """
     from .models import ClientePushSubscription
 
+    # Cliente dado de baja por el dueño: no recibe ningún mensaje automático
+    if not cliente.esta_activo:
+        return None
+
     twilio = bool(settings.TWILIO_ACCOUNT_SID and settings.TWILIO_AUTH_TOKEN)
 
     if ClientePushSubscription.objects.filter(cliente=cliente, activa=True).exists():

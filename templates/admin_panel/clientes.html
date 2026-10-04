@@ -6,12 +6,25 @@
 <div class="row mb-4">
     <div class="col-md-12">
         <div class="d-flex justify-content-between align-items-center">
-            <h4><i class="bi bi-people"></i> Mis Clientes</h4>
+            <h4><i class="bi bi-people"></i> {% if ver_baja %}Clientes dados de baja{% else %}Mis Clientes{% endif %}</h4>
             <!-- (El antiguo "Nuevo Cliente" llevaba al admin de Django, bloqueado para los dueños) -->
-            <a href="{% url 'public:admin_clientes_recuperar' negocio.slug %}" class="btn btn-outline-warning">
-                <i class="bi bi-arrow-repeat"></i> Clientes por recuperar
-                {% if total_por_recuperar %}<span class="badge bg-warning text-dark">{{ total_por_recuperar }}</span>{% endif %}
-            </a>
+            <div class="d-flex flex-wrap gap-2">
+                {% if ver_baja %}
+                <a href="{% url 'public:admin_clientes' negocio.slug %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Clientes activos
+                </a>
+                {% else %}
+                <a href="{% url 'public:admin_clientes_recuperar' negocio.slug %}" class="btn btn-outline-warning">
+                    <i class="bi bi-arrow-repeat"></i> Clientes por recuperar
+                    {% if total_por_recuperar %}<span class="badge bg-warning text-dark">{{ total_por_recuperar }}</span>{% endif %}
+                </a>
+                {% if total_baja %}
+                <a href="{% url 'public:admin_clientes' negocio.slug %}?baja=1" class="btn btn-outline-secondary">
+                    <i class="bi bi-person-dash"></i> Dados de baja <span class="badge bg-secondary">{{ total_baja }}</span>
+                </a>
+                {% endif %}
+                {% endif %}
+            </div>
         </div>
     </div>
 </div>
@@ -20,6 +33,7 @@
 <div class="row mb-4">
     <div class="col-md-6">
         <form method="GET" class="input-group">
+            {% if ver_baja %}<input type="hidden" name="baja" value="1">{% endif %}
             <input type="text" name="q" class="form-control" placeholder="Buscar por nombre, teléfono o email..." value="{{ q }}">
             <button type="submit" class="btn btn-outline-primary">
                 <i class="bi bi-search"></i> Buscar
@@ -89,6 +103,18 @@
                                     {% endif %}
                                 </td>
                                 <td class="align-middle">
+                                    {% if ver_baja %}
+                                    <!-- Dado de baja: fecha, motivo y opción de reactivar -->
+                                    <div class="small text-muted mb-1">
+                                        Baja: {{ cliente.fecha_baja|date:"d/m/Y" }}{% if cliente.motivo_baja %} · {{ cliente.motivo_baja }}{% endif %}
+                                    </div>
+                                    <form method="post" action="{% url 'public:cliente_reactivar' negocio.slug cliente.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-success">
+                                            <i class="bi bi-person-check"></i> Reactivar
+                                        </button>
+                                    </form>
+                                    {% else %}
                                     <!-- Cliente de confianza: sus citas se confirman sin pedir abono -->
                                     <form method="post" action="{% url 'public:cliente_no_exigir_abono' negocio.slug cliente.id %}" class="d-inline">
                                         {% csrf_token %}
@@ -102,6 +128,10 @@
                                         </button>
                                         {% endif %}
                                     </form>
+                                    <a href="{% url 'public:cliente_baja' negocio.slug cliente.id %}" class="btn btn-sm btn-outline-danger" title="El cliente no quiere volver">
+                                        <i class="bi bi-person-dash"></i> Dar de baja
+                                    </a>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}
@@ -114,6 +144,8 @@
                     <h5 class="mt-3 text-muted">
                         {% if q %}
                             No se encontraron clientes con "{{ q }}"
+                        {% elif ver_baja %}
+                            No hay clientes dados de baja
                         {% else %}
                             No tienes clientes aún
                         {% endif %}

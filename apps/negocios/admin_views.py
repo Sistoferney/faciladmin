@@ -3,6 +3,7 @@ Vistas de administración personalizadas para cada mini-página
 Panel de administración intuitivo para dueños de negocios
 """
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import redirect_to_login
 from django.contrib import messages
@@ -30,7 +31,11 @@ logger = logging.getLogger(__name__)
 
 def _volver(request, slug):
     """Vuelve a la pantalla desde donde se abrió la acción (?desde=abonos|pendientes)"""
-    destinos = {'abonos': 'public:abonos_admin', 'pendientes': 'public:admin_pendientes'}
+    destinos = {
+        'abonos': 'public:abonos_admin',
+        'pendientes': 'public:admin_pendientes',
+        'clientes': 'public:admin_clientes',
+    }
     return redirect(destinos.get(request.GET.get('desde'), 'public:admin_agenda'), slug=slug)
 
 
@@ -360,9 +365,10 @@ def clientes_admin(request, slug):
     """
     negocio = get_object_or_404(Negocio, slug=slug)
 
-    # Búsqueda
+    # Búsqueda. Por defecto solo activos; ?baja=1 muestra los dados de baja
     q = request.GET.get('q', '')
-    clientes = Cliente.objects.filter(negocio=negocio)
+    ver_baja = request.GET.get('baja') == '1'
+    clientes = Cliente.objects.filter(negocio=negocio, esta_activo=not ver_baja)
 
     if q:
         clientes = clientes.filter(
@@ -371,7 +377,7 @@ def clientes_admin(request, slug):
             Q(email__icontains=q)
         )
 
-    clientes = clientes.order_by('-fecha_registro')
+    clientes = clientes.order_by('-fecha_baja' if ver_baja else '-fecha_registro')
 
     from apps.fidelizacion.recuperacion import clientes_por_recuperar
 
@@ -380,10 +386,46 @@ def clientes_admin(request, slug):
         'seccion_activa': 'clientes',
         'clientes': clientes,
         'q': q,
+        'ver_baja': ver_baja,
+        'total_baja': Cliente.objects.filter(negocio=negocio, esta_activo=False).count(),
         'total_por_recuperar': len(clientes_por_recuperar(negocio)),
     }
 
     return render(request, 'admin_panel/clientes.html', context)
+
+
+@admin_required
+def cliente_baja(request, slug, cliente_id):
+    """
+    Dar de baja a un cliente que no quiere volver. No se permite si tiene citas
+    próximas: la pantalla las muestra para cancelarlas primero.
+    """
+    negocio = get_object_or_404(Negocio, slug=slug)
+    cliente = get_object_or_404(Cliente, id=cliente_id, negocio=negocio, esta_activo=True)
+    citas_proximas = list(cliente.citas_proximas())
+
+    if request.method == 'POST' and not citas_proximas:
+        cliente.dar_de_baja(request.POST.get('motivo', ''))
+        messages.success(request, f'{cliente.nombre} fue dado de baja. No recibirá más mensajes automáticos.')
+        return redirect('public:admin_clientes', slug=slug)
+
+    return render(request, 'admin_panel/cliente_baja.html', {
+        'negocio': negocio,
+        'seccion_activa': 'clientes',
+        'cliente': cliente,
+        'citas_proximas': citas_proximas,
+    })
+
+
+@admin_required
+def cliente_reactivar(request, slug, cliente_id):
+    """Vuelve a dar de alta a un cliente dado de baja"""
+    negocio = get_object_or_404(Negocio, slug=slug)
+    cliente = get_object_or_404(Cliente, id=cliente_id, negocio=negocio, esta_activo=False)
+    if request.method == 'POST':
+        cliente.reactivar()
+        messages.success(request, f'{cliente.nombre} fue reactivado.')
+    return redirect(f"{reverse('public:admin_clientes', args=[slug])}?baja=1")
 
 
 @admin_required

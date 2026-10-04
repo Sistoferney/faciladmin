@@ -50,6 +50,8 @@ urlpatterns = [
     # Otros
     path('<slug:slug>/admin/clientes/', admin_views.clientes_admin, name='admin_clientes'),
     path('<slug:slug>/admin/clientes/recuperar/', admin_views.clientes_recuperar, name='admin_clientes_recuperar'),
+    path('<slug:slug>/admin/clientes/<int:cliente_id>/baja/', admin_views.cliente_baja, name='cliente_baja'),
+    path('<slug:slug>/admin/clientes/<int:cliente_id>/reactivar/', admin_views.cliente_reactivar, name='cliente_reactivar'),
     path('<slug:slug>/admin/clientes/<int:cliente_id>/no-exigir-abono/', admin_views.cliente_no_exigir_abono, name='cliente_no_exigir_abono'),
     path('<slug:slug>/admin/configuracion/', admin_views.configuracion_admin, name='admin_configuracion'),
     path('<slug:slug>/admin/qr/', admin_views.generar_qr, name='generar_qr'),

@@ -92,7 +92,11 @@ class Cliente(models.Model):
     # Metadata
     fecha_registro = models.DateTimeField('Fecha de registro', auto_now_add=True)
     fecha_actualizacion = models.DateTimeField('Última actualización', auto_now=True)
+    # Dado de baja por el dueño (no quiere volver): no recibe mensajes automáticos
+    # ni aparece en las listas; su historial se conserva. Ver dar_de_baja().
     esta_activo = models.BooleanField('Activo', default=True)
+    fecha_baja = models.DateTimeField('Fecha de baja', null=True, blank=True)
+    motivo_baja = models.CharField('Motivo de baja', max_length=200, blank=True)
 
     class Meta:
         verbose_name = 'Usuario'
@@ -162,6 +166,33 @@ class Cliente(models.Model):
     def es_cliente_inactivo(self):
         """RF-31: Verifica si es un cliente inactivo"""
         return self.tipo_cliente == 'inactivo'
+
+    def citas_proximas(self):
+        """Citas futuras que siguen en pie (pendientes de abono o confirmadas)"""
+        return self.citas.filter(
+            estado__in=['pendiente_abono', 'confirmada'],
+            fecha_hora__gt=timezone.now(),
+        ).select_related('servicio').order_by('fecha_hora')
+
+    def dar_de_baja(self, motivo=''):
+        """
+        Da de baja al cliente (no quiere volver). No se permite si tiene citas
+        próximas: primero hay que cancelarlas. Retorna False si no se pudo.
+        """
+        if self.citas_proximas().exists():
+            return False
+        self.esta_activo = False
+        self.fecha_baja = timezone.now()
+        self.motivo_baja = (motivo or '').strip()[:200]
+        self.save(update_fields=['esta_activo', 'fecha_baja', 'motivo_baja', 'fecha_actualizacion'])
+        return True
+
+    def reactivar(self):
+        """Vuelve a dar de alta al cliente (lo reactiva el dueño, o él mismo al agendar)"""
+        self.esta_activo = True
+        self.fecha_baja = None
+        self.motivo_baja = ''
+        self.save(update_fields=['esta_activo', 'fecha_baja', 'motivo_baja', 'fecha_actualizacion'])
 
     @classmethod
     def buscar_por_telefono(cls, negocio, telefono):
