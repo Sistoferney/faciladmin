@@ -146,26 +146,7 @@ class TareasProgramadasTests(TestCase):
         self.assertEqual(self.cliente.ultima_visita, cita.fecha_hora)
         self.assertEqual(self.cliente.total_citas, 1)
 
-    @patch.object(Notificacion, 'enviar', return_value={'success': True})
-    def test_sugerencia_ignora_citas_si_el_cliente_volvio(self, *mocks):
-        from apps.fidelizacion.tasks import sugerir_proximas_citas
-        hoy = timezone.localdate()
-        self._cita(_local(hoy - timedelta(days=28), 10), estado='completada')
-        self.cliente.acepta_promociones = True
-        self.cliente.save()
-
-        self._cita(_local(hoy - timedelta(days=2), 10), estado='completada')
-        sugerir_proximas_citas()
-        self.assertFalse(Notificacion.objects.filter(tipo='sugerencia_cita').exists())
-
-    @patch.object(Notificacion, 'enviar', return_value={'success': True})
-    def test_sugerencia_se_envia_cerca_de_la_frecuencia(self, *mocks):
-        from apps.fidelizacion.tasks import sugerir_proximas_citas
-        self._cita(_local(timezone.localdate() - timedelta(days=28), 10), estado='completada')
-        self.cliente.acepta_promociones = True
-        self.cliente.save()
-        sugerir_proximas_citas()
-        self.assertEqual(Notificacion.objects.filter(tipo='sugerencia_cita').count(), 1)
+    # Las sugerencias (frecuencia + 2 días) se prueban en apps/fidelizacion/tests.py
 
 
 class SuscripcionPushClienteTests(TestCase):

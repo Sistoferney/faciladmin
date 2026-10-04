@@ -7,6 +7,7 @@ from django.utils import timezone
 from datetime import timedelta
 from apps.citas.models import Cita
 from apps.clientes.models import Cliente
+from apps.fidelizacion.recuperacion import clientes_por_recuperar
 
 
 class ReporteService:
@@ -73,7 +74,8 @@ class ReporteService:
                 'total': Cliente.objects.filter(negocio=self.negocio, esta_activo=True).count(),
                 'frecuentes': clientes_frecuentes,
                 'nuevos': Cliente.objects.filter(negocio=self.negocio, tipo_cliente='nuevo').count(),
-                'inactivos': Cliente.objects.filter(negocio=self.negocio, tipo_cliente='inactivo').count()
+                # "Por recuperar" según la frecuencia de su servicio (ver fidelizacion/recuperacion.py)
+                'inactivos': len(clientes_por_recuperar(self.negocio)),
             }
         }
 

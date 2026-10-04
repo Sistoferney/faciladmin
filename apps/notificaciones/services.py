@@ -189,6 +189,9 @@ class NotificacionService:
                     'tipo': 'recordatorio_cita'
                 }
 
+            if url and not cita:
+                payload['url'] = url
+
             # Enviar a las suscripciones activas (cliente O admin, nunca ambos)
             enviados = 0
             enviados_cliente = 0

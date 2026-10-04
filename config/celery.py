@@ -30,13 +30,9 @@ app.conf.beat_schedule = {
         'task': 'apps.abonos.tasks.verificar_abonos_pendientes',
         'schedule': crontab(hour=9, minute=0),  # Todos los días a las 9:00 AM
     },
-    'identificar-clientes-inactivos': {
-        'task': 'apps.fidelizacion.tasks.identificar_clientes_inactivos',
-        'schedule': crontab(day_of_week=1, hour=8, minute=0),  # Todos los lunes a las 8:00 AM
-    },
     'sugerir-proximas-citas': {
         'task': 'apps.fidelizacion.tasks.sugerir_proximas_citas',
-        'schedule': crontab(hour=11, minute=0),  # Todos los días a las 11:00 AM
+        'schedule': crontab(hour=11, minute=0),  # 11:00: recordar agendar (frecuencia + 2 días)
     },
 }
 

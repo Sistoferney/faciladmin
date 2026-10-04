@@ -3,192 +3,70 @@ Tareas de Celery para fidelización
 RF-28 a RF-32
 """
 from celery import shared_task
-from django.utils import timezone
-from datetime import timedelta
-from apps.clientes.models import Cliente
-from apps.citas.models import Cita
+from django.conf import settings
+
 from apps.notificaciones.models import Notificacion
 from apps.notificaciones.services import elegir_canal
+
+from .recuperacion import seguimientos
 
 
 @shared_task
 def sugerir_proximas_citas():
     """
-    RF-29, RF-30: Sugerir próximas citas basado en frecuencia del servicio
+    RF-29, RF-30: Recordar agendar cuando ya pasó la frecuencia del servicio.
+
+    Se ejecuta a diario (11:00). Al cliente que lleva la frecuencia de su
+    servicio habitual + 2 días sin volver (y sin citas próximas) se le envía
+    UN mensaje para agendar; no se repite hasta que vuelva y se ausente otra vez.
+    Si sigue sin volver, a la frecuencia + 50% aparece en "Clientes por
+    recuperar" del panel (ver recuperacion.py).
     """
-    # Obtener citas completadas
-    citas_completadas = Cita.objects.filter(
-        estado='completada',
-        servicio__frecuencia_dias__isnull=False,
-        negocio__esta_activo=True,
-    ).select_related('cliente', 'servicio', 'negocio')
-
-    sugerencias_enviadas = 0
-
-    for cita in citas_completadas:
-        # Calcular fecha sugerida para próxima cita
-        dias_desde_cita = (timezone.now() - cita.fecha_hora).days
-        frecuencia = cita.servicio.frecuencia_dias
-
-        # Si está cerca de la fecha sugerida (5 días antes)
-        if dias_desde_cita >= (frecuencia - 5) and dias_desde_cita <= frecuencia:
-            # Solo cuenta la última visita: si el cliente volvió después
-            # por el mismo servicio, esta cita ya no aplica
-            volvio_despues = Cita.objects.filter(
-                cliente=cita.cliente,
-                servicio=cita.servicio,
-                estado='completada',
-                fecha_hora__gt=cita.fecha_hora,
-            ).exists()
-
-            if volvio_despues:
-                continue
-
-            # Verificar que no tenga otra cita ya agendada
-            tiene_cita_futura = Cita.objects.filter(
-                cliente=cita.cliente,
-                servicio=cita.servicio,
-                fecha_hora__gte=timezone.now(),
-                estado__in=['pendiente_abono', 'confirmada']
-            ).exists()
-
-            if tiene_cita_futura:
-                continue
-
-            # Verificar que no se haya enviado sugerencia recientemente
-            sugerencia_reciente = Notificacion.objects.filter(
-                cliente=cita.cliente,
-                tipo='sugerencia_cita',
-                fecha_creacion__gte=timezone.now() - timedelta(days=30)
-            ).exists()
-
-            if sugerencia_reciente:
-                continue
-
-            # Determinar canal
-            cliente = cita.cliente
-            negocio = cita.negocio
-
-            if not cliente.acepta_promociones:
-                continue
-
-            canal = elegir_canal(cliente)
-            if not canal:
-                continue
-
-            # Crear mensaje
-            mensaje = f"""
-¡Hola {cliente.nombre}!
-
-Es momento de agendar tu próxima cita de {cita.servicio.nombre}.
-
-Según tu última visita, te recomendamos agendar una nueva cita pronto para mantener los mejores resultados.
-
-💰 Precio: ${cita.servicio.precio}
-⏱️ Duración: {cita.servicio.duracion_minutos} minutos
-
-📍 {negocio.nombre}
-📞 {negocio.telefono}
-🌐 {negocio.url_publica}
-
-¡Agenda tu cita ahora!
-            """.strip()
-
-            # Crear notificación
-            notificacion = Notificacion.objects.create(
-                cliente=cliente,
-                tipo='sugerencia_cita',
-                canal=canal,
-                asunto=f'Es momento de tu próxima cita - {negocio.nombre}',
-                mensaje=mensaje
-            )
-
-            resultado = notificacion.enviar()
-            if resultado.get('success'):
-                sugerencias_enviadas += 1
-
-    return f"Enviadas {sugerencias_enviadas} sugerencias de próximas citas"
-
-
-@shared_task
-def identificar_clientes_inactivos():
-    """
-    RF-31: Identificar clientes inactivos (sin citas en 90+ días)
-    RF-32: Enviar promociones de reactivación
-    """
-    fecha_limite = timezone.now() - timedelta(days=90)
-
-    clientes_inactivos = Cliente.objects.filter(
-        ultima_visita__lt=fecha_limite,
-        esta_activo=True
-    ).exclude(tipo_cliente='inactivo')
-
-    # Contar antes de actualizar: después el queryset ya no los incluye
-    total = clientes_inactivos.update(tipo_cliente='inactivo')
-
-    return f"Identificados {total} clientes inactivos"
-
-
-@shared_task
-def enviar_campana_reactivacion():
-    """
-    RF-32: Enviar promociones a clientes inactivos
-    """
-    clientes_inactivos = Cliente.objects.filter(
-        tipo_cliente='inactivo',
-        esta_activo=True,
-        acepta_promociones=True
-    )
-
-    enviados = 0
-
-    for cliente in clientes_inactivos:
-        negocio = cliente.negocio
-
-        # Verificar que no se haya enviado reactivación recientemente
-        reactivacion_reciente = Notificacion.objects.filter(
-            cliente=cliente,
-            tipo='reactivacion',
-            fecha_creacion__gte=timezone.now() - timedelta(days=60)
-        ).exists()
-
-        if reactivacion_reciente:
+    enviadas = 0
+    for seguimiento in seguimientos():
+        if not seguimiento.toca_recordatorio:
             continue
 
-        # Determinar canal
+        cliente = seguimiento.cliente
+        negocio = seguimiento.ultima_cita.negocio
+        if not cliente.acepta_promociones:
+            continue
+
+        # Una vez por ausencia: ¿ya se le recordó después de su última visita?
+        ya_recordado = Notificacion.objects.filter(
+            cliente=cliente,
+            tipo='sugerencia_cita',
+            fecha_creacion__gte=seguimiento.ultima_cita.fecha_hora,
+        ).exists()
+        if ya_recordado:
+            continue
+
         canal = elegir_canal(cliente)
         if not canal:
             continue
 
-        # Crear mensaje
+        servicio = seguimiento.servicio.nombre
+        enlace = f"{getattr(settings, 'SITE_URL', '').rstrip('/')}/{negocio.slug}/agendar/"
         mensaje = f"""
 ¡Hola {cliente.nombre}!
 
-¡Te extrañamos en {negocio.nombre}!
+Han pasado {seguimiento.dias_sin_venir} días desde tu última cita de {servicio} en {negocio.nombre}.
+Para mantener los mejores resultados te recomendamos agendar tu próxima cita.
 
-Han pasado varios meses desde tu última visita. Nos encantaría verte de nuevo.
+📅 Agenda aquí: {enlace}
 
-🎁 Tenemos una promoción especial para ti.
-
-Agenda tu cita y recibe un descuento especial.
-
-📍 {negocio.nombre}
-📞 {negocio.telefono}
-🌐 {negocio.url_publica}
-
-¡Esperamos verte pronto!
+¡Te esperamos!
         """.strip()
 
         notificacion = Notificacion.objects.create(
             cliente=cliente,
-            tipo='reactivacion',
+            tipo='sugerencia_cita',
             canal=canal,
-            asunto=f'¡Te extrañamos! - {negocio.nombre}',
-            mensaje=mensaje
+            # El push usa la primera parte del asunto como texto
+            asunto=f'¿Te agendamos tu próximo {servicio}? - {negocio.nombre}',
+            mensaje=mensaje,
         )
+        if notificacion.enviar().get('success'):
+            enviadas += 1
 
-        resultado = notificacion.enviar()
-        if resultado.get('success'):
-            enviados += 1
-
-    return f"Enviadas {enviados} campañas de reactivación"
+    return f"Enviados {enviadas} recordatorios para agendar"

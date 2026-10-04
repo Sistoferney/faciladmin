@@ -57,14 +57,10 @@ class ClienteAdmin(admin.ModelAdmin):
             obj.negocio = request.user.negocio
         super().save_model(request, obj, form, change)
 
-    actions = ['marcar_como_frecuente', 'marcar_como_inactivo']
+    actions = ['marcar_como_frecuente']
 
     def marcar_como_frecuente(self, request, queryset):
         queryset.update(tipo_cliente='frecuente')
         self.message_user(request, f'{queryset.count()} clientes marcados como frecuentes.')
     marcar_como_frecuente.short_description = 'Marcar como clientes frecuentes'
 
-    def marcar_como_inactivo(self, request, queryset):
-        queryset.update(tipo_cliente='inactivo')
-        self.message_user(request, f'{queryset.count()} clientes marcados como inactivos.')
-    marcar_como_inactivo.short_description = 'Marcar como clientes inactivos'

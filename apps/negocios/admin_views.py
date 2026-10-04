@@ -373,11 +373,14 @@ def clientes_admin(request, slug):
 
     clientes = clientes.order_by('-fecha_registro')
 
+    from apps.fidelizacion.recuperacion import clientes_por_recuperar
+
     context = {
         'negocio': negocio,
         'seccion_activa': 'clientes',
         'clientes': clientes,
         'q': q,
+        'total_por_recuperar': len(clientes_por_recuperar(negocio)),
     }
 
     return render(request, 'admin_panel/clientes.html', context)
@@ -1100,4 +1103,44 @@ def pendientes_estado(request, slug):
         'ahora': ahora.isoformat(),
         'novedades': novedades,
         'url': f'/{negocio.slug}/admin/pendientes/',
+    })
+
+
+@admin_required
+def clientes_recuperar(request, slug):
+    """
+    Clientes por recuperar: superaron la frecuencia de su servicio habitual
+    + 50% (o 90 días si el servicio no tiene frecuencia) y no tienen citas
+    próximas. El dueño les escribe por WhatsApp con un mensaje prellenado.
+    """
+    from apps.core.whatsapp import enlace_whatsapp
+    from apps.fidelizacion.recuperacion import clientes_por_recuperar
+    from apps.notificaciones.models import Notificacion
+
+    negocio = get_object_or_404(Negocio, slug=slug)
+    lista = clientes_por_recuperar(negocio)
+
+    # Último recordatorio automático enviado a cada uno (frecuencia + 2 días)
+    recordatorios = {}
+    for n in Notificacion.objects.filter(
+        cliente_id__in=[s.cliente.id for s in lista], tipo='sugerencia_cita'
+    ).order_by('fecha_creacion'):
+        recordatorios[n.cliente_id] = n.fecha_creacion
+
+    filas = []
+    for s in lista:
+        texto = (
+            f'Hola {s.cliente.nombre.split()[0]}, hace un tiempo no te vemos en {negocio.nombre}. '
+            f'¿Te agendamos tu próximo {s.servicio.nombre}?'
+        )
+        filas.append({
+            'seguimiento': s,
+            'whatsapp': enlace_whatsapp(s.cliente.telefono, texto),
+            'recordatorio': recordatorios.get(s.cliente.id),
+        })
+
+    return render(request, 'admin_panel/clientes_recuperar.html', {
+        'negocio': negocio,
+        'seccion_activa': 'clientes',
+        'filas': filas,
     })

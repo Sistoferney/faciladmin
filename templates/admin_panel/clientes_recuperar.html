@@ -1,0 +1,56 @@
+{% extends 'admin_panel/base_admin.html' %}
+
+{% block page_title %}Clientes por recuperar{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h4 class="mb-0"><i class="bi bi-arrow-repeat"></i> Clientes por recuperar</h4>
+    <a href="{% url 'public:admin_clientes' negocio.slug %}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Clientes
+    </a>
+</div>
+<p class="text-muted small mb-4">
+    Clientes que no han vuelto pasada la frecuencia de su servicio más un 50%
+    (o 90 días si el servicio no tiene frecuencia) y no tienen citas próximas.
+    A la frecuencia + 2 días ya se les envió un recordatorio automático para agendar;
+    aquí puedes escribirles personalmente.
+</p>
+
+{% if filas %}
+<div class="list-group">
+    {% for fila in filas %}
+    {% with s=fila.seguimiento %}
+    <div class="list-group-item py-3">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+            <div>
+                <strong>{{ s.cliente.nombre }}</strong>
+                <div class="small text-muted">
+                    Última visita: {{ s.ultima_cita.fecha_hora|date:"d/m/Y" }} · {{ s.servicio.nombre }}
+                    {% if s.frecuencia %}(cada {{ s.frecuencia }} días){% endif %}
+                </div>
+                <div class="small">
+                    <span class="badge bg-warning text-dark">{{ s.dias_sin_venir }} días sin venir</span>
+                    {% if fila.recordatorio %}
+                        <span class="text-muted ms-1"><i class="bi bi-send-check"></i> Recordatorio enviado el {{ fila.recordatorio|date:"d/m" }}</span>
+                    {% elif not s.cliente.acepta_promociones %}
+                        <span class="text-muted ms-1">No acepta mensajes automáticos</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% if fila.whatsapp %}
+            <a href="{{ fila.whatsapp }}" target="_blank" rel="noopener" class="btn btn-success btn-sm">
+                <i class="bi bi-whatsapp"></i> Escribirle
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endwith %}
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center text-muted py-5 border rounded">
+    <i class="bi bi-emoji-smile fs-1 text-success"></i>
+    <p class="mt-2 mb-0">No hay clientes por recuperar. ¡Tus clientes están volviendo!</p>
+</div>
+{% endif %}
+{% endblock %}

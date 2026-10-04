@@ -112,7 +112,10 @@ class Promocion(models.Model):
         elif self.segmento == 'frecuentes':
             queryset = queryset.filter(tipo_cliente='frecuente')
         elif self.segmento == 'inactivos':
-            queryset = queryset.filter(tipo_cliente='inactivo')
+            # "Por recuperar": superaron la frecuencia de su servicio + 50% (ver recuperacion.py)
+            from apps.fidelizacion.recuperacion import clientes_por_recuperar
+            ids = [s.cliente.id for s in clientes_por_recuperar(self.negocio)]
+            queryset = queryset.filter(id__in=ids)
         # Si es 'todos' o 'personalizado', devuelve todos
 
         return queryset

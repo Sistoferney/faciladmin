@@ -108,7 +108,9 @@ class Notificacion(models.Model):
             # largos con emojis, teléfonos y precios). El detalle está en la app.
             from .textos_push import push_cliente
             titulo, cuerpo = push_cliente(self.tipo, self.cita, self.cliente.negocio, self.asunto)
-            resultado = service.enviar_push(self.cliente, titulo, cuerpo, self.cita)
+            # El recordatorio para agendar lleva directo a agendar en la mini-página
+            url = f'/{self.cliente.negocio.slug}/agendar/' if self.tipo == 'sugerencia_cita' else None
+            resultado = service.enviar_push(self.cliente, titulo, cuerpo, self.cita, url=url)
         elif self.canal == 'whatsapp':
             resultado = service.enviar_whatsapp(self.cliente.telefono.as_e164, mensaje)
         elif self.canal == 'sms':
