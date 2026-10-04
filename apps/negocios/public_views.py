@@ -603,6 +603,10 @@ def editar_cita_cliente(request, slug, cita_id):
                 cita.notas_cliente = notas
                 cita.save()
 
+                # Bandeja del dueño
+                from apps.notificaciones import pendientes
+                pendientes.abrir(cita, 'cita_modificada')
+
             # Enviar notificación al dueño del negocio
             try:
                 from apps.notificaciones.services import NotificacionService
@@ -678,6 +682,10 @@ def cancelar_cita_cliente(request, slug, cita_id):
         else:
             cita.notas_internas = "Cancelada por cliente"
         cita.save()
+
+        # Bandeja del dueño (la señal ya cerró los demás pendientes de la cita)
+        from apps.notificaciones import pendientes
+        pendientes.abrir(cita, 'cita_cancelada', f'Motivo: {motivo[:150]}' if motivo else '')
 
         # Enviar notificación al dueño del negocio
         try:
@@ -763,6 +771,10 @@ def subir_comprobante(request, slug, cita_id):
         abono.estado = 'pendiente'
     abono.save()
 
+    # Bandeja del dueño: el pendiente de abono pasa a "comprobante enviado"
+    from apps.notificaciones import pendientes
+    pendientes.abrir(cita, 'abono', f'Comprobante enviado por {pesos(abono.monto_reportado or abono.monto)}')
+
     # Avisar al dueño (al confirmarse la transacción; si falla no afecta al cliente)
     def avisar_dueno():
         try:
@@ -775,7 +787,7 @@ def subir_comprobante(request, slug, cita_id):
                 mensaje=mensaje,
                 cita=cita,
                 enviar_a_admin=True,
-                url=f'/{negocio.slug}/admin/abonos/',
+                url=f'/{negocio.slug}/admin/pendientes/',
             )
         except Exception:
             logger.exception('Error avisando comprobante de la cita %s', cita.id)

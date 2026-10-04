@@ -251,11 +251,11 @@ class PayloadPushTests(TestCase):
             self.cliente, 'Título', 'Mensaje', cita=cita, enviar_a_admin=a_admin
         )
 
-    def test_admin_va_a_la_agenda(self, webpush, *mocks):
+    def test_admin_va_a_pendientes(self, webpush, *mocks):
         cita = self._cita(2)
         self.assertTrue(self._enviar(cita, a_admin=True)['success'])
         payload = self._payload(webpush)
-        self.assertEqual(payload['url'], f'/{self.negocio.slug}/admin/agenda/')
+        self.assertEqual(payload['url'], f'/{self.negocio.slug}/admin/pendientes/')
         self.assertEqual(payload['tag'], f'cita-{cita.id}')
 
     def test_cliente_va_a_mis_citas(self, webpush, *mocks):

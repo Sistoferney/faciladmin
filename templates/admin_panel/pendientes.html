@@ -1,0 +1,96 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% load whatsapp %}
+
+{% block page_title %}Pendientes{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="bi bi-inbox"></i> Pendientes
+        {% if abiertos %}<span class="badge bg-danger">{{ abiertos|length }}</span>{% endif %}
+    </h4>
+    {% if abiertos %}
+    <form method="post" action="{% url 'public:admin_pendientes_revisados' negocio.slug %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-outline-secondary" title="Marca como revisadas las citas nuevas y los cambios de clientes (los abonos se resuelven al confirmar el pago)">
+            <i class="bi bi-check2-all"></i> Marcar avisos como revisados
+        </button>
+    </form>
+    {% endif %}
+</div>
+
+{% if abiertos %}
+<div class="list-group mb-4">
+    {% for p in abiertos %}
+    <div class="list-group-item py-3">
+        <div class="d-flex align-items-start">
+            <i class="bi {{ p.icono }} fs-4 me-3 {% if p.tipo == 'abono' %}text-warning{% elif p.tipo == 'cita_cancelada' %}text-danger{% else %}text-primary{% endif %}"></i>
+            <div class="flex-grow-1">
+                <div class="d-flex justify-content-between">
+                    <strong>{{ p.titulo }}</strong>
+                    <small class="text-muted text-nowrap ms-2">hace {{ p.actualizado_en|timesince }}</small>
+                </div>
+                <div class="text-muted small mb-2">{{ p.texto }}</div>
+
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{% url 'public:admin_agenda' negocio.slug %}?fecha={{ p.cita.fecha_hora|date:'Y-m-d' }}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-calendar-week"></i> Ver en agenda
+                    </a>
+
+                    {% if p.tipo == 'abono' and p.cita.abono.por_pagar and p.cita.estado == 'pendiente_abono' %}
+                        {% if p.cita.abono.comprobante %}
+                        <a href="{{ p.cita.abono.comprobante.url }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-image"></i> Ver comprobante
+                        </a>
+                        {% endif %}
+                        <a href="{% url 'public:cita_confirmar' negocio.slug p.cita.id %}?desde=pendientes" class="btn btn-sm btn-success">
+                            <i class="bi bi-check-circle"></i> Confirmar
+                        </a>
+                        {% if p.cita.abono.estado == 'vencido' %}
+                        <a href="{% url 'public:cita_cancelar' negocio.slug p.cita.id %}?desde=pendientes" class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-calendar-x"></i> Cancelar cita
+                        </a>
+                        {% endif %}
+                    {% endif %}
+
+                    {% whatsapp_negocio_a_cliente p.cita as enlace_whatsapp %}
+                    {% if enlace_whatsapp %}
+                    <a href="{{ enlace_whatsapp }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-success">
+                        <i class="bi bi-whatsapp"></i> WhatsApp
+                    </a>
+                    {% endif %}
+
+                    {% if p.informativo %}
+                    <form method="post" action="{% url 'public:admin_pendiente_revisado' negocio.slug p.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-check2"></i> {% if p.tipo == 'cita_nueva' %}Revisada{% else %}Entendido{% endif %}
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center text-muted py-5 mb-4 border rounded">
+    <i class="bi bi-check2-circle fs-1 text-success"></i>
+    <p class="mt-2 mb-0">¡Todo al día! No tienes pendientes.</p>
+</div>
+{% endif %}
+
+{% if historial %}
+<details>
+    <summary class="text-muted mb-2">Resueltos en los últimos 30 días ({{ historial|length }})</summary>
+    <ul class="list-group list-group-flush small">
+        {% for p in historial %}
+        <li class="list-group-item text-muted">
+            <i class="bi {{ p.icono }}"></i> <strong>{{ p.titulo }}</strong> · {{ p.texto }}
+            <span class="float-end">{{ p.resuelto_en|date:"d/m H:i" }}</span>
+        </li>
+        {% endfor %}
+    </ul>
+</details>
+{% endif %}
+{% endblock %}

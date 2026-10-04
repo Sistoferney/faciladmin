@@ -4,6 +4,7 @@ Tareas de Celery para abonos
 from celery import shared_task
 from django.utils import timezone
 from .models import Abono
+from apps.notificaciones import pendientes
 import logging
 
 logger = logging.getLogger(__name__)
@@ -23,8 +24,8 @@ def _avisar_admin_abono_vencido(abono):
             mensaje=mensaje,
             cita=cita,
             enviar_a_admin=True,
-            # Lleva directo a Abonos, donde el dueño decide qué hacer
-            url=f'/{cita.negocio.slug}/admin/abonos/',
+            # Lleva a Pendientes, donde el dueño decide qué hacer
+            url=f'/{cita.negocio.slug}/admin/pendientes/',
         )
     except Exception:
         logger.exception('Error avisando abono vencido %s', abono.id)
@@ -71,6 +72,7 @@ def verificar_abonos_pendientes():
     ahora = timezone.now()
     for abono in abonos_vencidos:
         if abono.cita.fecha_hora > ahora and abono.cita.estado == 'pendiente_abono':
+            pendientes.abrir(abono.cita, 'abono', 'Abono vencido: confirma el pago o cancela la cita')
             _avisar_admin_abono_vencido(abono)
 
     return f"Verificados {abonos_pendientes.count()} abonos. {count_vencidos} marcados como vencidos."

@@ -41,6 +41,12 @@ urlpatterns = [
     path('<slug:slug>/admin/abonos/<int:abono_id>/confirmar/', admin_views.abono_confirmar, name='abono_confirmar'),
     path('<slug:slug>/admin/abonos/<int:abono_id>/rechazar/', admin_views.abono_rechazar, name='abono_rechazar'),
 
+    # Bandeja de pendientes del dueño
+    path('<slug:slug>/admin/pendientes/', admin_views.pendientes_admin, name='admin_pendientes'),
+    path('<slug:slug>/admin/pendientes/estado/', admin_views.pendientes_estado, name='admin_pendientes_estado'),
+    path('<slug:slug>/admin/pendientes/revisados/', admin_views.pendiente_resolver, name='admin_pendientes_revisados'),
+    path('<slug:slug>/admin/pendientes/<int:pendiente_id>/revisado/', admin_views.pendiente_resolver, name='admin_pendiente_revisado'),
+
     # Otros
     path('<slug:slug>/admin/clientes/', admin_views.clientes_admin, name='admin_clientes'),
     path('<slug:slug>/admin/clientes/<int:cliente_id>/no-exigir-abono/', admin_views.cliente_no_exigir_abono, name='cliente_no_exigir_abono'),

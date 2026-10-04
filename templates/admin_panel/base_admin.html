@@ -1,5 +1,6 @@
 {% load static %}
 {% load tz %}
+{% load pendientes %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -226,6 +227,12 @@
                 <i class="bi bi-speedometer2"></i>
                 <span>Dashboard</span>
             </a>
+            {% pendientes_abiertos negocio as total_pendientes %}
+            <a href="{% url 'public:admin_pendientes' negocio.slug %}" class="nav-link {% if seccion_activa == 'pendientes' %}active{% endif %}">
+                <i class="bi bi-inbox"></i>
+                <span>Pendientes</span>
+                <span id="contador-pendientes" class="badge bg-danger ms-auto" {% if not total_pendientes %}hidden{% endif %}>{{ total_pendientes }}</span>
+            </a>
             <a href="{% url 'public:admin_agenda' negocio.slug %}" class="nav-link {% if seccion_activa == 'agenda' %}active{% endif %}">
                 <i class="bi bi-calendar-check"></i>
                 <span>Agenda de Citas</span>
@@ -302,6 +309,93 @@
          así Android asigna las notificaciones (y su contador) a esta app -->
     <script>window.PWA_SCOPE = '/{{ negocio.slug }}/admin/';</script>
     <script src="{% static 'js/pwa-register.js' %}"></script>
+
+    <!-- Bandeja de pendientes: con el panel abierto se consulta cada 60 s y se
+         muestra una notificación local por cada novedad, aunque el push no haya
+         llegado. Usa la misma etiqueta que el push de la cita (cita-<id>), así
+         que si el push ya llegó, la reemplaza en vez de duplicarla. -->
+    <script>
+    (function () {
+        const URL_ESTADO = "{% url 'public:admin_pendientes_estado' negocio.slug %}";
+        const URL_PENDIENTES = "{% url 'public:admin_pendientes' negocio.slug %}";
+        const CLAVE_DESDE = 'pendientes_desde_{{ negocio.slug }}';
+        const INTERVALO = 60 * 1000;
+
+        function actualizarContador(total) {
+            const contador = document.getElementById('contador-pendientes');
+            if (contador) {
+                contador.textContent = total;
+                contador.hidden = !total;
+            }
+            // En computador (Chrome/Edge) el ícono de la app muestra los pendientes
+            if ('setAppBadge' in navigator) {
+                (total ? navigator.setAppBadge(total) : navigator.clearAppBadge()).catch(() => {});
+            }
+        }
+
+        async function notificarLocal(novedad) {
+            mostrarAvisoEnPagina(novedad);
+            if (!('Notification' in window) || Notification.permission !== 'granted' || typeof obtenerRegistro !== 'function') {
+                return;
+            }
+            try {
+                const registro = await obtenerRegistro();
+                await registro.showNotification(novedad.titulo, {
+                    body: novedad.texto,
+                    tag: `cita-${novedad.cita_id}`,
+                    icon: '/static/images/faciladmin-logo.png',
+                    data: { url: URL_PENDIENTES },
+                });
+            } catch (e) {
+                console.log('[Pendientes] No se pudo mostrar la notificación local:', e);
+            }
+        }
+
+        function mostrarAvisoEnPagina(novedad) {
+            const aviso = document.createElement('a');
+            aviso.href = URL_PENDIENTES;
+            aviso.className = 'alert alert-info shadow position-fixed text-decoration-none';
+            aviso.style.cssText = 'bottom: 20px; right: 20px; z-index: 1080; max-width: 360px;';
+            const titulo = document.createElement('strong');
+            titulo.textContent = novedad.titulo;
+            const texto = document.createElement('div');
+            texto.className = 'small';
+            texto.textContent = novedad.texto;
+            aviso.append(titulo, texto);
+            document.body.appendChild(aviso);
+            setTimeout(() => aviso.remove(), 8000);
+        }
+
+        async function consultar() {
+            if (document.visibilityState !== 'visible') {
+                return;
+            }
+            let desde = '';
+            try { desde = localStorage.getItem(CLAVE_DESDE) || ''; } catch (e) { /* sin localStorage */ }
+            try {
+                const respuesta = await fetch(URL_ESTADO + (desde ? `?desde=${encodeURIComponent(desde)}` : ''), {
+                    credentials: 'same-origin',
+                });
+                if (!respuesta.ok) {
+                    return;
+                }
+                const datos = await respuesta.json();
+                try { localStorage.setItem(CLAVE_DESDE, datos.ahora); } catch (e) { /* sin localStorage */ }
+                actualizarContador(datos.total);
+                // La primera consulta solo marca el punto de partida (no avisa de lo anterior)
+                if (desde) {
+                    datos.novedades.forEach(notificarLocal);
+                }
+            } catch (e) {
+                console.log('[Pendientes] Error consultando:', e);
+            }
+        }
+
+        window.addEventListener('load', consultar);
+        document.addEventListener('visibilitychange', consultar);
+        setInterval(consultar, INTERVALO);
+    })();
+    </script>
 
     <script>
         function toggleSidebar() {

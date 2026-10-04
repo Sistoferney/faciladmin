@@ -168,7 +168,8 @@ class NotificacionService:
                 if url:
                     payload['url'] = url
                 elif enviar_a_admin:
-                    payload['url'] = f'/{cita.negocio.slug}/admin/agenda/'
+                    # La bandeja de pendientes reúne lo que el dueño debe hacer
+                    payload['url'] = f'/{cita.negocio.slug}/admin/pendientes/'
                 else:
                     payload['url'] = f'/{cita.negocio.slug}/mis-citas/'
 

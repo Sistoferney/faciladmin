@@ -322,3 +322,84 @@ class UsuarioPushSubscription(models.Model):
         """Marca la suscripción como inactiva en lugar de eliminarla"""
         self.activa = False
         self.save()
+
+
+class Pendiente(models.Model):
+    """
+    Tarea pendiente del dueño en su bandeja ("Pendientes" del panel).
+
+    No depende de que llegue el push: aunque la notificación falle, al abrir
+    el panel el dueño ve lo que tiene por hacer. Hay un pendiente abierto por
+    (cita, tipo); los eventos posteriores lo actualizan en vez de duplicarlo
+    (p. ej. el de abono pasa de "esperando pago" a "comprobante enviado").
+    Se resuelven solos cuando se hace la acción (ver pendientes.py).
+    """
+    TIPO_CHOICES = [
+        ('cita_nueva', 'Nueva cita'),
+        ('abono', 'Abono'),
+        ('cita_modificada', 'Cita modificada por el cliente'),
+        ('cita_cancelada', 'Cita cancelada por el cliente'),
+    ]
+
+    negocio = models.ForeignKey(
+        'negocios.Negocio', on_delete=models.CASCADE, related_name='pendientes', verbose_name='Negocio'
+    )
+    cita = models.ForeignKey(
+        Cita, on_delete=models.CASCADE, related_name='pendientes', verbose_name='Cita'
+    )
+    tipo = models.CharField('Tipo', max_length=20, choices=TIPO_CHOICES)
+    detalle = models.CharField('Detalle', max_length=200, blank=True)
+    resuelto = models.BooleanField('Resuelto', default=False, db_index=True)
+    creado_en = models.DateTimeField('Creado', auto_now_add=True)
+    # Se actualiza con cada evento (comprobante, vencimiento...): ordena la
+    # bandeja y permite al panel detectar novedades para la notificación local
+    actualizado_en = models.DateTimeField('Actualizado', auto_now=True, db_index=True)
+    resuelto_en = models.DateTimeField('Resuelto en', null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Pendiente'
+        verbose_name_plural = 'Pendientes'
+        ordering = ['-actualizado_en']
+        indexes = [models.Index(fields=['negocio', 'resuelto', '-actualizado_en'])]
+
+    def __str__(self):
+        return f'{self.get_tipo_display()} - {self.cita}'
+
+    @property
+    def titulo(self):
+        if self.tipo == 'abono':
+            abono = getattr(self.cita, 'abono', None)
+            if abono is not None:
+                if abono.estado == 'vencido':
+                    return 'Abono vencido'
+                if abono.estado == 'rechazado':
+                    return 'Pago rechazado'
+                if abono.comprobante:
+                    return 'Comprobante por revisar'
+            return 'Esperando abono'
+        return {
+            'cita_nueva': 'Nueva cita',
+            'cita_modificada': 'Cita modificada por el cliente',
+            'cita_cancelada': 'Cita cancelada por el cliente',
+        }.get(self.tipo, self.get_tipo_display())
+
+    @property
+    def texto(self):
+        from .textos_push import resumen_cita
+        texto = resumen_cita(self.cita)
+        if self.tipo in ('abono', 'cita_cancelada') and self.detalle:
+            texto += f' · {self.detalle}'
+        return texto
+
+    @property
+    def icono(self):
+        if self.tipo == 'abono':
+            return {'Abono vencido': 'bi-alarm', 'Pago rechazado': 'bi-x-octagon',
+                    'Comprobante por revisar': 'bi-receipt'}.get(self.titulo, 'bi-wallet2')
+        return {'cita_nueva': 'bi-calendar-plus', 'cita_modificada': 'bi-arrow-repeat',
+                'cita_cancelada': 'bi-calendar-x'}.get(self.tipo, 'bi-bell')
+
+    @property
+    def informativo(self):
+        """Se resuelve marcándolo como visto (no con una acción sobre la cita)"""
+        return self.tipo in ('cita_nueva', 'cita_modificada', 'cita_cancelada')

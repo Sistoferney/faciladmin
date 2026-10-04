@@ -296,7 +296,7 @@ class PagoYComprobanteTests(TestCase):
         # Aviso al dueño que lo lleva a Abonos
         kwargs = enviar_push.call_args.kwargs
         self.assertTrue(kwargs['enviar_a_admin'])
-        self.assertEqual(kwargs['url'], f'/{self.negocio.slug}/admin/abonos/')
+        self.assertEqual(kwargs['url'], f'/{self.negocio.slug}/admin/pendientes/')
 
         # Mis citas ahora indica que está en revisión
         resp = self.client.get(reverse('public:mis_citas', args=[self.negocio.slug]))

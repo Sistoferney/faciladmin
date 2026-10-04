@@ -15,6 +15,7 @@ from apps.clientes.models import Cliente
 from apps.citas.models import Cita
 from apps.abonos.models import Abono
 from apps.core.formato import parsear_monto, pesos
+from apps.notificaciones import pendientes
 from apps.core.whatsapp import enlace_negocio_a_cliente
 from apps.notificaciones.tasks import (
     enviar_notificacion_confirmacion_abono,
@@ -25,6 +26,12 @@ from apps.notificaciones.tasks import (
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def _volver(request, slug):
+    """Vuelve a la pantalla desde donde se abrió la acción (?desde=abonos|pendientes)"""
+    destinos = {'abonos': 'public:abonos_admin', 'pendientes': 'public:admin_pendientes'}
+    return redirect(destinos.get(request.GET.get('desde'), 'public:admin_agenda'), slug=slug)
 
 
 def _resumen_pago(cita):
@@ -717,12 +724,11 @@ def cita_confirmar(request, slug, cita_id):
         else:
             cita.estado = 'confirmada'
             cita.save()
+            pendientes.resolver(cita, tipos=['cita_nueva'])
             programar_notificacion(notificar_cambio_cita, cita.id, 'confirmada')
             messages.success(request, f'Cita de {cita.cliente.nombre} confirmada. Le avisaremos al cliente.')
 
-        if request.GET.get('desde') == 'abonos':
-            return redirect('public:abonos_admin', slug=slug)
-        return redirect('public:admin_agenda', slug=slug)
+        return _volver(request, slug)
 
     context = {
         'negocio': negocio,
@@ -793,9 +799,7 @@ def cita_cancelar(request, slug, cita_id):
         programar_notificacion(notificar_cambio_cita, cita.id, 'cancelada', motivo)
         messages.success(request, f'Cita de {cita.cliente.nombre} cancelada. Le avisaremos al cliente.')
         # Volver a abonos si se canceló desde ahí (abono vencido)
-        if request.GET.get('desde') == 'abonos':
-            return redirect('public:abonos_admin', slug=slug)
-        return redirect('public:admin_agenda', slug=slug)
+        return _volver(request, slug)
 
     context = {
         'negocio': negocio,
@@ -1013,3 +1017,87 @@ def generar_qr(request, slug):
     response['Content-Disposition'] = f'attachment; filename="qr_{negocio.slug}.png"'
 
     return response
+
+
+# ==================== BANDEJA DE PENDIENTES ====================
+
+@admin_required
+def pendientes_admin(request, slug):
+    """
+    Bandeja de pendientes del dueño: lo que tiene por hacer (abiertos) y lo
+    resuelto en los últimos 30 días. No depende de que haya llegado el push.
+    """
+    from apps.notificaciones.models import Pendiente
+
+    negocio = get_object_or_404(Negocio, slug=slug)
+    base = Pendiente.objects.filter(negocio=negocio).select_related(
+        'cita__cliente', 'cita__servicio', 'cita__abono'
+    )
+    context = {
+        'negocio': negocio,
+        'seccion_activa': 'pendientes',
+        'abiertos': base.filter(resuelto=False),
+        'historial': base.filter(
+            resuelto=True, resuelto_en__gte=timezone.now() - timedelta(days=30)
+        ).order_by('-resuelto_en')[:50],
+    }
+    return render(request, 'admin_panel/pendientes.html', context)
+
+
+@admin_required
+def pendiente_resolver(request, slug, pendiente_id=None):
+    """
+    Marca como revisado un pendiente informativo (o todos con ?todos=1).
+    Los de abono no: se resuelven al confirmar o exonerar el pago.
+    """
+    from apps.notificaciones.models import Pendiente
+
+    negocio = get_object_or_404(Negocio, slug=slug)
+    if request.method == 'POST':
+        pendientes_qs = Pendiente.objects.filter(
+            negocio=negocio, resuelto=False,
+            tipo__in=['cita_nueva', 'cita_modificada', 'cita_cancelada'],
+        )
+        if pendiente_id is not None:
+            pendientes_qs = pendientes_qs.filter(id=pendiente_id)
+        ahora = timezone.now()
+        pendientes_qs.update(resuelto=True, resuelto_en=ahora, actualizado_en=ahora)
+    return redirect('public:admin_pendientes', slug=slug)
+
+
+@admin_required
+def pendientes_estado(request, slug):
+    """
+    Para la consulta periódica del panel (cada 60 s con la app abierta):
+    total de pendientes abiertos y novedades desde `desde` (ISO), para mostrar
+    una notificación local aunque el push no haya llegado.
+    """
+    from django.http import JsonResponse
+    from django.utils.dateparse import parse_datetime
+    from apps.notificaciones.models import Pendiente
+
+    negocio = get_object_or_404(Negocio, slug=slug)
+    abiertos = Pendiente.objects.filter(negocio=negocio, resuelto=False)
+    ahora = timezone.now()
+
+    novedades = []
+    desde = parse_datetime(request.GET.get('desde', '') or '')
+    if desde is not None:
+        if timezone.is_naive(desde):
+            desde = timezone.make_aware(desde)
+        for p in abiertos.filter(actualizado_en__gt=desde).select_related(
+            'cita__cliente', 'cita__servicio', 'cita__abono'
+        )[:10]:
+            novedades.append({
+                'id': p.id,
+                'cita_id': p.cita_id,
+                'titulo': p.titulo,
+                'texto': p.texto,
+            })
+
+    return JsonResponse({
+        'total': abiertos.count(),
+        'ahora': ahora.isoformat(),
+        'novedades': novedades,
+        'url': f'/{negocio.slug}/admin/pendientes/',
+    })
