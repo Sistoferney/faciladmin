@@ -714,3 +714,119 @@ class SinAvisosDeCitasPasadasTests(TestCase):
         self.assertFalse(notificar_cambio_cita(cita.id, 'cancelada')['success'])
         self.assertFalse(enviar_notificacion_confirmacion_abono(cita.id)['success'])
         self.assertFalse(Notificacion.objects.filter(cita=cita).exists())
+
+
+class _RespuestaPush:
+    def __init__(self, status_code, text=''):
+        self.status_code = status_code
+        self.text = text
+
+
+@patch('apps.citas.signals.enviar_confirmacion_cita', create=True)
+@patch('py_vapid.Vapid.from_pem')
+@patch('pywebpush.webpush')
+class FallosConsecutivosPushTests(TestCase):
+    """
+    Una suscripción que el servicio de push rechaza 3 veces seguidas se
+    desactiva; un envío exitoso reinicia la cuenta.
+    """
+
+    def setUp(self):
+        _, _, self.cliente = _crear_base()
+        self.sub = ClientePushSubscription.objects.create(
+            cliente=self.cliente, endpoint='https://push/1', auth='a', p256dh='p'
+        )
+
+    def _enviar(self):
+        from .services import NotificacionService
+        return NotificacionService().enviar_push(self.cliente, 'Título', 'Mensaje')
+
+    def _rechazo(self, status=500):
+        from pywebpush import WebPushException
+        return WebPushException('rechazado', response=_RespuestaPush(status))
+
+    def test_tres_rechazos_seguidos_desactivan(self, webpush, *mocks):
+        webpush.side_effect = self._rechazo()
+        for esperado in (1, 2):
+            self._enviar()
+            self.sub.refresh_from_db()
+            self.assertEqual(self.sub.fallos_consecutivos, esperado)
+            self.assertTrue(self.sub.activa)
+        self._enviar()
+        self.sub.refresh_from_db()
+        self.assertFalse(self.sub.activa)
+
+    def test_exito_reinicia_la_cuenta(self, webpush, *mocks):
+        webpush.side_effect = self._rechazo()
+        self._enviar()
+        self._enviar()
+        webpush.side_effect = None
+        self._enviar()
+        self.sub.refresh_from_db()
+        self.assertEqual(self.sub.fallos_consecutivos, 0)
+        self.assertTrue(self.sub.activa)
+
+    def test_error_propio_no_cuenta(self, webpush, *mocks):
+        # Sin respuesta del servicio (sin red, clave mal configurada): no es culpa del dispositivo
+        webpush.side_effect = RuntimeError('clave mal configurada')
+        for _ in range(4):
+            self._enviar()
+        self.sub.refresh_from_db()
+        self.assertEqual(self.sub.fallos_consecutivos, 0)
+        self.assertTrue(self.sub.activa)
+
+    def test_renovar_suscripcion_reinicia_la_cuenta(self, *mocks):
+        self.sub.fallos_consecutivos = 3
+        self.sub.activa = False
+        self.sub.save()
+        ClientePushSubscription.crear_desde_subscription_info(
+            self.cliente, {'endpoint': 'https://push/1', 'keys': {'auth': 'a', 'p256dh': 'p'}}
+        )
+        self.sub.refresh_from_db()
+        self.assertTrue(self.sub.activa)
+        self.assertEqual(self.sub.fallos_consecutivos, 0)
+
+
+@patch('apps.citas.signals.enviar_confirmacion_cita', create=True)
+class LimpiezaHistorialTests(TestCase):
+
+    def setUp(self):
+        self.negocio, self.servicio, self.cliente = _crear_base()
+
+    def _envejecer(self, modelo, obj, campo, dias):
+        modelo.objects.filter(pk=obj.pk).update(**{campo: timezone.now() - timedelta(days=dias)})
+
+    def test_borra_solo_lo_viejo_y_resuelto(self, *mocks):
+        from .models import Pendiente
+        from .tasks import limpiar_historial_notificaciones
+
+        vieja = Notificacion.objects.create(cliente=self.cliente, tipo='recordatorio_cita', canal='email', mensaje='x')
+        reciente = Notificacion.objects.create(cliente=self.cliente, tipo='recordatorio_cita', canal='email', mensaje='x')
+        self._envejecer(Notificacion, vieja, 'fecha_creacion', 91)
+
+        citas = [
+            Cita.objects.create(
+                negocio=self.negocio, cliente=self.cliente, servicio=self.servicio,
+                fecha_hora=_local(timezone.localdate() + timedelta(days=d), 10), duracion_minutos=30,
+            ) for d in (1, 2, 3)
+        ]
+        Pendiente.objects.all().delete()  # los que crean las señales al agendar
+        resuelto_viejo, abierto_viejo, resuelto_reciente = [
+            Pendiente.objects.create(negocio=self.negocio, cita=cita, tipo='cita_nueva', resuelto=resuelto)
+            for cita, resuelto in zip(citas, (True, False, True))
+        ]
+        self._envejecer(Pendiente, resuelto_viejo, 'actualizado_en', 31)
+        self._envejecer(Pendiente, abierto_viejo, 'actualizado_en', 200)
+
+        inactiva = ClientePushSubscription.objects.create(
+            cliente=self.cliente, endpoint='https://push/viejo', auth='a', p256dh='p', activa=False)
+        activa = ClientePushSubscription.objects.create(
+            cliente=self.cliente, endpoint='https://push/activo', auth='a', p256dh='p')
+        self._envejecer(ClientePushSubscription, inactiva, 'fecha_actualizacion', 91)
+        self._envejecer(ClientePushSubscription, activa, 'fecha_actualizacion', 300)
+
+        limpiar_historial_notificaciones()
+
+        self.assertEqual(list(Notificacion.objects.all()), [reciente])
+        self.assertCountEqual(Pendiente.objects.all(), [abierto_viejo, resuelto_reciente])
+        self.assertEqual(list(ClientePushSubscription.objects.all()), [activa])

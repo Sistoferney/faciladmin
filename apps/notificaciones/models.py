@@ -134,6 +134,27 @@ class Notificacion(models.Model):
         return resultado
 
 
+# Una suscripción que falla varias veces seguidas (navegador desinstalado,
+# servicio de push caído para ese dispositivo, etc.) se desactiva para no
+# seguir intentando en cada envío. Un envío exitoso reinicia la cuenta.
+MAX_FALLOS_PUSH = 3
+
+
+def _registrar_exito(suscripcion):
+    if suscripcion.fallos_consecutivos:
+        suscripcion.fallos_consecutivos = 0
+        suscripcion.save(update_fields=['fallos_consecutivos'])
+
+
+def _registrar_fallo(suscripcion):
+    suscripcion.fallos_consecutivos += 1
+    campos = ['fallos_consecutivos']
+    if suscripcion.fallos_consecutivos >= MAX_FALLOS_PUSH:
+        suscripcion.activa = False
+        campos.append('activa')
+    suscripcion.save(update_fields=campos)
+
+
 class ClientePushSubscription(models.Model):
     """
     Modelo para asociar suscripciones push con clientes
@@ -156,6 +177,7 @@ class ClientePushSubscription(models.Model):
     fecha_suscripcion = models.DateTimeField('Fecha de suscripción', auto_now_add=True)
     fecha_actualizacion = models.DateTimeField('Última actualización', auto_now=True)
     activa = models.BooleanField('Activa', default=True)
+    fallos_consecutivos = models.PositiveSmallIntegerField('Fallos seguidos', default=0)
 
     class Meta:
         verbose_name = 'Suscripción Push de Cliente'
@@ -196,7 +218,8 @@ class ClientePushSubscription(models.Model):
                 'auth': keys.get('auth'),
                 'p256dh': keys.get('p256dh'),
                 'user_agent': user_agent,
-                'activa': True
+                'activa': True,
+                'fallos_consecutivos': 0,
             }
         )
 
@@ -221,6 +244,12 @@ class ClientePushSubscription(models.Model):
         """Marca la suscripción como inactiva en lugar de eliminarla"""
         self.activa = False
         self.save()
+
+    def registrar_exito(self):
+        _registrar_exito(self)
+
+    def registrar_fallo(self):
+        _registrar_fallo(self)
 
 
 class UsuarioPushSubscription(models.Model):
@@ -256,6 +285,7 @@ class UsuarioPushSubscription(models.Model):
     fecha_suscripcion = models.DateTimeField('Fecha de suscripción', auto_now_add=True)
     fecha_actualizacion = models.DateTimeField('Última actualización', auto_now=True)
     activa = models.BooleanField('Activa', default=True)
+    fallos_consecutivos = models.PositiveSmallIntegerField('Fallos seguidos', default=0)
 
     class Meta:
         verbose_name = 'Suscripción Push de Usuario Admin'
@@ -300,7 +330,8 @@ class UsuarioPushSubscription(models.Model):
                 'auth': keys.get('auth'),
                 'p256dh': keys.get('p256dh'),
                 'user_agent': user_agent,
-                'activa': True
+                'activa': True,
+                'fallos_consecutivos': 0,
             }
         )
 
@@ -325,6 +356,12 @@ class UsuarioPushSubscription(models.Model):
         """Marca la suscripción como inactiva en lugar de eliminarla"""
         self.activa = False
         self.save()
+
+    def registrar_exito(self):
+        _registrar_exito(self)
+
+    def registrar_fallo(self):
+        _registrar_fallo(self)
 
 
 class Pendiente(models.Model):

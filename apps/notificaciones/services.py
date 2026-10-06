@@ -226,6 +226,7 @@ class NotificacionService:
                         **OPCIONES_ENTREGA_PUSH,
                     )
                     enviados += 1
+                    suscripcion.registrar_exito()
 
                     # Trackear si fue a cliente o admin
                     if isinstance(suscripcion, ClientePushSubscription):
@@ -246,6 +247,11 @@ class NotificacionService:
                         # nunca va a funcionar. El navegador la renueva sola al abrir la app.
                         suscripcion.desactivar()
                         logger.info(f"Suscripción {suscripcion.id} marcada como inactiva (clave VAPID distinta)")
+                    elif respuesta is not None:
+                        # El servicio de push rechazó el envío por otro motivo.
+                        # Solo cuentan los rechazos del servicio: un error propio
+                        # (clave mal configurada, sin red) no es culpa del dispositivo.
+                        suscripcion.registrar_fallo()
                     suscripciones_fallidas.append(suscripcion.id)
                     continue
                 except Exception as e:

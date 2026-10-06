@@ -288,6 +288,10 @@
                 <h5 class="d-inline-block mb-0">{% block page_title %}Panel de Administración{% endblock %}</h5>
             </div>
             <div>
+                <button type="button" id="boton-sonido" class="btn btn-sm btn-outline-secondary me-1"
+                        title="Sonido de avisos" aria-label="Sonido de avisos" aria-pressed="true">
+                    <i class="bi bi-bell-fill"></i>
+                </button>
                 <a href="{% url 'public:minipagina' negocio.slug %}" target="_blank" class="btn btn-sm btn-outline-primary">
                     <i class="bi bi-eye"></i> Vista Pública
                 </a>
@@ -340,6 +344,76 @@
             }
         }
 
+        // Sonido al llegar avisos con el panel abierto. Se puede silenciar con
+        // la campana de la barra superior (se recuerda en este dispositivo).
+        const CLAVE_SILENCIO = 'avisos_silenciados';
+        const botonSonido = document.getElementById('boton-sonido');
+        let audio = null;
+
+        function silenciado() {
+            try { return localStorage.getItem(CLAVE_SILENCIO) === '1'; } catch (e) { return false; }
+        }
+
+        function pintarBotonSonido() {
+            if (!botonSonido) {
+                return;
+            }
+            const callado = silenciado();
+            botonSonido.innerHTML = callado ? '<i class="bi bi-bell-slash"></i>' : '<i class="bi bi-bell-fill"></i>';
+            botonSonido.title = callado ? 'Sonido de avisos desactivado' : 'Sonido de avisos activado';
+            botonSonido.setAttribute('aria-pressed', String(!callado));
+        }
+
+        function prepararAudio() {
+            // Los navegadores solo permiten sonido después de que el usuario toque la página
+            const Contexto = window.AudioContext || window.webkitAudioContext;
+            if (!Contexto) {
+                return null;
+            }
+            if (!audio) {
+                audio = new Contexto();
+            }
+            if (audio.state === 'suspended') {
+                audio.resume().catch(() => {});
+            }
+            return audio;
+        }
+
+        function sonar() {
+            if (silenciado() || !audio || audio.state !== 'running') {
+                return;
+            }
+            // Dos tonos cortos ("din-don")
+            [[880, 0], [660, 0.18]].forEach(([frecuencia, inicio]) => {
+                const oscilador = audio.createOscillator();
+                const volumen = audio.createGain();
+                const t = audio.currentTime + inicio;
+                oscilador.frequency.value = frecuencia;
+                volumen.gain.setValueAtTime(0.0001, t);
+                volumen.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+                volumen.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+                oscilador.connect(volumen).connect(audio.destination);
+                oscilador.start(t);
+                oscilador.stop(t + 0.32);
+            });
+        }
+
+        ['click', 'touchstart', 'keydown'].forEach((evento) =>
+            document.addEventListener(evento, prepararAudio, { passive: true }));
+
+        if (botonSonido) {
+            pintarBotonSonido();
+            botonSonido.addEventListener('click', () => {
+                const callar = !silenciado();
+                try { localStorage.setItem(CLAVE_SILENCIO, callar ? '1' : '0'); } catch (e) { /* sin localStorage */ }
+                pintarBotonSonido();
+                if (!callar) {
+                    prepararAudio();
+                    setTimeout(sonar, 50);  // muestra cómo suena
+                }
+            });
+        }
+
         async function notificarLocal(novedad) {
             mostrarAvisoEnPagina(novedad);
             if (!('Notification' in window) || Notification.permission !== 'granted' || typeof obtenerRegistro !== 'function') {
@@ -390,7 +464,8 @@
                 try { localStorage.setItem(CLAVE_DESDE, datos.ahora); } catch (e) { /* sin localStorage */ }
                 actualizarContador(datos.total);
                 // La primera consulta solo marca el punto de partida (no avisa de lo anterior)
-                if (desde) {
+                if (desde && datos.novedades.length) {
+                    sonar();
                     datos.novedades.forEach(notificarLocal);
                 }
             } catch (e) {

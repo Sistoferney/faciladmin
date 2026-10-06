@@ -411,6 +411,47 @@ def notificar_cambio_cita(cita_id, evento, motivo=''):
     return notificacion.enviar()
 
 
+# Cuánto se guarda el historial antes de borrarlo en la limpieza semanal
+DIAS_HISTORIAL_NOTIFICACIONES = 90
+DIAS_PENDIENTES_RESUELTOS = 30
+DIAS_SUSCRIPCIONES_INACTIVAS = 90
+
+
+@shared_task
+def limpiar_historial_notificaciones():
+    """
+    Limpieza semanal para que las tablas no crezcan sin límite:
+    - Notificaciones enviadas hace más de 90 días (ya cumplieron su función).
+    - Pendientes que el dueño resolvió hace más de 30 días.
+    - Suscripciones push desactivadas hace más de 90 días (el dispositivo ya
+      no las usa; si vuelve, se crea una nueva al abrir la app).
+    Las citas, abonos y pendientes sin resolver no se tocan.
+    """
+    from .models import ClientePushSubscription, Pendiente, UsuarioPushSubscription
+
+    ahora = timezone.now()
+    notificaciones, _ = Notificacion.objects.filter(
+        fecha_creacion__lt=ahora - timedelta(days=DIAS_HISTORIAL_NOTIFICACIONES)
+    ).delete()
+    pendientes, _ = Pendiente.objects.filter(
+        resuelto=True,
+        actualizado_en__lt=ahora - timedelta(days=DIAS_PENDIENTES_RESUELTOS),
+    ).delete()
+    suscripciones = 0
+    for modelo in (ClientePushSubscription, UsuarioPushSubscription):
+        borradas, _ = modelo.objects.filter(
+            activa=False,
+            fecha_actualizacion__lt=ahora - timedelta(days=DIAS_SUSCRIPCIONES_INACTIVAS),
+        ).delete()
+        suscripciones += borradas
+
+    logger.info(
+        'Limpieza: %s notificaciones, %s pendientes resueltos, %s suscripciones inactivas',
+        notificaciones, pendientes, suscripciones,
+    )
+    return {'notificaciones': notificaciones, 'pendientes': pendientes, 'suscripciones': suscripciones}
+
+
 def programar_notificacion(tarea, *args):
     """
     Ejecuta la tarea al confirmarse la transacción: en segundo plano si hay

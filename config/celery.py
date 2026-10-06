@@ -34,6 +34,10 @@ app.conf.beat_schedule = {
         'task': 'apps.fidelizacion.tasks.sugerir_proximas_citas',
         'schedule': crontab(hour=11, minute=0),  # 11:00: recordar agendar (frecuencia + 2 días)
     },
+    'limpiar-historial-notificaciones': {
+        'task': 'apps.notificaciones.tasks.limpiar_historial_notificaciones',
+        'schedule': crontab(hour=3, minute=0, day_of_week='sunday'),  # Domingos 3:00 AM
+    },
 }
 
 @app.task(bind=True)
