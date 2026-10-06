@@ -181,7 +181,7 @@ Asegurarse de que las claves VAPID estén configuradas en settings:
 WEBPUSH_SETTINGS = {
     'VAPID_PUBLIC_KEY': 'tu-clave-publica',
     'VAPID_PRIVATE_KEY': 'tu-clave-privada',
-    'VAPID_ADMIN_EMAIL': 'admin@faciladmin.com'
+    'VAPID_ADMIN_EMAIL': 'admin@faciladmin.app'
 }
 ```
 

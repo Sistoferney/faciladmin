@@ -26,10 +26,10 @@ Resend es un servicio moderno de email transaccional que usa **HTTPS** (puerto 4
 
 ### Opción A: Usar dominio personalizado (Recomendado)
 
-Si tienes un dominio (ej: `faciladmin.com`):
+Si tienes un dominio (ej: `faciladmin.app`):
 
 1. En Resend Dashboard: **Domains** → **Add Domain**
-2. Ingresa tu dominio: `faciladmin.com`
+2. Ingresa tu dominio: `faciladmin.app`
 3. Agrega los registros DNS que Resend te muestra:
    ```
    Tipo: TXT
@@ -41,7 +41,7 @@ Si tienes un dominio (ej: `faciladmin.com`):
    Valor: [valor que te da Resend]
    ```
 4. Espera 5-10 minutos para que se verifique
-5. Una vez verificado, podrás enviar desde: `noreply@faciladmin.com`
+5. Una vez verificado, podrás enviar desde: `noreply@faciladmin.app`
 
 ### Opción B: Usar dominio de prueba (Desarrollo/Testing)
 
@@ -71,7 +71,7 @@ Opción A - Desde CLI (reemplaza con tu API Key):
 ```bash
 cd "e:\proyecto spa\faciladmin"
 railway variables set RESEND_API_KEY="re_xxxxxxxxxxxxxxxxxxxxxxxxxx" --service faciladmin
-railway variables set DEFAULT_FROM_EMAIL="noreply@faciladmin.com" --service faciladmin
+railway variables set DEFAULT_FROM_EMAIL="noreply@faciladmin.app" --service faciladmin
 ```
 
 Opción B - Desde Dashboard Web:
@@ -87,7 +87,7 @@ RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxxxx
 
 # Email desde el cual se enviarán los correos
 # Usa tu dominio verificado o el dominio de prueba
-DEFAULT_FROM_EMAIL=noreply@faciladmin.com
+DEFAULT_FROM_EMAIL=noreply@faciladmin.app
 
 # O si usas dominio de prueba:
 # DEFAULT_FROM_EMAIL=onboarding@resend.dev
@@ -139,7 +139,7 @@ Variables **obligatorias** en Railway:
 ```bash
 # Resend (Nuevo)
 RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxxxx
-DEFAULT_FROM_EMAIL=noreply@faciladmin.com
+DEFAULT_FROM_EMAIL=noreply@faciladmin.app
 
 # Django (Ya existentes - NO cambiar)
 SECRET_KEY=iijaspg-_3*@#q*u8lu19c$9c%0)t$b44h$xc%4!ib*s^r@jpk
@@ -157,7 +157,7 @@ CLOUDINARY_API_SECRET=5WuCHn_8Ff1kyhKJj5UPbPOFEFo
 # VAPID (Ya existente - NO cambiar)
 VAPID_PUBLIC_KEY=...
 VAPID_PRIVATE_KEY=...
-VAPID_ADMIN_EMAIL=admin@faciladmin.com
+VAPID_ADMIN_EMAIL=admin@faciladmin.app
 
 # Gunicorn (Ya configurado)
 GUNICORN_TIMEOUT=120
@@ -248,7 +248,7 @@ from django.core.mail import send_mail
 send_mail(
     'Test desde Django',
     'Este es un email de prueba.',
-    'noreply@faciladmin.com',
+    'noreply@faciladmin.app',
     ['tu-email@gmail.com'],
     fail_silently=False,
 )

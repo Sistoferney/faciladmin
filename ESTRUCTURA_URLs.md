@@ -229,16 +229,16 @@ Mini Página:    http://localhost:8000/{slug}/
 Cuando despliegues (ejemplo):
 
 ```
-Landing:        https://faciladmin.com/
-Registro:       https://faciladmin.com/registro/
-Admin:          https://faciladmin.com/admin/
-Mini Página:    https://faciladmin.com/{slug}/
+Landing:        https://faciladmin.app/
+Registro:       https://faciladmin.app/registro/
+Admin:          https://faciladmin.app/admin/
+Mini Página:    https://faciladmin.app/{slug}/
 ```
 
 Ejemplos de mini páginas:
-- https://faciladmin.com/spa-relax/
-- https://faciladmin.com/barberia-el-corte/
-- https://faciladmin.com/salon-belleza-maria/
+- https://faciladmin.app/spa-relax/
+- https://faciladmin.app/barberia-el-corte/
+- https://faciladmin.app/salon-belleza-maria/
 
 ---
 

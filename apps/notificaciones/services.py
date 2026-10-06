@@ -221,7 +221,7 @@ class NotificacionService:
                         data=json.dumps(payload),
                         vapid_private_key=vapid,
                         vapid_claims={
-                            'sub': f"mailto:{settings.WEBPUSH_SETTINGS.get('VAPID_ADMIN_EMAIL', 'admin@faciladmin.com')}"
+                            'sub': f"mailto:{settings.WEBPUSH_SETTINGS.get('VAPID_ADMIN_EMAIL', 'admin@faciladmin.app')}"
                         },
                         **OPCIONES_ENTREGA_PUSH,
                     )

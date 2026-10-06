@@ -51,7 +51,7 @@ System check identified no issues (0 silenced).
 ```
 VAPID_PUBLIC_KEY: BFTdSJKB_JA87CV92o2lUWqrr0Wuk_67ibyYDBzg0p8Y...
 VAPID_PRIVATE_KEY: -----BEGIN PRIVATE KEY-----\nMIGHAgEAMBMG...
-VAPID_ADMIN_EMAIL: admin@faciladmin.com
+VAPID_ADMIN_EMAIL: admin@faciladmin.app
 ```
 
 **Resultado:** ✅ CONFIGURACIÓN CORRECTA

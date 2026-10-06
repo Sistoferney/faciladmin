@@ -73,7 +73,7 @@ Ejemplo: -----BEGIN PRIVATE KEY-----\nMIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0waw
 ### Variable 3: `VAPID_ADMIN_EMAIL`
 **Valor:**
 ```
-admin@faciladmin.com
+admin@faciladmin.app
 ```
 
 ---

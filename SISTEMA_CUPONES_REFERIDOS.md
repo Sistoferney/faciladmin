@@ -256,7 +256,7 @@ EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_HOST_USER=tu_email@gmail.com
 EMAIL_HOST_PASSWORD=tu_password
-DEFAULT_FROM_EMAIL=noreply@faciladmin.com
+DEFAULT_FROM_EMAIL=noreply@faciladmin.app
 ```
 
 ### Cron Job Mensual

@@ -44,7 +44,7 @@ u4m8mAwc4NKfGG2UZX+QklS1K2g7DJBQWGSPCyB0P8WGX5co9vc5Tu4V
 
 #### VAPID_ADMIN_EMAIL
 ```
-admin@faciladmin.com
+admin@faciladmin.app
 ```
 
 ### 3. Guardar y Redesplegar

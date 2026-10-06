@@ -286,7 +286,7 @@ text = strip_tags(html)
 send_mail(
     'Prueba de recuperación - FacilAdmin',
     text,
-    'noreply@faciladmin.com',
+    'noreply@faciladmin.app',
     [usuario.email],
     html_message=html
 )

@@ -191,7 +191,7 @@ else:
 WEBPUSH_SETTINGS = {
     "VAPID_PUBLIC_KEY": config('VAPID_PUBLIC_KEY', default='').strip(),
     "VAPID_PRIVATE_KEY": _vapid_private,
-    "VAPID_ADMIN_EMAIL": config('VAPID_ADMIN_EMAIL', default='admin@faciladmin.com').strip()
+    "VAPID_ADMIN_EMAIL": config('VAPID_ADMIN_EMAIL', default='admin@faciladmin.app').strip()
 }
 
 # Celery Configuration (base)
