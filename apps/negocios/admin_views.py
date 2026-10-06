@@ -1202,3 +1202,142 @@ def clientes_recuperar(request, slug):
         'seccion_activa': 'clientes',
         'filas': filas,
     })
+
+
+# ---------- Agendar citas desde el panel (clientes que llaman) ----------
+
+# Igual que en la reserva web: el anticipo se pide con al menos 2 días de margen
+DIAS_MINIMOS_ABONO = 2
+
+
+def _puede_pedir_abono(servicio, fecha_hora):
+    return servicio.requiere_pago_abono and fecha_hora - timedelta(days=DIAS_MINIMOS_ABONO) > timezone.now()
+
+
+@admin_required
+def cliente_buscar(request, slug):
+    """Al escribir el teléfono en "Nueva cita": ¿ya es cliente del negocio?"""
+    from django.http import JsonResponse
+
+    negocio = get_object_or_404(Negocio, slug=slug)
+    cliente = Cliente.buscar_por_telefono(negocio, request.GET.get('telefono', ''))
+    if not cliente:
+        return JsonResponse({'encontrado': False})
+    return JsonResponse({
+        'encontrado': True,
+        'nombre': cliente.nombre,
+        'de_baja': not cliente.esta_activo,
+        'no_exigir_abono': cliente.no_exigir_abono,
+    })
+
+
+@admin_required
+def cita_nueva(request, slug):
+    """
+    El dueño agenda una cita (cliente que llama o escribe). Se abre desde un
+    espacio libre de la agenda. Si el teléfono no es de un cliente, se crea.
+    La cita queda confirmada; si el servicio lleva anticipo, el dueño decide
+    si pedirlo.
+    """
+    from datetime import datetime
+    from django.db import transaction
+    from apps.authentication.telefonos import normalizar_telefono
+    from .disponibilidad import esta_disponible
+
+    negocio = get_object_or_404(Negocio, slug=slug)
+    servicios = Servicio.objects.filter(negocio=negocio, esta_activo=True).order_by('orden', 'nombre')
+    datos = request.POST if request.method == 'POST' else request.GET
+
+    form = {
+        'telefono': datos.get('telefono', '').strip(),
+        'nombre': datos.get('nombre', '').strip(),
+        'servicio': datos.get('servicio', ''),
+        'fecha': datos.get('fecha', '') or timezone.localdate().isoformat(),
+        'hora': datos.get('hora', ''),
+        'notas': datos.get('notas', '').strip(),
+        'pedir_abono': datos.get('pedir_abono') == '1',
+    }
+
+    def mostrar(error=None):
+        if error:
+            messages.error(request, error)
+        return render(request, 'admin_panel/cita_nueva.html', {
+            'negocio': negocio,
+            'seccion_activa': 'agenda',
+            'servicios': servicios,
+            'form': form,
+            'dias_minimos_abono': DIAS_MINIMOS_ABONO,
+        })
+
+    if request.method != 'POST':
+        return mostrar()
+
+    telefono = normalizar_telefono(form['telefono'])
+    if not telefono:
+        return mostrar('El número de celular no es válido.')
+    servicio = servicios.filter(id=form['servicio']).first() if form['servicio'].isdigit() else None
+    if not servicio:
+        return mostrar('Selecciona un servicio.')
+    try:
+        fecha_hora = timezone.make_aware(datetime.strptime(f"{form['fecha']} {form['hora']}", '%Y-%m-%d %H:%M'))
+    except ValueError:
+        return mostrar('Selecciona la fecha y la hora.')
+
+    with transaction.atomic():
+        # Mismo bloqueo que la reserva web: nadie más toma ese horario a la vez
+        Negocio.objects.select_for_update().get(pk=negocio.pk)
+
+        if not esta_disponible(negocio, fecha_hora, servicio.duracion_minutos):
+            return mostrar('Ese horario ya no está disponible para este servicio. Elige otra hora.')
+
+        cliente = Cliente.buscar_por_telefono(negocio, telefono)
+        if cliente is None:
+            if not 2 <= len(form['nombre']) <= 200:
+                return mostrar('Escribe el nombre del cliente nuevo.')
+            cliente = Cliente.objects.create(
+                negocio=negocio, telefono=telefono, nombre=form['nombre'], creado_manualmente=True,
+            )
+        elif not cliente.esta_activo:
+            # Estaba dado de baja y volvió a pedir cita
+            cliente.reactivar()
+
+        exige_abono = form['pedir_abono'] and _puede_pedir_abono(servicio, fecha_hora)
+        cita = Cita.objects.create(
+            negocio=negocio,
+            cliente=cliente,
+            servicio=servicio,
+            fecha_hora=fecha_hora,
+            duracion_minutos=servicio.duracion_minutos,
+            estado='pendiente_abono' if exige_abono else 'confirmada',
+            origen='manual',
+            notas_internas=form['notas'],
+        )
+        if exige_abono:
+            Abono.objects.create(
+                cita=cita,
+                monto=servicio.precio_abono,
+                metodo_pago='transferencia',
+                estado='pendiente',
+                fecha_limite=cita.fecha_limite_abono,
+            )
+
+    return redirect('public:cita_agendada', slug=slug, cita_id=cita.id)
+
+
+@admin_required
+def cita_agendada(request, slug, cita_id):
+    """Resumen de la cita recién agendada, con el botón para confirmarle al cliente por WhatsApp"""
+    from apps.core.whatsapp import enlace_cita_agendada
+    from apps.notificaciones.tasks import _enlace_mis_citas
+
+    negocio = get_object_or_404(Negocio, slug=slug)
+    cita = get_object_or_404(
+        Cita.objects.select_related('cliente', 'servicio', 'abono'), id=cita_id, negocio=negocio
+    )
+    return render(request, 'admin_panel/cita_agendada.html', {
+        'negocio': negocio,
+        'seccion_activa': 'agenda',
+        'cita': cita,
+        'whatsapp': enlace_cita_agendada(cita, _enlace_mis_citas(negocio)),
+        'abono': getattr(cita, 'abono', None),
+    })

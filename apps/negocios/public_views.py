@@ -17,6 +17,7 @@ import calendar
 import re
 from apps.core.formato import parsear_monto, pesos
 from .disponibilidad import horarios_disponibles, esta_disponible
+from . import novedades_cliente
 from .models import Negocio
 from apps.servicios.models import Servicio
 from apps.clientes.models import Cliente
@@ -511,12 +512,16 @@ def mis_citas(request, slug):
 
     cliente = _cliente_verificado(request, negocio)
     citas_futuras = citas_pasadas = None
+    avisos = []
 
     if cliente:
         citas = Cita.objects.filter(
             cliente=cliente,
             negocio=negocio
         ).select_related('servicio', 'abono').order_by('-fecha_hora')
+
+        # Cambios desde la última visita (confirmada, cancelada, pago...)
+        avisos = novedades_cliente.novedades(request, negocio, list(citas))
 
         # Separar citas en futuras y pasadas
         ahora = timezone.now()
@@ -536,6 +541,7 @@ def mis_citas(request, slug):
         'citas_pasadas': citas_pasadas,
         # Aviso destacado si tiene una cita hoy (respaldo del recordatorio de 2 horas)
         'aviso_cita_hoy': _aviso_cita_hoy(citas_futuras),
+        'avisos': avisos,
         'title': f'Mis Citas - {negocio.nombre}',
     }
 
@@ -643,6 +649,7 @@ def editar_cita_cliente(request, slug, cita_id):
             except Exception:
                 logger.exception('Error al notificar edición de cita %s', cita.id)
 
+            novedades_cliente.registrar_cambio_propio(request, cita)
             messages.success(request, f'¡Cita actualizada! Nueva fecha: {timezone.localtime(nueva_fecha_hora).strftime("%d/%m/%Y a las %H:%M")}')
             return redirect('public:mis_citas', slug=slug)
 
@@ -725,6 +732,7 @@ def cancelar_cita_cliente(request, slug, cita_id):
         except Exception:
             logger.exception('Error al notificar cancelación de cita %s', cita.id)
 
+        novedades_cliente.registrar_cambio_propio(request, cita)
         messages.success(request, 'Tu cita ha sido cancelada exitosamente.')
         return redirect('public:mis_citas', slug=slug)
 
@@ -811,6 +819,7 @@ def subir_comprobante(request, slug, cita_id):
 
     transaction.on_commit(avisar_dueno)
 
+    novedades_cliente.registrar_cambio_propio(request, cita)
     messages.success(request, f'¡Listo! Enviamos tu comprobante a {negocio.nombre}. Te avisaremos cuando confirmen tu pago.')
     return redirect('public:mis_citas', slug=slug)
 

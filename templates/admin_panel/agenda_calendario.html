@@ -298,6 +298,9 @@
                     Siguiente <i class="bi bi-chevron-right"></i>
                 </a>
             </div>
+            <a href="{% url 'public:cita_nueva' negocio.slug %}" class="btn btn-primary ms-2">
+                <i class="bi bi-calendar-plus"></i> Nueva cita
+            </a>
             <a href="{% url 'public:bloqueos_admin' negocio.slug %}" class="btn btn-outline-warning ms-2">
                 <i class="bi bi-calendar-x"></i> Gestionar Bloqueos
             </a>
@@ -371,6 +374,9 @@
     <div class="mb-2">
         <strong id="selectedCount">0 bloques seleccionados</strong>
     </div>
+    <button class="btn btn-primary btn-sm me-2" onclick="agendarCitaDesdeSeleccion()">
+        <i class="bi bi-calendar-plus"></i> Agendar cita
+    </button>
     <button class="btn btn-warning btn-sm" onclick="crearBloqueoDesdeSeleccion()">
         <i class="bi bi-lock-fill"></i> Crear Bloqueo
     </button>
@@ -537,6 +543,20 @@ function cancelarSeleccion() {
         cell.classList.remove('selected');
     });
     actualizarToolbar();
+}
+
+// Agendar una cita (cliente que llama) en el primer espacio seleccionado.
+// La duración la pone el servicio que se elija en el formulario.
+function agendarCitaDesdeSeleccion() {
+    if (seleccionados.size === 0) {
+        alert('Selecciona el espacio donde va la cita');
+        return;
+    }
+    const [fecha, hora] = Array.from(seleccionados).sort()[0].split('_');
+    const url = new URL('{% url "public:cita_nueva" negocio.slug %}', window.location.origin);
+    url.searchParams.set('fecha', fecha);
+    url.searchParams.set('hora', hora);
+    window.location.href = url.toString();
 }
 
 function crearBloqueoDesdeSeleccion() {

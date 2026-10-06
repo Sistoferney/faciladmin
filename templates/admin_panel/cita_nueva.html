@@ -1,0 +1,207 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% load formato %}
+
+{% block page_title %}Agendar cita{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6 col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-calendar-plus"></i> Agendar cita</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" id="form-cita">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="telefono" class="form-label">Celular del cliente</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+                            <input type="tel" class="form-control" id="telefono" name="telefono"
+                                   value="{{ form.telefono }}" placeholder="300 123 4567"
+                                   inputmode="tel" autocomplete="off" required autofocus>
+                        </div>
+                        <div id="estado-cliente" class="form-text"></div>
+                    </div>
+
+                    <div class="mb-3" id="grupo-nombre" hidden>
+                        <label for="nombre" class="form-label">Nombre del cliente nuevo</label>
+                        <input type="text" class="form-control" id="nombre" name="nombre"
+                               value="{{ form.nombre }}" maxlength="200" autocomplete="off">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="servicio" class="form-label">Servicio</label>
+                        <select class="form-select" id="servicio" name="servicio" required>
+                            <option value="">Selecciona un servicio</option>
+                            {% for servicio in servicios %}
+                            <option value="{{ servicio.id }}"
+                                    data-abono="{% if servicio.requiere_pago_abono %}{{ servicio.precio_abono|pesos }}{% endif %}"
+                                    {% if form.servicio == servicio.id|stringformat:'s' %}selected{% endif %}>
+                                {{ servicio.nombre }} · {{ servicio.duracion_minutos }} min · {{ servicio.precio|pesos }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label for="fecha" class="form-label">Fecha</label>
+                            <input type="date" class="form-control" id="fecha" name="fecha" value="{{ form.fecha }}" min="{% now 'Y-m-d' %}" required>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label for="hora" class="form-label">Hora</label>
+                            <select class="form-select" id="hora" name="hora" required>
+                                <option value="">Elige el servicio</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="aviso-hora" class="alert alert-warning py-2 small" hidden></div>
+
+                    <div class="form-check mb-3" id="grupo-abono" hidden>
+                        <input class="form-check-input" type="checkbox" id="pedir_abono" name="pedir_abono" value="1"
+                               {% if form.pedir_abono or request.method != 'POST' %}checked{% endif %}>
+                        <label class="form-check-label" for="pedir_abono">
+                            Pedir anticipo de <strong id="monto-abono"></strong>
+                        </label>
+                        <div class="form-text" id="ayuda-abono">
+                            Si lo desmarcas, la cita queda confirmada sin anticipo.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notas" class="form-label">Notas internas <small class="text-muted">(opcional, el cliente no las ve)</small></label>
+                        <textarea class="form-control" id="notas" name="notas" rows="2">{{ form.notas }}</textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-check-lg"></i> Agendar cita
+                    </button>
+                    <a href="{% url 'public:admin_agenda' negocio.slug %}?fecha={{ form.fecha }}" class="btn btn-link w-100 mt-2">Volver a la agenda</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const URL_BUSCAR = "{% url 'public:admin_cliente_buscar' negocio.slug %}";
+    const URL_HORARIOS = "{% url 'public:disponibilidad_api' negocio.slug %}";
+    const DIAS_MINIMOS_ABONO = {{ dias_minimos_abono }};
+    let horaElegida = "{{ form.hora|escapejs }}";
+
+    const telefono = document.getElementById('telefono');
+    const estadoCliente = document.getElementById('estado-cliente');
+    const grupoNombre = document.getElementById('grupo-nombre');
+    const nombre = document.getElementById('nombre');
+    const servicio = document.getElementById('servicio');
+    const fecha = document.getElementById('fecha');
+    const hora = document.getElementById('hora');
+    const avisoHora = document.getElementById('aviso-hora');
+    const grupoAbono = document.getElementById('grupo-abono');
+    const pedirAbono = document.getElementById('pedir_abono');
+    const ayudaAbono = document.getElementById('ayuda-abono');
+    let clienteDeConfianza = false;
+
+    // ---- ¿Ya es cliente? ----
+    let temporizador = null;
+    async function buscarCliente() {
+        const digitos = telefono.value.replace(/\D/g, '');
+        if (digitos.length < 10) {
+            estadoCliente.textContent = '';
+            grupoNombre.hidden = true;
+            nombre.required = false;
+            return;
+        }
+        try {
+            const respuesta = await fetch(`${URL_BUSCAR}?telefono=${encodeURIComponent(telefono.value)}`, { credentials: 'same-origin' });
+            const datos = await respuesta.json();
+            if (datos.encontrado) {
+                estadoCliente.className = 'form-text text-success';
+                estadoCliente.textContent = `✓ Cliente: ${datos.nombre}` + (datos.de_baja ? ' (estaba dado de baja: se reactivará)' : '');
+                grupoNombre.hidden = true;
+                nombre.required = false;
+                clienteDeConfianza = datos.no_exigir_abono;
+                if (clienteDeConfianza) {
+                    pedirAbono.checked = false;
+                }
+            } else {
+                estadoCliente.className = 'form-text text-primary';
+                estadoCliente.textContent = 'Cliente nuevo: se creará con este celular.';
+                grupoNombre.hidden = false;
+                nombre.required = true;
+                clienteDeConfianza = false;
+            }
+            actualizarAbono();
+        } catch (e) {
+            console.log('No se pudo buscar el cliente', e);
+        }
+    }
+    telefono.addEventListener('input', () => {
+        clearTimeout(temporizador);
+        temporizador = setTimeout(buscarCliente, 400);
+    });
+
+    // ---- Horas libres para el servicio y la fecha ----
+    async function cargarHoras() {
+        avisoHora.hidden = true;
+        if (!servicio.value || !fecha.value) {
+            hora.innerHTML = '<option value="">Elige el servicio</option>';
+            return;
+        }
+        hora.innerHTML = '<option value="">Cargando…</option>';
+        try {
+            const respuesta = await fetch(`${URL_HORARIOS}?servicio=${servicio.value}&fecha=${fecha.value}`, { credentials: 'same-origin' });
+            const datos = await respuesta.json();
+            const horarios = datos.horarios || [];
+            hora.innerHTML = '';
+            if (!horarios.length) {
+                hora.innerHTML = '<option value="">Sin horas libres</option>';
+            }
+            horarios.forEach((h) => hora.add(new Option(h, h, false, h === horaElegida)));
+            if (horaElegida && horarios.length && !horarios.includes(horaElegida)) {
+                avisoHora.textContent = `A las ${horaElegida} no cabe este servicio (se cruza con otra cita, un bloqueo o el cierre). Elige otra hora.`;
+                avisoHora.hidden = false;
+                hora.selectedIndex = -1;
+            }
+        } catch (e) {
+            hora.innerHTML = '<option value="">No se pudieron cargar las horas</option>';
+        }
+        actualizarAbono();
+    }
+    hora.addEventListener('change', () => { horaElegida = hora.value; avisoHora.hidden = true; actualizarAbono(); });
+    servicio.addEventListener('change', cargarHoras);
+    fecha.addEventListener('change', cargarHoras);
+
+    // ---- Anticipo: solo si el servicio lo lleva y faltan al menos 2 días ----
+    function actualizarAbono() {
+        const opcion = servicio.selectedOptions[0];
+        const monto = opcion ? opcion.dataset.abono : '';
+        grupoAbono.hidden = !monto;
+        if (!monto) {
+            return;
+        }
+        document.getElementById('monto-abono').textContent = monto;
+        const inicio = fecha.value && hora.value ? new Date(`${fecha.value}T${hora.value}`) : null;
+        const conMargen = inicio && (inicio - Date.now()) > DIAS_MINIMOS_ABONO * 24 * 3600 * 1000;
+        if (inicio && !conMargen) {
+            pedirAbono.checked = false;
+            pedirAbono.disabled = true;
+            ayudaAbono.textContent = `Faltan menos de ${DIAS_MINIMOS_ABONO} días: la cita queda confirmada sin anticipo.`;
+        } else {
+            pedirAbono.disabled = false;
+            ayudaAbono.textContent = clienteDeConfianza
+                ? 'Este cliente es de confianza: normalmente no se le pide anticipo.'
+                : 'Si lo desmarcas, la cita queda confirmada sin anticipo.';
+        }
+    }
+
+    buscarCliente();
+    cargarHoras();
+})();
+</script>
+{% endblock %}

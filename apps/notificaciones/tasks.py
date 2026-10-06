@@ -82,7 +82,9 @@ Fecha límite de pago: {timezone.localtime(cita.abono.fecha_limite).strftime('%d
             # Enviar al cliente
             resultado = notificacion.enviar()
 
-        # También enviar notificación push al dueño del negocio
+        # Aviso al dueño, salvo que la haya agendado él mismo desde el panel
+        if cita.origen != 'web':
+            return resultado
         try:
             from .services import NotificacionService
             service = NotificacionService()

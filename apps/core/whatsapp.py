@@ -66,3 +66,28 @@ def enlace_comprobante(cita):
         f'{fecha.strftime("%d/%m/%Y a las %H:%M")}.'
     )
     return enlace_whatsapp(contacto_negocio(cita.negocio), texto)
+
+
+def enlace_cita_agendada(cita, enlace_mis_citas):
+    """
+    El dueño le confirma por WhatsApp al cliente la cita que le agendó por
+    teléfono (un cliente nuevo todavía no tiene notificaciones activadas).
+    """
+    from apps.notificaciones.textos_push import a_la_hora, fecha_corta
+    texto = (
+        f'Hola {cita.cliente.nombre}, tu cita de {cita.servicio.nombre} en '
+        f'{cita.negocio.nombre} quedó agendada para el '
+        f'{fecha_corta(cita.fecha_hora, con_hora=False)} {a_la_hora(cita.fecha_hora)}.'
+    )
+    abono = getattr(cita, 'abono', None)
+    if abono is not None and abono.estado == 'pendiente':
+        monto = f'{abono.monto:,.0f}'.replace(',', '.')
+        texto += (
+            f'\n\nPara confirmarla, envía el anticipo de ${monto} antes del '
+            f'{fecha_corta(abono.fecha_limite)}.'
+        )
+        medios = cita.negocio.texto_medios_pago()
+        if medios:
+            texto += f'\n{medios}'
+    texto += f'\n\nAquí puedes ver o cambiar tus citas: {enlace_mis_citas}'
+    return enlace_whatsapp(cita.cliente.telefono, texto)

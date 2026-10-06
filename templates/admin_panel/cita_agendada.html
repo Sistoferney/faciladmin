@@ -1,0 +1,47 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% load formato %}
+
+{% block page_title %}Cita agendada{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6 col-md-8 mx-auto">
+        <div class="card border-success">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-check-circle"></i> Cita agendada</h5>
+            </div>
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-person-circle"></i> {{ cita.cliente.nombre }}</h5>
+                <p class="mb-1"><i class="bi bi-scissors"></i> {{ cita.servicio.nombre }}</p>
+                <p class="mb-1"><i class="bi bi-calendar"></i> {{ cita.fecha_hora|date:"l j \d\e F" }}, {{ cita.fecha_hora|date:"g:i a" }}</p>
+                <p class="mb-3"><i class="bi bi-telephone"></i> {{ cita.cliente.telefono }}</p>
+
+                {% if abono and abono.estado == 'pendiente' %}
+                <div class="alert alert-warning">
+                    <i class="bi bi-hourglass-split"></i>
+                    Queda pendiente el anticipo de <strong>{{ abono.monto|pesos }}</strong>
+                    (plazo: {{ abono.fecha_limite|date:"j/m/Y g:i a" }}). Lo verás en Abonos.
+                </div>
+                {% else %}
+                <div class="alert alert-success"><i class="bi bi-check2"></i> La cita quedó confirmada.</div>
+                {% endif %}
+
+                {% if whatsapp %}
+                <p class="small text-muted mb-2">
+                    Si el cliente tiene las notificaciones activadas, ya le llegó la confirmación.
+                    Si no, envíasela por WhatsApp{% if abono and abono.estado == 'pendiente' %} (incluye los datos para pagar el anticipo){% endif %}:
+                </p>
+                <a href="{{ whatsapp }}" target="_blank" rel="noopener" class="btn btn-success w-100 mb-2">
+                    <i class="bi bi-whatsapp"></i> Enviar confirmación por WhatsApp
+                </a>
+                {% endif %}
+
+                <a href="{% url 'public:admin_agenda' negocio.slug %}?fecha={{ cita.fecha_hora|date:'Y-m-d' }}" class="btn btn-outline-primary w-100 mb-2">
+                    <i class="bi bi-calendar-week"></i> Volver a la agenda
+                </a>
+                <a href="{% url 'public:cita_nueva' negocio.slug %}" class="btn btn-link w-100">Agendar otra cita</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

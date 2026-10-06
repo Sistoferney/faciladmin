@@ -25,6 +25,9 @@ urlpatterns = [
 
     # Agenda y Citas
     path('<slug:slug>/admin/agenda/', admin_views.agenda_admin, name='admin_agenda'),
+    path('<slug:slug>/admin/citas/nueva/', admin_views.cita_nueva, name='cita_nueva'),
+    path('<slug:slug>/admin/citas/<int:cita_id>/agendada/', admin_views.cita_agendada, name='cita_agendada'),
+    path('<slug:slug>/admin/clientes/buscar/', admin_views.cliente_buscar, name='admin_cliente_buscar'),
     path('<slug:slug>/admin/citas/<int:cita_id>/confirmar/', admin_views.cita_confirmar, name='cita_confirmar'),
     path('<slug:slug>/admin/citas/<int:cita_id>/completar/', admin_views.cita_completar, name='cita_completar'),
     path('<slug:slug>/admin/citas/<int:cita_id>/cancelar/', admin_views.cita_cancelar, name='cita_cancelar'),

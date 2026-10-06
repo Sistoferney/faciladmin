@@ -14,7 +14,9 @@ from . import pendientes
 @receiver(post_save, sender=Cita, dispatch_uid='pendientes_cita')
 def pendientes_por_cita(sender, instance, created, **kwargs):
     if created:
-        pendientes.abrir(instance, 'cita_nueva')
+        # Las citas que agenda el propio dueño (por teléfono) no son novedad para él
+        if instance.origen == 'web':
+            pendientes.abrir(instance, 'cita_nueva')
     elif instance.estado in pendientes.ESTADOS_CITA_CERRADA:
         # Cancelada, completada o no asistió: ya no hay nada que revisar ni cobrar.
         # El aviso de "cancelada por el cliente" se mantiene hasta que el dueño lo vea.
@@ -24,7 +26,10 @@ def pendientes_por_cita(sender, instance, created, **kwargs):
 @receiver(post_save, sender=Abono, dispatch_uid='pendientes_abono')
 def pendientes_por_abono(sender, instance, created, **kwargs):
     if created:
-        pendientes.abrir(instance.cita, 'abono', 'Esperando pago')
+        # En citas agendadas por el dueño, el pendiente se abre cuando el
+        # cliente envía el comprobante o vence el plazo, no al crearlas
+        if instance.cita.origen == 'web':
+            pendientes.abrir(instance.cita, 'abono', 'Esperando pago')
     elif instance.estado in ('confirmado', 'exonerado'):
         # Pago resuelto: también se da por revisada la cita
         pendientes.resolver(instance.cita, tipos=['abono', 'cita_nueva'])
