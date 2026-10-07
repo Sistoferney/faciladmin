@@ -18,7 +18,6 @@ def landing_page(request):
     context = {
         'title': 'FacilAdmin - Sistema de Gestión para Spas y Peluquerías',
         'total_negocios': Negocio.objects.filter(esta_activo=True).count(),
-        'negocios': Negocio.objects.filter(esta_activo=True).order_by('-fecha_creacion') if request.user.is_superuser else None,
     }
     return render(request, 'landing/index.html', context)
 

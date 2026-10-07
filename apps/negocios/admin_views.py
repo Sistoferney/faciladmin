@@ -87,9 +87,16 @@ def admin_required(view_func):
         negocio = get_object_or_404(Negocio, slug=slug)
 
         # Verificar que el usuario sea el admin de este negocio o superadmin
-        if not (hasattr(request.user, 'negocio') and request.user.negocio == negocio) and not request.user.is_superuser:
+        es_dueno = negocio.administrador_id == request.user.id
+        if not es_dueno and not request.user.is_superuser:
             messages.error(request, 'No tienes permiso para acceder a este panel de administración.')
             return redirect('/')
+
+        # Superadmin dando soporte: ve y actúa en el panel, pero su dispositivo
+        # no se suscribe a los avisos del negocio (ver base_admin.html)
+        request.modo_soporte = not es_dueno
+        if request.modo_soporte and request.method == 'POST':
+            logger.info('Soporte: %s hizo %s en el panel de %s', request.user.pk, request.path, slug)
 
         return view_func(request, slug, *args, **kwargs)
 

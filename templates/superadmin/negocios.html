@@ -1,0 +1,182 @@
+{% extends 'landing/base_landing.html' %}
+
+{% block extra_css %}
+<style>
+    .sa-page { padding: 32px 0 64px; background: #f6f7fb; min-height: 70vh; }
+    .sa-card { background: #fff; border-radius: 12px; padding: 16px 18px; box-shadow: 0 1px 3px rgba(0,0,0,.06); height: 100%; }
+    .sa-card .valor { font-size: 1.9rem; font-weight: 700; line-height: 1.1; }
+    .sa-card a { color: inherit; text-decoration: none; }
+    .sa-tabla { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.06); overflow: hidden; }
+    .sa-tabla table { margin: 0; }
+    .sa-tabla th { font-size: .8rem; text-transform: uppercase; color: #6c757d; font-weight: 600; white-space: nowrap; }
+    .sa-tabla td { vertical-align: middle; }
+    .sa-acciones .btn { padding: .2rem .5rem; }
+    /* En celular cada negocio se ve como una tarjeta */
+    @media (max-width: 767.98px) {
+        .sa-tabla thead { display: none; }
+        .sa-tabla tr { display: block; border-bottom: 1px solid #eee; padding: 10px 14px; }
+        .sa-tabla td { display: flex; justify-content: space-between; gap: 12px; border: 0; padding: 4px 0; }
+        .sa-tabla td::before { content: attr(data-etiqueta); color: #6c757d; font-size: .85rem; }
+        .sa-tabla td.sa-nombre::before, .sa-tabla td.sa-acciones::before { content: none; }
+        .sa-tabla td.sa-acciones { justify-content: flex-start; padding-top: 8px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="sa-page">
+<div class="container">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <h2 class="mb-0"><i class="bi bi-shop"></i> Negocios</h2>
+        <a href="/admin/negocios/negocio/" class="btn btn-sm btn-outline-secondary"><i class="bi bi-gear"></i> Editar en Django Admin</a>
+    </div>
+
+    <!-- Resumen -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="sa-card"><a href="?estado=todos">
+                <div class="text-muted small">Total inscritos</div>
+                <div class="valor">{{ resumen.total }}</div>
+            </a></div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="sa-card"><a href="?estado=activos">
+                <div class="text-muted small">Activos</div>
+                <div class="valor text-success">{{ resumen.activos }}</div>
+            </a></div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="sa-card"><a href="?estado=todos&orden=recientes">
+                <div class="text-muted small">Nuevos este mes</div>
+                <div class="valor text-primary">{{ resumen.nuevos_mes }}</div>
+            </a></div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="sa-card"><a href="?estado=sin_actividad">
+                <div class="text-muted small">Sin actividad ({{ dias_actividad }} días)</div>
+                <div class="valor text-danger">{{ resumen.sin_actividad }}</div>
+            </a></div>
+        </div>
+    </div>
+
+    <!-- Búsqueda y filtros -->
+    <form method="get" class="row g-2 mb-3">
+        <div class="col-12 col-md-5">
+            <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Buscar por negocio, dueño, celular o correo">
+        </div>
+        <div class="col-6 col-md-3">
+            <select name="estado" class="form-select" onchange="this.form.submit()">
+                <option value="activos" {% if estado == 'activos' %}selected{% endif %}>Activos</option>
+                <option value="sin_actividad" {% if estado == 'sin_actividad' %}selected{% endif %}>Sin actividad</option>
+                <option value="inactivos" {% if estado == 'inactivos' %}selected{% endif %}>Desactivados</option>
+                <option value="todos" {% if estado == 'todos' %}selected{% endif %}>Todos</option>
+            </select>
+        </div>
+        <div class="col-6 col-md-3">
+            <select name="orden" class="form-select" onchange="this.form.submit()">
+                <option value="recientes" {% if orden == 'recientes' %}selected{% endif %}>Más recientes</option>
+                <option value="actividad" {% if orden == 'actividad' %}selected{% endif %}>Última actividad</option>
+                <option value="citas" {% if orden == 'citas' %}selected{% endif %}>Más citas (30 días)</option>
+                <option value="nombre" {% if orden == 'nombre' %}selected{% endif %}>Nombre</option>
+            </select>
+        </div>
+        <div class="col-12 col-md-1 d-grid">
+            <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i></button>
+        </div>
+    </form>
+
+    <div class="sa-tabla">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Negocio</th>
+                    <th>Dueño</th>
+                    <th class="text-end">Citas 30 d</th>
+                    <th class="text-end">Clientes</th>
+                    <th>Última actividad</th>
+                    <th>Avisos</th>
+                    <th>Plan</th>
+                    <th>Registro</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for negocio in pagina %}
+                <tr>
+                    <td class="sa-nombre">
+                        <strong>{{ negocio.nombre }}</strong>
+                        {% if not negocio.esta_activo %}<span class="badge bg-secondary ms-1">Desactivado</span>{% endif %}
+                        <div class="small text-muted">/{{ negocio.slug }}</div>
+                    </td>
+                    <td data-etiqueta="Dueño">
+                        <div>
+                            {{ negocio.administrador.nombre }}
+                            <div class="small text-muted">{{ negocio.administrador.telefono|default:"sin celular" }}</div>
+                        </div>
+                    </td>
+                    <td data-etiqueta="Citas 30 días" class="text-end">{{ negocio.citas_30d }}</td>
+                    <td data-etiqueta="Clientes" class="text-end">{{ negocio.total_clientes }}</td>
+                    <td data-etiqueta="Última actividad">
+                        {% if negocio.ultima_actividad %}
+                            <span class="{% if negocio.inactivo_reciente %}text-danger{% endif %}" title="{{ negocio.ultima_actividad|date:'j/m/Y g:i a' }}">
+                                hace {{ negocio.ultima_actividad|timesince }}
+                            </span>
+                        {% else %}
+                            <span class="text-danger">Nunca</span>
+                        {% endif %}
+                    </td>
+                    <td data-etiqueta="Avisos">
+                        {% if negocio.push_activo %}
+                            <span class="text-success" title="El dueño recibe notificaciones"><i class="bi bi-bell-fill"></i> Sí</span>
+                        {% else %}
+                            <span class="text-muted" title="El dueño no ha activado las notificaciones"><i class="bi bi-bell-slash"></i> No</span>
+                        {% endif %}
+                    </td>
+                    <td data-etiqueta="Plan">
+                        {% with s=negocio.suscripcion %}
+                        {% if s %}
+                            <div>{{ s.plan.nombre }}
+                                <div class="small {% if s.estado == 'vencida' or s.estado == 'suspendida' or s.estado == 'cancelada' %}text-danger{% else %}text-muted{% endif %}">
+                                    {{ s.get_estado_display }} · vence {{ s.fecha_fin|date:"j/m/Y" }}
+                                </div>
+                            </div>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                        {% endwith %}
+                    </td>
+                    <td data-etiqueta="Registro">{{ negocio.fecha_creacion|date:"j/m/Y" }}</td>
+                    <td class="sa-acciones text-nowrap">
+                        <a href="/{{ negocio.slug }}/" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary" title="Ver minipágina"><i class="bi bi-globe"></i></a>
+                        <a href="/{{ negocio.slug }}/admin/" class="btn btn-sm btn-outline-primary" title="Abrir su panel (soporte)"><i class="bi bi-life-preserver"></i> Panel</a>
+                        {% if negocio.whatsapp_dueno %}
+                        <a href="{{ negocio.whatsapp_dueno }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-success" title="WhatsApp al dueño"><i class="bi bi-whatsapp"></i></a>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="9" class="text-center text-muted py-4">No hay negocios con estos filtros.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if pagina.paginator.num_pages > 1 %}
+    <nav class="mt-3 d-flex justify-content-between align-items-center">
+        <span class="text-muted small">{{ pagina.start_index }}–{{ pagina.end_index }} de {{ pagina.paginator.count }}</span>
+        <ul class="pagination mb-0">
+            {% if pagina.has_previous %}
+            <li class="page-item"><a class="page-link" href="?{{ parametros }}&pagina={{ pagina.previous_page_number }}">Anterior</a></li>
+            {% endif %}
+            <li class="page-item disabled"><span class="page-link">{{ pagina.number }} / {{ pagina.paginator.num_pages }}</span></li>
+            {% if pagina.has_next %}
+            <li class="page-item"><a class="page-link" href="?{{ parametros }}&pagina={{ pagina.next_page_number }}">Siguiente</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+
+</div>
+</section>
+{% endblock %}

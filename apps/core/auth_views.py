@@ -10,9 +10,9 @@ def redirect_after_login(request):
     """
     Redirige al usuario a su panel personalizado después del login
     """
-    # Si es superadmin, ir a la landing principal
+    # Si es superadmin, ir al listado de negocios
     if request.user.is_superuser:
-        return redirect('/')
+        return redirect('core:superadmin_negocios')
 
     # Si el usuario tiene un negocio asociado, ir a su mini-página admin
     if hasattr(request.user, 'negocio'):
