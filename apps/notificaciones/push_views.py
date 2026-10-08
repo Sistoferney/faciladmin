@@ -34,6 +34,37 @@ def _desactivar_endpoints_anteriores(data, endpoint_actual):
     return total
 
 
+def _separar_de_la_otra_app(data, suscripcion):
+    """
+    Una suscripción push pertenece a un solo Service Worker, es decir, a una
+    sola app: el panel del dueño o la mini-página del cliente.
+
+    Un error del navegador (ver obtenerRegistro en pwa-register.js) hacía que
+    el panel se suscribiera con el Service Worker de la mini-página del mismo
+    celular: los avisos del dueño llegaban a la app del cliente. Al guardar:
+    - Se desactiva el mismo endpoint en la tabla de la otra app.
+    - Se desactivan en esta tabla los endpoints que el navegador reporta como
+      de la otra app (endpoints_otra_app).
+    """
+    from .models import ClientePushSubscription, UsuarioPushSubscription
+
+    es_dueno = isinstance(suscripcion, UsuarioPushSubscription)
+    propia, otra = (
+        (UsuarioPushSubscription, ClientePushSubscription) if es_dueno
+        else (ClientePushSubscription, UsuarioPushSubscription)
+    )
+    total = otra.objects.filter(endpoint=suscripcion.endpoint, activa=True).update(activa=False)
+
+    ajenos = data.get('endpoints_otra_app') or []
+    if isinstance(ajenos, list):
+        ajenos = [e for e in ajenos[:5] if isinstance(e, str) and e and e != suscripcion.endpoint]
+        if ajenos:
+            total += propia.objects.filter(endpoint__in=ajenos, activa=True).update(activa=False)
+    if total:
+        logger.info('Desactivadas %s suscripciones cruzadas entre panel y mini-página', total)
+    return total
+
+
 @require_http_methods(["GET"])
 def get_vapid_public_key(request):
     """
@@ -102,6 +133,7 @@ def subscribe_push(request):
                 user_agent=user_agent
             )
             _desactivar_endpoints_anteriores(data, subscription.endpoint)
+            _separar_de_la_otra_app(data, subscription)
 
             return JsonResponse({
                 'success': True,
@@ -258,6 +290,7 @@ def subscribe_admin_push(request):
                 user_agent=user_agent
             )
             _desactivar_endpoints_anteriores(data, subscription.endpoint)
+            _separar_de_la_otra_app(data, subscription)
 
             return JsonResponse({
                 'success': True,

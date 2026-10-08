@@ -339,7 +339,7 @@
 
     <!-- Bandeja de pendientes: con el panel abierto se consulta cada 60 s y se
          muestra una notificación local por cada novedad, aunque el push no haya
-         llegado. Usa la misma etiqueta que el push de la cita (cita-<id>), así
+         llegado. Usa la misma etiqueta que el push al dueño (dueno-cita-<id>), así
          que si el push ya llegó, la reemplaza en vez de duplicarla. -->
     <script>
     (function () {
@@ -439,7 +439,7 @@
                 const registro = await obtenerRegistro();
                 await registro.showNotification(novedad.titulo, {
                     body: novedad.texto,
-                    tag: `cita-${novedad.cita_id}`,
+                    tag: `dueno-cita-${novedad.cita_id}`,
                     icon: '/static/images/faciladmin-logo.png',
                     data: { url: URL_PENDIENTES },
                 });

@@ -237,11 +237,14 @@ class PayloadPushTests(TestCase):
         self.assertTrue(self._enviar(cita, a_admin=True)['success'])
         payload = self._payload(webpush)
         self.assertEqual(payload['url'], f'/{self.negocio.slug}/admin/pendientes/')
-        self.assertEqual(payload['tag'], f'cita-{cita.id}')
+        self.assertEqual(payload['tag'], f'dueno-cita-{cita.id}')
 
     def test_cliente_va_a_mis_citas(self, webpush, *mocks):
-        self._enviar(self._cita(2), a_admin=False)
+        cita = self._cita(2)
+        self._enviar(cita, a_admin=False)
         self.assertEqual(self._payload(webpush)['url'], f'/{self.negocio.slug}/mis-citas/')
+        # Distinto del tag del dueño: un aviso no reemplaza al otro
+        self.assertEqual(self._payload(webpush)['tag'], f'cita-{cita.id}')
 
     def test_citas_distintas_tienen_tags_distintos(self, webpush, *mocks):
         self._enviar(self._cita(2), a_admin=True)
@@ -830,3 +833,46 @@ class LimpiezaHistorialTests(TestCase):
         self.assertEqual(list(Notificacion.objects.all()), [reciente])
         self.assertCountEqual(Pendiente.objects.all(), [abierto_viejo, resuelto_reciente])
         self.assertEqual(list(ClientePushSubscription.objects.all()), [activa])
+
+
+class SuscripcionesCruzadasTests(TestCase):
+    """
+    El panel del dueño se suscribía con el Service Worker de la mini-página
+    del mismo celular: los avisos del dueño llegaban a la app del cliente.
+    """
+    MINI = 'https://push/minipagina'
+    PANEL = 'https://push/panel'
+
+    def setUp(self):
+        from .models import UsuarioPushSubscription
+        self.negocio, _, self.cliente = _crear_base()
+        session = self.client.session
+        session['clientes_verificados'] = {str(self.negocio.id): self.cliente.id}
+        session.save()
+        # Estado dañado: la suscripción de la mini-página guardada también como del dueño
+        ClientePushSubscription.objects.create(cliente=self.cliente, endpoint=self.MINI, auth='a', p256dh='p')
+        self.cruzada = UsuarioPushSubscription.objects.create(
+            user=self.negocio.administrador, negocio=self.negocio, endpoint=self.MINI, auth='a', p256dh='p'
+        )
+
+    def _post(self, url, endpoint, **extra):
+        import json
+        sub = {'endpoint': endpoint, 'keys': {'auth': 'a', 'p256dh': 'p'}}
+        return self.client.post(url, json.dumps(
+            {'subscription': sub, 'negocio_slug': self.negocio.slug, **extra}
+        ), content_type='application/json')
+
+    def test_minipagina_recupera_su_suscripcion(self):
+        self._post('/api/notificaciones/push/subscribe/', self.MINI)
+        self.cruzada.refresh_from_db()
+        self.assertFalse(self.cruzada.activa)
+        self.assertTrue(ClientePushSubscription.objects.get(endpoint=self.MINI).activa)
+
+    def test_panel_reporta_la_suscripcion_de_la_minipagina(self):
+        self.client.force_login(self.negocio.administrador)
+        resp = self._post('/api/notificaciones/push/subscribe-admin/', self.PANEL, endpoints_otra_app=[self.MINI])
+        self.assertEqual(resp.status_code, 200)
+        self.cruzada.refresh_from_db()
+        self.assertFalse(self.cruzada.activa)
+        # La del cliente sigue activa: es suya
+        self.assertTrue(ClientePushSubscription.objects.get(endpoint=self.MINI).activa)

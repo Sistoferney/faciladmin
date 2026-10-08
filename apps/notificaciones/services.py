@@ -166,7 +166,9 @@ class NotificacionService:
                 # Las notificaciones de una misma cita (nueva, editada, cancelada)
                 # se reemplazan entre sí; las de citas distintas se acumulan.
                 # Sin cita no hay tag: cada notificación se muestra por separado.
-                payload['tag'] = f'cita-{cita.id}'
+                # Dueño y cliente usan tags distintos: el aviso de uno nunca
+                # reemplaza la notificación del otro.
+                payload['tag'] = f'dueno-cita-{cita.id}' if enviar_a_admin else f'cita-{cita.id}'
                 # Al tocar la notificación: el dueño va a su agenda y el cliente
                 # a sus citas (cada uno dentro de su app instalada)
                 if url:

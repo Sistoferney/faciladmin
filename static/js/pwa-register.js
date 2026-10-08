@@ -11,22 +11,38 @@ let registroServiceWorker = null;
 if ('serviceWorker' in navigator) {
     // Registrar Service Worker cuando la página cargue
     window.addEventListener('load', () => {
-        registroServiceWorker = registerServiceWorker();
+        if (!registroServiceWorker) {
+            registroServiceWorker = registerServiceWorker();
+        }
     });
 }
 
 /**
  * Registro activo del Service Worker de esta app (panel o mini-página).
- * No usa navigator.serviceWorker.ready porque durante la migración podría
- * devolver el registro antiguo de alcance '/'.
+ *
+ * IMPORTANTE: debe ser el registro con el alcance EXACTO de esta app.
+ * getRegistration('/negocio/admin/') devuelve el registro cuyo alcance
+ * contiene esa ruta, y '/negocio/' (la mini-página) la contiene: si el panel
+ * se abría antes de registrar su propio Service Worker, se suscribía con el
+ * de la mini-página y los avisos del dueño llegaban a la app del cliente.
+ * Por lo mismo no se usa navigator.serviceWorker.ready.
  */
+function esRegistroDeEstaApp(registro) {
+    return Boolean(registro) &&
+        registro.scope === new URL(alcanceServiceWorker(), window.location.origin).href;
+}
+
 async function obtenerRegistro() {
     let registro = registroServiceWorker ? await registroServiceWorker : null;
-    if (!registro) {
+    if (!esRegistroDeEstaApp(registro)) {
         registro = await navigator.serviceWorker.getRegistration(alcanceServiceWorker());
     }
-    if (!registro) {
-        return navigator.serviceWorker.ready;
+    if (!esRegistroDeEstaApp(registro)) {
+        // Todavía no existe el de esta app: registrarlo ahora
+        if (!registroServiceWorker) {
+            registroServiceWorker = registerServiceWorker();
+        }
+        registro = await registroServiceWorker;
     }
     if (!registro.active) {
         // Esperar a que termine de activarse (el SW hace skipWaiting al instalarse)
@@ -40,6 +56,28 @@ async function obtenerRegistro() {
         }
     }
     return registro;
+}
+
+/**
+ * Suscripción push de la OTRA app del mismo negocio en este navegador
+ * (panel <-> mini-página). Se envía al servidor para que no quede guardada
+ * como de esta app (ver el error descrito en obtenerRegistro).
+ */
+async function endpointsOtraApp() {
+    try {
+        const partes = window.location.pathname.split('/').filter(Boolean);
+        if (!partes.length) {
+            return [];
+        }
+        const otroAlcance = alcanceServiceWorker().endsWith('/admin/') ? `/${partes[0]}/` : `/${partes[0]}/admin/`;
+        const otroScope = new URL(otroAlcance, window.location.origin).href;
+        const registros = await navigator.serviceWorker.getRegistrations();
+        const otro = registros.find((r) => r.scope === otroScope);
+        const suscripcion = otro ? await otro.pushManager.getSubscription() : null;
+        return suscripcion ? [suscripcion.endpoint] : [];
+    } catch (e) {
+        return [];
+    }
 }
 
 /**
@@ -524,7 +562,7 @@ function mismaClaveVapid(subscription, claveActual) {
  */
 function claveSuscripcionGuardada() {
     const app = window.location.pathname.includes('/admin/') ? 'panel' : 'cliente';
-    return `push_guardada_${app}`;
+    return `push_guardada_v2_${app}`;
 }
 
 function necesitaGuardarse(subscription) {
@@ -557,7 +595,8 @@ async function savePushSubscription(subscription, interactivo = true) {
                 body: JSON.stringify({
                     subscription: subscription.toJSON(),
                     negocio_slug: negocio_slug,  // Enviar slug del negocio
-                    endpoints_anteriores: endpointsAnteriores()
+                    endpoints_anteriores: endpointsAnteriores(),
+                    endpoints_otra_app: await endpointsOtraApp()
                 })
             });
 
@@ -594,7 +633,8 @@ async function savePushSubscription(subscription, interactivo = true) {
             body: JSON.stringify({
                 subscription: subscription.toJSON(),
                 negocio_slug: negocio_slug,
-                endpoints_anteriores: endpointsAnteriores()
+                endpoints_anteriores: endpointsAnteriores(),
+                endpoints_otra_app: await endpointsOtraApp()
             })
         });
 
