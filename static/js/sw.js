@@ -6,7 +6,7 @@
 
 // v5: deja de cachear páginas HTML (el activate borra la caché v4, que podía
 // contener páginas privadas del panel del dueño)
-const CACHE_NAME = 'faciladmin-v5';
+const CACHE_NAME = 'faciladmin-v6';
 const CACHE_ASSETS = [
     '/static/css/main.css',
     '/static/js/main.js',
@@ -265,6 +265,23 @@ async function notifyClients(message) {
 }
 
 // Manejar click en notificaciones
+/**
+ * ¿La ventana pertenece a la app de este Service Worker?
+ * - Panel del dueño: alcance /<negocio>/admin/
+ * - Mini-página:     alcance /<negocio>/ sin incluir /<negocio>/admin/,
+ *   que está dentro de su ruta pero es la otra app
+ */
+function esDeEstaApp(url) {
+    const alcance = self.registration.scope;
+    if (!url.startsWith(alcance)) {
+        return false;
+    }
+    if (alcance.endsWith('/admin/')) {
+        return true;
+    }
+    return !url.startsWith(`${alcance}admin/`);
+}
+
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
 
@@ -285,17 +302,21 @@ self.addEventListener('notificationclick', (event) => {
         Promise.all([
             decrementBadge(),
             clients.matchAll({ type: 'window', includeUncontrolled: true })
-                .then((clientList) => {
+                .then((todas) => {
+                    // Solo ventanas de ESTA app. matchAll devuelve todas las del
+                    // sitio, incluida la otra app instalada del mismo negocio: antes
+                    // un aviso del cliente podía abrirse dentro de la app del dueño
+                    // (p. ej. si esta estaba en la página de login).
+                    const clientList = todas.filter((c) => esDeEstaApp(c.url));
+
                     // Si ya está abierta exactamente esa página, enfocarla
                     const exacta = clientList.find((c) => c.url === urlToOpen && 'focus' in c);
                     if (exacta) {
                         return exacta.focus();
                     }
-                    // Si la misma app (panel del dueño o mini-página) está abierta en
-                    // otra pantalla, llevarla a la página de la notificación
-                    const esPanel = (url) => new URL(url).pathname.includes('/admin/');
-                    const misma = clientList.find((c) =>
-                        esPanel(c.url) === esPanel(urlToOpen) && 'navigate' in c);
+                    // Si esta app está abierta en otra pantalla, llevarla a la
+                    // página de la notificación
+                    const misma = clientList.find((c) => 'navigate' in c);
                     if (misma) {
                         return misma.navigate(urlToOpen).then((c) => (c || misma).focus());
                     }
