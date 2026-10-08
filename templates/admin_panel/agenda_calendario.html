@@ -12,23 +12,37 @@
         margin-bottom: 20px;
     }
 
+    /* Encabezado y cuadrícula van en un mismo contenedor con desplazamiento:
+       así comparten exactamente el ancho de las columnas (antes eran dos
+       cuadrículas separadas y en el celular los días quedaban corridos
+       respecto a las citas) y se deslizan juntos en pantallas angostas. */
     .calendar-grid {
         background: white;
         border-radius: 10px;
-        overflow: hidden;
+        overflow: auto;
+        max-height: calc(100vh - 350px);
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .calendar-week-header,
+    .calendar-body {
+        min-width: 620px;
+        grid-template-columns: 70px repeat(7, minmax(0, 1fr));
     }
 
     .calendar-week-header {
         display: grid;
-        grid-template-columns: 80px repeat(7, 1fr);
+        position: sticky;
+        top: 0;
+        z-index: 20;
         background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
         color: white;
         font-weight: 600;
     }
 
     .calendar-week-header > div {
-        padding: 15px 10px;
+        min-width: 0;
+        padding: 12px 4px;
         text-align: center;
         border-right: 1px solid rgba(255,255,255,0.2);
     }
@@ -57,14 +71,19 @@
     .calendar-day-header.today {
         background: rgba(255, 255, 255, 0.2);
         border-radius: 8px;
-        padding: 5px 10px;
+        padding: 5px 2px;
     }
 
     .calendar-body {
         display: grid;
-        grid-template-columns: 80px repeat(7, 1fr);
-        max-height: calc(100vh - 350px);
-        overflow-y: auto;
+    }
+
+    /* Esquina del encabezado: fija al deslizar en horizontal, como la columna de horas */
+    .calendar-week-header > .calendar-corner {
+        position: sticky;
+        left: 0;
+        z-index: 21;
+        background: var(--primary-color);
     }
 
     .time-slot {
@@ -166,7 +185,7 @@
     .cita-block:hover {
         transform: translateY(-1px);
         box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        z-index: 100;
+        z-index: 5;  /* sobre las celdas vecinas, debajo de horas y encabezado fijos */
     }
 
     .cita-block.confirmada {
@@ -340,7 +359,7 @@
 <div class="calendar-grid">
     <!-- Header de días -->
     <div class="calendar-week-header">
-        <div style="background: rgba(0,0,0,0.1);"></div>
+        <div class="calendar-corner"></div>
         {% for dia in dias_semana %}
         <div>
             <div class="calendar-day-header {% if dia.es_hoy %}today{% endif %}">
