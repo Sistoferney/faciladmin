@@ -156,7 +156,7 @@ class NotificacionService:
             payload = {
                 'head': titulo,
                 'body': mensaje,
-                'icon': '/static/images/faciladmin-logo.png',
+                'icon': '/static/images/facilacces-icon-192.png',
                 'url': '/',
                 'requireInteraction': True,
                 'vibrate': [200, 100, 200]

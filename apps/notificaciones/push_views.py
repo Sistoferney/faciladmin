@@ -370,7 +370,7 @@ def test_push_notification(request):
         payload = {
             'head': '¡Notificación de prueba!',
             'body': 'Si ves esto, las notificaciones push están funcionando correctamente.',
-            'icon': '/static/images/faciladmin-logo.png',
+            'icon': '/static/images/facilacces-icon-192.png',
             'url': '/'
         }
 

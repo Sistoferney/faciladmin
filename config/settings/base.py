@@ -1,5 +1,5 @@
 """
-Configuración base para FacilAdmin
+Configuración base para facilacces
 Configuración común entre desarrollo y producción
 """
 from pathlib import Path

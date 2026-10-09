@@ -467,7 +467,7 @@ class ProgramaReferidos(models.Model):
 
         # Verificar que el negocio esté activo
         if not negocio_referido.esta_activo:
-            return False, "Este negocio no está activo en FacilAdmin", None
+            return False, "Este negocio no está activo en facilacces", None
 
         return True, "Negocio válido para referir", negocio_referido
 

@@ -1,5 +1,5 @@
 """
-Celery configuration for FacilAdmin project.
+Celery configuration for facilacces project.
 """
 import os
 from celery import Celery

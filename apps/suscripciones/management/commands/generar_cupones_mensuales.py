@@ -91,11 +91,11 @@ class Command(BaseCommand):
                     admin_nombre = programa.negocio.administrador.nombre or 'Admin'
 
                     send_mail(
-                        subject='🎁 Tu cupón mensual está listo - FacilAdmin',
+                        subject='🎁 Tu cupón mensual está listo - facilacces',
                         message=f'''
 Hola {admin_nombre},
 
-¡Excelente noticia! Has ganado tu cupón mensual por el programa de referidos de FacilAdmin.
+¡Excelente noticia! Has ganado tu cupón mensual por el programa de referidos de facilacces.
 
 📋 Código del cupón: {cupon.codigo}
 ⏰ Válido hasta: {cupon.fecha_expiracion.strftime('%d/%m/%Y')}
@@ -111,10 +111,10 @@ Tu cupón se generó automáticamente porque tienes 3 referidos activos:
 - {programa.negocio_referido_2.nombre if programa.negocio_referido_2 else 'N/A'}
 - {programa.negocio_referido_3.nombre if programa.negocio_referido_3 else 'N/A'}
 
-¡Gracias por recomendar FacilAdmin!
+¡Gracias por recomendar facilacces!
 
 Saludos,
-El equipo de FacilAdmin
+El equipo de facilacces
                         ''',
                         from_email=settings.DEFAULT_FROM_EMAIL,
                         recipient_list=[admin_email],

@@ -1,5 +1,5 @@
 """
-WSGI config for FacilAdmin project.
+WSGI config for facilacces project.
 """
 
 import os

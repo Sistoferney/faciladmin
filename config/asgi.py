@@ -1,5 +1,5 @@
 """
-ASGI config for FacilAdmin project.
+ASGI config for facilacces project.
 """
 
 import os

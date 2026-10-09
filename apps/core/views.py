@@ -16,7 +16,7 @@ def landing_page(request):
 
     # Para superadmin o usuarios no autenticados, mostrar landing
     context = {
-        'title': 'FacilAdmin - Sistema de Gestión para Spas y Peluquerías',
+        'title': 'facilacces - Sistema de Gestión para Spas y Peluquerías',
         'total_negocios': Negocio.objects.filter(esta_activo=True).count(),
     }
     return render(request, 'landing/index.html', context)
@@ -27,7 +27,7 @@ def precios(request):
     Página de planes y precios
     """
     context = {
-        'title': 'Planes y Precios - FacilAdmin',
+        'title': 'Planes y Precios - facilacces',
     }
     return render(request, 'landing/precios.html', context)
 
@@ -37,7 +37,7 @@ def como_funciona(request):
     Página explicativa de cómo funciona el sistema
     """
     context = {
-        'title': 'Cómo Funciona - FacilAdmin',
+        'title': 'Cómo Funciona - facilacces',
     }
     return render(request, 'landing/como_funciona.html', context)
 
@@ -47,7 +47,7 @@ def contacto(request):
     Página de contacto
     """
     context = {
-        'title': 'Contacto - FacilAdmin',
+        'title': 'Contacto - facilacces',
     }
     return render(request, 'landing/contacto.html', context)
 
@@ -83,7 +83,7 @@ def robots_txt(request):
     """
     from django.http import HttpResponse
 
-    content = """# robots.txt - FacilAdmin
+    content = """# robots.txt - facilacces
 # Bloquear indexación mientras está en desarrollo
 
 User-agent: *

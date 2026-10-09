@@ -1,5 +1,5 @@
 """
-URL configuration for FacilAdmin project.
+URL configuration for facilacces project.
 """
 from django.contrib import admin
 from django.contrib.auth.views import LogoutView
@@ -60,6 +60,6 @@ if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 # Personalización del admin
-admin.site.site_header = "FacilAdmin - Administración"
-admin.site.site_title = "FacilAdmin"
+admin.site.site_header = "facilacces - Administración"
+admin.site.site_title = "facilacces"
 admin.site.index_title = "Panel de Administración"

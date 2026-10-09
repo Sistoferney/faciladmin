@@ -1,7 +1,7 @@
-// JavaScript principal de FacilAdmin
+// JavaScript principal de facilacces
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('FacilAdmin cargado');
+    console.log('facilacces cargado');
 });
 
 // Utilidades

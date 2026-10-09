@@ -19,16 +19,16 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="{{ negocio.nombre }} Admin">
+    <meta name="apple-mobile-web-app-title" content="facilacces">
 
     <!-- Manifest -->
     {% if not request.modo_soporte %}
     <link rel="manifest" href="{% url 'public:manifest_admin' negocio.slug %}">
     {% endif %}
 
-    <!-- Icons: el panel del dueño siempre usa la marca FacilAdmin (el logo del
+    <!-- Icons: el panel del dueño siempre usa la marca facilacces (el logo del
          negocio es para su mini-página, la que ven los clientes) -->
-    <link rel="icon" type="image/png" sizes="192x192" href="{% static 'images/faciladmin-icon-192.png' %}">
+    <link rel="icon" type="image/png" sizes="192x192" href="{% static 'images/facilacces-icon-192.png' %}">
     <link rel="apple-touch-icon" href="{% static 'images/apple-touch-icon.png' %}">
 
     <!-- Bootstrap 5 CSS -->
@@ -225,7 +225,7 @@
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <div class="text-center mb-3">
-                <img src="{% static 'images/faciladmin-logo.png' %}" alt="FacilAdmin" style="max-width: 120px; height: auto;">
+                <img src="{% static 'images/facilacces-logo.png' %}" alt="facilacces" style="max-width: 120px; height: auto;">
             </div>
             <h4>{{ negocio.nombre }}</h4>
             <p><i class="bi bi-person-circle"></i> {{ request.user.nombre }}</p>
@@ -308,7 +308,7 @@
             <div class="alert alert-warning d-flex flex-wrap align-items-center gap-2">
                 <i class="bi bi-life-preserver fs-5"></i>
                 <div class="flex-grow-1">
-                    <strong>Modo soporte:</strong> estás en el panel de {{ negocio.nombre }} como administrador de FacilAdmin.
+                    <strong>Modo soporte:</strong> estás en el panel de {{ negocio.nombre }} como administrador de facilacces.
                     Lo que hagas aquí (confirmar, cancelar, agendar) le avisa al cliente como si lo hiciera el dueño.
                     Este dispositivo no recibirá los avisos del negocio.
                 </div>
@@ -440,7 +440,7 @@
                 await registro.showNotification(novedad.titulo, {
                     body: novedad.texto,
                     tag: `dueno-cita-${novedad.cita_id}`,
-                    icon: '/static/images/faciladmin-logo.png',
+                    icon: '/static/images/facilacces-icon-192.png',
                     data: { url: URL_PENDIENTES },
                 });
             } catch (e) {

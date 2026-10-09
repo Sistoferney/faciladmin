@@ -1,5 +1,5 @@
 """
-Vistas del superadministrador de FacilAdmin (dueño de la plataforma)
+Vistas del superadministrador de facilacces (dueño de la plataforma)
 """
 from datetime import timedelta
 
@@ -115,7 +115,7 @@ def negocios_superadmin(request):
         negocio.inactivo_reciente = not negocio.ultima_actividad or negocio.ultima_actividad < hace
         negocio.whatsapp_dueno = enlace_whatsapp(
             admin.telefono,
-            f'Hola {admin.nombre}, te escribo de FacilAdmin sobre {negocio.nombre}.',
+            f'Hola {admin.nombre}, te escribo de facilacces sobre {negocio.nombre}.',
         ) if admin.telefono else ''
 
     # Para conservar búsqueda y filtros al cambiar de página
@@ -123,7 +123,7 @@ def negocios_superadmin(request):
     parametros.pop('pagina', None)
 
     return render(request, 'superadmin/negocios.html', {
-        'title': 'Negocios - FacilAdmin',
+        'title': 'Negocios - facilacces',
         'pagina': pagina,
         'resumen': resumen,
         'q': q,

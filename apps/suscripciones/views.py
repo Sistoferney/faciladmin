@@ -76,11 +76,11 @@ def registro_negocio(request):
 
         try:
             send_mail(
-                subject='✨ Activa tu cuenta gratis de 120 días - FacilAdmin',
+                subject='✨ Activa tu cuenta gratis de 120 días - facilacces',
                 message=f'''
 Hola {nombre},
 
-¡Bienvenido a FacilAdmin! 🎉
+¡Bienvenido a facilacces! 🎉
 
 Estás a un paso de acceder a tu cuenta GRATIS por 120 días con todas las funciones incluidas.
 
@@ -98,7 +98,7 @@ Este enlace expira en 24 horas.
 ✅ Soporte técnico
 
 ¡Nos vemos dentro!
-Equipo FacilAdmin
+Equipo facilacces
                 ''',
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[email],
@@ -226,11 +226,11 @@ def validar_email(request, token):
             # Enviar email de bienvenida
             try:
                 send_mail(
-                    subject=f'🎉 ¡Bienvenido a FacilAdmin, {registro.nombre}!',
+                    subject=f'🎉 ¡Bienvenido a facilacces, {registro.nombre}!',
                     message=f'''
 Hola {registro.nombre},
 
-¡Tu cuenta de FacilAdmin está lista y activa!
+¡Tu cuenta de facilacces está lista y activa!
 
 🏢 Negocio: {nombre_negocio}
 📧 Email: {registro.email}
@@ -251,7 +251,7 @@ Durante los próximos {dias_trial} días tendrás acceso COMPLETO a:
 ¿Preguntas? Responde este email o escríbenos a WhatsApp: +57 300 779 4375
 
 ¡Éxitos!
-Equipo FacilAdmin
+Equipo facilacces
                     ''',
                     from_email=settings.DEFAULT_FROM_EMAIL,
                     recipient_list=[registro.email],
@@ -387,7 +387,7 @@ def generar_cupon_referidos(request):
         # Enviar email con el cupón
         try:
             send_mail(
-                subject='🎁 Tu cupón mensual está listo - FacilAdmin',
+                subject='🎁 Tu cupón mensual está listo - facilacces',
                 message=f'''
 Hola {request.user.nombre},
 
@@ -402,10 +402,10 @@ Para canjear tu cupón:
 2. Haz clic en "Canjear cupón"
 3. Ingresa el código: {cupon.codigo}
 
-¡Gracias por recomendar FacilAdmin!
+¡Gracias por recomendar facilacces!
 
 Saludos,
-El equipo de FacilAdmin
+El equipo de facilacces
                 ''',
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[request.user.email],

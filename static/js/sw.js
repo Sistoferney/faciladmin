@@ -1,5 +1,5 @@
 /**
- * Service Worker para PWA de FacilAdmin
+ * Service Worker para PWA de facilacces
  * Maneja caché, actualizaciones y funcionalidad offline
  * Versión optimizada para notificaciones en segundo plano
  */
@@ -178,10 +178,10 @@ self.addEventListener('push', (event) => {
         // Mostrar notificación genérica aunque no haya datos
         event.waitUntil(
             Promise.all([
-                self.registration.showNotification('FacilAdmin', {
+                self.registration.showNotification('facilacces', {
                     body: 'Tienes una nueva notificación',
-                    icon: '/static/images/faciladmin-logo.png',
-                    badge: '/static/images/faciladmin-logo.png',
+                    icon: '/static/images/facilacces-icon-192.png',
+                    badge: '/static/images/facilacces-icon-192.png',
                     vibrate: [200, 100, 200]
                 }),
                 incrementBadge()
@@ -194,11 +194,11 @@ self.addEventListener('push', (event) => {
         const data = event.data.json();
         console.log('[SW] Datos del push:', data);
 
-        const title = data.title || data.head || 'FacilAdmin';
+        const title = data.title || data.head || 'facilacces';
         const options = {
             body: data.body || data.message || '',
-            icon: data.icon || '/static/images/faciladmin-logo.png',
-            badge: data.badge || '/static/images/faciladmin-logo.png',
+            icon: data.icon || '/static/images/facilacces-icon-192.png',
+            badge: data.badge || '/static/images/facilacces-icon-192.png',
             // Sin tag por defecto: cada notificación se muestra por separado
             // (con un tag común se reemplazaban y solo quedaba la última)
             ...(data.tag ? { tag: data.tag, renotify: true } : {}),
@@ -241,7 +241,7 @@ self.addEventListener('push', (event) => {
             Promise.all([
                 self.registration.showNotification('Nueva notificación', {
                     body: 'Tienes una nueva actualización',
-                    icon: '/static/images/faciladmin-logo.png',
+                    icon: '/static/images/facilacces-icon-192.png',
                     timestamp: Date.now()
                 }),
                 incrementBadge()

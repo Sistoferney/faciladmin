@@ -1,5 +1,5 @@
 """
-Settings package for FacilAdmin
+Settings package for facilacces
 Detecta automáticamente el entorno y carga la configuración correcta
 """
 import os

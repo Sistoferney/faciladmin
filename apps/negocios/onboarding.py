@@ -1,5 +1,5 @@
 """
-Sistema de Onboarding Guiado para FacilAdmin
+Sistema de Onboarding Guiado para facilacces
 Gestiona el proceso de configuración inicial del negocio
 """
 from django.db import models

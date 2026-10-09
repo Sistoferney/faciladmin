@@ -141,7 +141,7 @@ class SolicitarRecuperacionView(View):
             plain_message = strip_tags(html_message)
 
             send_mail(
-                subject='Recuperación de contraseña - FacilAdmin',
+                subject='Recuperación de contraseña - facilacces',
                 message=plain_message,
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[usuario.email],

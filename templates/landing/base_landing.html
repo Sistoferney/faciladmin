@@ -16,10 +16,10 @@
     <!-- Dirección oficial y vista previa al compartir en redes (WhatsApp, Facebook, Instagram) -->
     <link rel="canonical" href="{{ url_canonica }}">
     <meta property="og:type" content="website">
-    <meta property="og:site_name" content="FacilAcces">
+    <meta property="og:site_name" content="facilacces">
     <meta property="og:locale" content="es_CO">
     <meta property="og:url" content="{{ url_canonica }}">
-    <meta property="og:title" content="{% block og_titulo %}FacilAcces · Agenda online para tu negocio de belleza{% endblock %}">
+    <meta property="og:title" content="{% block og_titulo %}facilacces · Agenda online para tu negocio de belleza{% endblock %}">
     <meta property="og:description" content="{% block og_descripcion %}Tus clientes agendan solos, reciben recordatorios y tú lo manejas todo desde el celular.{% endblock %}">
     <meta property="og:image" content="{{ url_base }}{% static 'images/facilacces-og.png' %}">
     <meta property="og:image:width" content="1200">
@@ -31,9 +31,9 @@
 
     <style>
         :root {
-            --primary-color: #6366f1;
-            --secondary-color: #8b5cf6;
-            --accent-color: #ec4899;
+            --primary-color: #052981;
+            --secondary-color: #021A58;
+            --accent-color: #FD651A;
             --dark: #1e293b;
             --light: #f8fafc;
         }
@@ -52,7 +52,7 @@
         }
 
         .hero-section {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #052981 0%, #021A58 100%);
             color: white;
             padding: 100px 0;
             position: relative;
@@ -82,7 +82,7 @@
 
         .btn-primary-gradient:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3);
+            box-shadow: 0 10px 25px rgba(5, 41, 129, 0.3);
         }
 
         .feature-card {
@@ -111,7 +111,7 @@
             margin-bottom: 20px;
         }
 
-        .bg-gradient-1 { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .bg-gradient-1 { background: linear-gradient(135deg, #052981 0%, #021A58 100%); }
         .bg-gradient-2 { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
         .bg-gradient-3 { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
         .bg-gradient-4 { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
@@ -150,8 +150,8 @@
     <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
         <div class="container">
             <a class="navbar-brand d-flex align-items-center" href="{% url 'core:landing' %}">
-                <img src="{% static 'images/faciladmin-logo.png' %}" alt="FacilAdmin Logo" style="height: 40px;" class="me-2">
-                <span>FacilAdmin</span>
+                <img src="{% static 'images/facilacces-icon-192.png' %}" alt="" style="height: 40px;" class="me-2">
+                <span>facilacces</span>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -252,7 +252,7 @@
             <div class="row">
                 <div class="col-md-4 mb-4">
                     <h5 class="mb-3">
-                        <i class="bi bi-calendar-check-fill"></i> FacilAdmin
+                        <i class="bi bi-calendar-check-fill"></i> facilacces
                     </h5>
                     <p class="text-muted">
                         Sistema completo de gestión para spas, peluquerías y barberías.
@@ -287,7 +287,7 @@
             <hr class="border-secondary">
             <div class="row">
                 <div class="col-md-6 text-center text-md-start">
-                    <p class="text-muted small mb-0">© 2024 FacilAdmin. Todos los derechos reservados.</p>
+                    <p class="text-muted small mb-0">© 2024 facilacces. Todos los derechos reservados.</p>
                 </div>
                 <div class="col-md-6 text-center text-md-end">
                     <a href="#" class="text-muted me-3"><i class="bi bi-facebook"></i></a>

@@ -457,15 +457,15 @@ def manifest_minipagina(request, slug):
                 "purpose": "any maskable"
             })
     else:
-        # Si no hay logo, usar el logo de FacilAdmin como fallback
+        # Si no hay logo, usar el logo de facilacces como fallback
         manifest["icons"] = [
             {
-                "src": f"{site_url}/static/images/faciladmin-logo.png",
+                "src": f"{site_url}/static/images/facilacces-icon-192.png",
                 "sizes": "192x192",
                 "type": "image/png"
             },
             {
-                "src": f"{site_url}/static/images/faciladmin-logo.png",
+                "src": f"{site_url}/static/images/facilacces-icon-192.png",
                 "sizes": "512x512",
                 "type": "image/png"
             }
@@ -835,8 +835,10 @@ def manifest_admin(request, slug):
 
     manifest = {
         "id": f"/{slug}/admin/?pwa=admin",  # ID único para panel de admin
-        "name": f"{negocio.nombre} - Admin",
-        "short_name": f"{negocio.nombre[:8]} Admin",
+        # La app del dueño se llama como la plataforma (la de los clientes
+        # lleva el nombre del negocio)
+        "name": "facilacces",
+        "short_name": "facilacces",
         "description": f"Panel de administración de {negocio.nombre}",
         "start_url": f"/{slug}/admin/",
         "scope": f"/{slug}/admin/",
@@ -847,16 +849,16 @@ def manifest_admin(request, slug):
         "icons": []
     }
 
-    # La app del panel siempre usa el ícono de FacilAdmin (el logo del negocio
+    # La app del panel siempre usa el ícono de facilacces (el logo del negocio
     # es para la app de su mini-página, la de los clientes)
     manifest["icons"] = [
         {
-            "src": f"{site_url}{static('images/faciladmin-icon-192.png')}",
+            "src": f"{site_url}{static('images/facilacces-icon-192.png')}",
             "sizes": "192x192",
             "type": "image/png",
         },
         {
-            "src": f"{site_url}{static('images/faciladmin-icon-512.png')}",
+            "src": f"{site_url}{static('images/facilacces-icon-512.png')}",
             "sizes": "512x512",
             "type": "image/png",
         },
@@ -985,7 +987,7 @@ def diagnostico_vapid_config(request):
                 payload = json.dumps({
                     'head': 'Test de diagnostico',
                     'body': 'Verificando configuracion VAPID',
-                    'icon': '/static/images/faciladmin-logo.png',
+                    'icon': '/static/images/facilacces-icon-192.png',
                 })
 
                 response = webpush(
@@ -1030,7 +1032,7 @@ def diagnostico_vapid_config(request):
 
     # Retornar HTML formateado para mejor legibilidad
     html = "<html><head><style>body{font-family:monospace;padding:20px;}pre{background:#f5f5f5;padding:10px;border-radius:5px;}</style></head><body>"
-    html += "<h1>Diagnostico VAPID - FacilAdmin</h1>"
+    html += "<h1>Diagnostico VAPID - facilacces</h1>"
     html += "<pre>" + escape(json.dumps(diagnostico, indent=2, ensure_ascii=False)) + "</pre>"
     html += "</body></html>"
 
@@ -1227,7 +1229,7 @@ def test_enviar_push_admin(request):
     payload = {
         'head': 'Prueba de notificacion',
         'body': 'Si ves esto, las notificaciones push estan funcionando correctamente!',
-        'icon': '/static/images/faciladmin-logo.png',
+        'icon': '/static/images/facilacces-icon-192.png',
         'url': '/',
         'tag': 'test-notification',
         'requireInteraction': True,
