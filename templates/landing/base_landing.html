@@ -9,10 +9,23 @@
     <meta name="robots" content="noindex, nofollow">
     <meta name="googlebot" content="noindex, nofollow">
 
-    <meta name="description" content="FacilAdmin - Sistema completo de gestión para spas, peluquerías y barberías. Agenda online, gestión de clientes y más.">
+    {% load static %}
+    <meta name="description" content="{% block descripcion %}Agenda online, recordatorios automáticos y gestión de clientes para spas, peluquerías y barberías.{% endblock %}">
     <title>{% block title %}{{ title }}{% endblock %}</title>
 
-    {% load static %}
+    <!-- Dirección oficial y vista previa al compartir en redes (WhatsApp, Facebook, Instagram) -->
+    <link rel="canonical" href="{{ url_canonica }}">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="FacilAcces">
+    <meta property="og:locale" content="es_CO">
+    <meta property="og:url" content="{{ url_canonica }}">
+    <meta property="og:title" content="{% block og_titulo %}FacilAcces · Agenda online para tu negocio de belleza{% endblock %}">
+    <meta property="og:description" content="{% block og_descripcion %}Tus clientes agendan solos, reciben recordatorios y tú lo manejas todo desde el celular.{% endblock %}">
+    <meta property="og:image" content="{{ url_base }}{% static 'images/facilacces-og.png' %}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 

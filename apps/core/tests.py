@@ -119,3 +119,27 @@ class DominioOficialTests(TestCase):
     @override_settings(DOMINIO_OFICIAL='')
     def test_sin_configurar_no_hace_nada(self):
         self.assertEqual(self.client.get('/', HTTP_HOST='faciladmin.app').status_code, 200)
+
+
+@override_settings(
+    DOMINIO_OFICIAL='facilacces.com',
+    DOMINIOS_REDIRIGIDOS=(),
+    ALLOWED_HOSTS=['facilacces.com', 'faciladmin.app', 'testserver'],
+)
+class VistaPreviaRedesTests(TestCase):
+    """Al compartir en redes, la tarjeta y la dirección oficial son de facilacces.com"""
+
+    def test_portada(self):
+        resp = self.client.get('/precios/', HTTP_HOST='faciladmin.app', secure=True)
+        self.assertContains(resp, '<link rel="canonical" href="https://facilacces.com/precios/">')
+        self.assertContains(resp, 'content="https://facilacces.com/static/images/facilacces-og.png"')
+        self.assertContains(resp, 'og:title')
+
+    def test_minipagina_usa_datos_del_negocio(self):
+        negocio = _negocio('Spa Ilusión', '3001000001')
+        negocio.descripcion = 'Uñas y pestañas en Bogotá'
+        negocio.save()
+        resp = self.client.get(f'/{negocio.slug}/', HTTP_HOST='facilacces.com', secure=True)
+        self.assertContains(resp, f'<link rel="canonical" href="https://facilacces.com/{negocio.slug}/">')
+        self.assertContains(resp, 'content="Spa Ilusión · Agenda tu cita"')
+        self.assertContains(resp, 'content="Uñas y pestañas en Bogotá"')

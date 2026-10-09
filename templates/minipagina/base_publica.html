@@ -20,6 +20,23 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="{{ negocio.nombre }}">
 
+    <!-- Dirección oficial y vista previa al compartir el enlace del negocio -->
+    <link rel="canonical" href="{{ url_canonica }}">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="{{ negocio.nombre }}">
+    <meta property="og:locale" content="es_CO">
+    <meta property="og:url" content="{{ url_canonica }}">
+    <meta property="og:title" content="{{ negocio.nombre }} · Agenda tu cita">
+    <meta property="og:description" content="{{ negocio.descripcion|default:'Agenda tu cita en línea en segundos.'|truncatechars:160 }}">
+    {% if negocio.imagen_portada %}
+    <meta property="og:image" content="{% if negocio.imagen_portada.url|slice:':1' == '/' %}{{ url_base }}{% endif %}{{ negocio.imagen_portada.url }}">
+    {% elif negocio.logo %}
+    <meta property="og:image" content="{% if negocio.logo.url|slice:':1' == '/' %}{{ url_base }}{% endif %}{{ negocio.logo.url }}">
+    {% else %}
+    <meta property="og:image" content="{{ url_base }}{% static 'images/facilacces-og.png' %}">
+    {% endif %}
+    <meta name="twitter:card" content="summary_large_image">
+
     <!-- Manifest -->
     <link rel="manifest" href="{% url 'public:manifest_minipagina' negocio.slug %}">
 
