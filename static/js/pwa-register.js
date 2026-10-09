@@ -1102,7 +1102,7 @@ function showUnblockInstructions() {
             </h4>
             <ol style="margin: 0; padding-left: 20px; color: #555; font-size: 14px; line-height: 1.6;">
                 <li>Busca <strong>"Notificaciones"</strong></li>
-                <li>Encuentra <strong>"faciladmin.app"</strong> en la lista</li>
+                <li>Encuentra <strong>"${window.location.hostname}"</strong> en la lista</li>
                 <li>Cámbialo de <strong>"Bloqueado"</strong> a <strong>"Permitir"</strong></li>
             </ol>
         </div>
@@ -1110,7 +1110,7 @@ function showUnblockInstructions() {
         <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #28a745;">
             <p style="margin: 0; color: #2e7d32; font-size: 13px; line-height: 1.5;">
                 💡 <strong>Atajo rápido:</strong> También puedes ir directamente a<br>
-                <code style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 3px; font-size: 12px;">chrome://settings/content/siteDetails?site=https://faciladmin.app</code>
+                <code style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 3px; font-size: 12px;">chrome://settings/content/siteDetails?site=${window.location.origin}</code>
             </p>
         </div>
 
@@ -1155,7 +1155,7 @@ function showUnblockInstructions() {
             }
         } else {
             // Sigue bloqueado
-            alert('⚠️ Los permisos siguen bloqueados.\n\nAsegúrate de cambiar "faciladmin.app" a "Permitir" en la configuración de Chrome.');
+            alert(`⚠️ Los permisos siguen bloqueados.\n\nAsegúrate de cambiar "${window.location.hostname}" a "Permitir" en la configuración de Chrome.`);
         }
     });
 

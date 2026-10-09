@@ -876,3 +876,48 @@ class SuscripcionesCruzadasTests(TestCase):
         self.assertFalse(self.cruzada.activa)
         # La del cliente sigue activa: es suya
         self.assertTrue(ClientePushSubscription.objects.get(endpoint=self.MINI).activa)
+
+
+@override_settings(
+    DOMINIO_OFICIAL='facilacces.com',
+    ALLOWED_HOSTS=['facilacces.com', 'faciladmin.app', 'testserver'],
+)
+class CambioDeDominioTests(TestCase):
+    """
+    Al pasar de faciladmin.app a facilacces.com, el navegador que se suscribe
+    en el dominio nuevo deja de recibir por el anterior (avisos duplicados).
+    """
+    UA = 'Mozilla/5.0 (Linux; Android 14) Chrome/130'
+
+    def setUp(self):
+        self.negocio, _, self.cliente = _crear_base()
+        session = self.client.session
+        session['clientes_verificados'] = {str(self.negocio.id): self.cliente.id}
+        session.save()
+        self.vieja = ClientePushSubscription.objects.create(
+            cliente=self.cliente, endpoint='https://push/viejo', auth='a', p256dh='p', user_agent=self.UA,
+        )
+        self.otro_celular = ClientePushSubscription.objects.create(
+            cliente=self.cliente, endpoint='https://push/pc', auth='a', p256dh='p', user_agent='Windows Chrome',
+        )
+
+    def _suscribir(self, host):
+        import json
+        sub = {'endpoint': f'https://push/{host}', 'keys': {'auth': 'a', 'p256dh': 'p'}}
+        self.client.post('/api/notificaciones/push/subscribe/', json.dumps(
+            {'subscription': sub, 'negocio_slug': self.negocio.slug}
+        ), content_type='application/json', HTTP_HOST=host, HTTP_USER_AGENT=self.UA)
+        return ClientePushSubscription.objects.get(endpoint=f'https://push/{host}')
+
+    def test_retira_la_del_dominio_anterior_del_mismo_navegador(self):
+        nueva = self._suscribir('facilacces.com')
+        self.assertEqual(nueva.dominio, 'facilacces.com')
+        self.vieja.refresh_from_db()
+        self.otro_celular.refresh_from_db()
+        self.assertFalse(self.vieja.activa)
+        self.assertTrue(self.otro_celular.activa)  # otro dispositivo: no se toca
+
+    def test_en_el_dominio_anterior_no_retira_nada(self):
+        self._suscribir('faciladmin.app')
+        self.vieja.refresh_from_db()
+        self.assertTrue(self.vieja.activa)

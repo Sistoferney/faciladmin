@@ -47,6 +47,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'apps.core.dominio_middleware.DominioOficialMiddleware',  # faciladmin.app -> facilacces.com
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
@@ -209,6 +210,13 @@ PHONENUMBER_DEFAULT_REGION = 'CO'
 # Aplica también a clientes de la mini-página (recordar quién es por teléfono).
 SESSION_COOKIE_AGE = 60 * 24 * 60 * 60
 SESSION_SAVE_EVERY_REQUEST = True
+
+# Dominio oficial: los dominios anteriores redirigen a él (ver
+# apps/core/dominio_middleware.py). Vacío = sin redirección.
+DOMINIO_OFICIAL = config('DOMINIO_OFICIAL', default='').strip().lower()
+DOMINIOS_REDIRIGIDOS = tuple(
+    d.strip().lower() for d in config('DOMINIOS_REDIRIGIDOS', default='').split(',') if d.strip()
+)
 
 # Authentication URLs
 LOGIN_URL = '/login/'

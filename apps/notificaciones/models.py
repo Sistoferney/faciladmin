@@ -174,6 +174,8 @@ class ClientePushSubscription(models.Model):
 
     # Metadata adicional
     user_agent = models.TextField('User Agent', blank=True)
+    # Dominio en el que se suscribió (faciladmin.app / facilacces.com): ver push_views
+    dominio = models.CharField('Dominio', max_length=100, blank=True)
     fecha_suscripcion = models.DateTimeField('Fecha de suscripción', auto_now_add=True)
     fecha_actualizacion = models.DateTimeField('Última actualización', auto_now=True)
     activa = models.BooleanField('Activa', default=True)
@@ -282,6 +284,8 @@ class UsuarioPushSubscription(models.Model):
 
     # Metadata adicional
     user_agent = models.TextField('User Agent', blank=True)
+    # Dominio en el que se suscribió (faciladmin.app / facilacces.com): ver push_views
+    dominio = models.CharField('Dominio', max_length=100, blank=True)
     fecha_suscripcion = models.DateTimeField('Fecha de suscripción', auto_now_add=True)
     fecha_actualizacion = models.DateTimeField('Última actualización', auto_now=True)
     activa = models.BooleanField('Activa', default=True)

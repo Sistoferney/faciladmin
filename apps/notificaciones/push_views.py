@@ -65,6 +65,40 @@ def _separar_de_la_otra_app(data, suscripcion):
     return total
 
 
+def _registrar_dominio(request, suscripcion):
+    """
+    Guarda el dominio de la suscripción y, si es el oficial, retira la que
+    el mismo navegador tenía en el dominio anterior.
+
+    Al pasar de faciladmin.app a facilacces.com, la app instalada en el
+    dominio anterior conserva su propia suscripción (otro Service Worker):
+    sin esto, la persona recibiría cada aviso dos veces. Se identifica el
+    mismo navegador por el user agent, para la misma persona.
+    """
+    from django.conf import settings
+    from .models import UsuarioPushSubscription
+
+    dominio = request.META.get('HTTP_HOST', '').split(':')[0].lower()[:100]
+    if suscripcion.dominio != dominio:
+        suscripcion.dominio = dominio
+        suscripcion.save(update_fields=['dominio'])
+
+    oficial = getattr(settings, 'DOMINIO_OFICIAL', '')
+    if not oficial or dominio != oficial or not suscripcion.user_agent:
+        return 0
+    modelo = type(suscripcion)
+    if modelo is UsuarioPushSubscription:
+        misma_persona = {'user_id': suscripcion.user_id, 'negocio_id': suscripcion.negocio_id}
+    else:
+        misma_persona = {'cliente_id': suscripcion.cliente_id}
+    total = modelo.objects.filter(
+        activa=True, user_agent=suscripcion.user_agent, **misma_persona
+    ).exclude(dominio=oficial).exclude(pk=suscripcion.pk).update(activa=False)
+    if total:
+        logger.info('Desactivadas %s suscripciones del dominio anterior', total)
+    return total
+
+
 @require_http_methods(["GET"])
 def get_vapid_public_key(request):
     """
@@ -134,6 +168,7 @@ def subscribe_push(request):
             )
             _desactivar_endpoints_anteriores(data, subscription.endpoint)
             _separar_de_la_otra_app(data, subscription)
+            _registrar_dominio(request, subscription)
 
             return JsonResponse({
                 'success': True,
@@ -291,6 +326,7 @@ def subscribe_admin_push(request):
             )
             _desactivar_endpoints_anteriores(data, subscription.endpoint)
             _separar_de_la_otra_app(data, subscription)
+            _registrar_dominio(request, subscription)
 
             return JsonResponse({
                 'success': True,

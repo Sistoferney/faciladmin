@@ -423,7 +423,7 @@ class SesionPersistentePWATests(TestCase):
     def test_service_worker_sin_cache_http(self, *mocks):
         resp = self.client.get('/sw.js')
         self.assertEqual(resp['Cache-Control'], 'no-cache')
-        self.assertIn('faciladmin-v5', resp.content.decode())
+        self.assertIn("const CACHE_NAME = 'faciladmin-v", resp.content.decode())
 
     def test_confirmacion_ofrece_boton_de_recordatorios(self, *mocks):
         self.client.post(self.url_mis_citas, {'telefono': '3001111111'})

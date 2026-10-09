@@ -3,7 +3,7 @@ Listado de negocios del superadministrador y modo soporte en el panel
 """
 from datetime import timedelta
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -83,3 +83,39 @@ class NegociosSuperadminTests(TestCase):
         resp = self.client.get(reverse('public:admin_dashboard', args=[self.activo.slug]))
         self.assertNotContains(resp, 'Modo soporte')
         self.assertContains(resp, 'js/pwa-register.js"></script>')
+
+
+@override_settings(
+    DOMINIO_OFICIAL='facilacces.com',
+    DOMINIOS_REDIRIGIDOS=('faciladmin.app', 'www.faciladmin.app'),
+    ALLOWED_HOSTS=['facilacces.com', 'faciladmin.app', 'www.faciladmin.app', 'testserver'],
+)
+class DominioOficialTests(TestCase):
+
+    def test_redirige_conservando_la_ruta(self):
+        resp = self.client.get('/spa-ilusion/mis-citas/?x=1', HTTP_HOST='faciladmin.app', secure=True)
+        self.assertEqual(resp.status_code, 301)
+        self.assertEqual(resp['Location'], 'https://facilacces.com/spa-ilusion/mis-citas/?x=1')
+
+    @override_settings(DOMINIO_OFICIAL='localhost', DOMINIOS_REDIRIGIDOS=('127.0.0.1',),
+                       ALLOWED_HOSTS=['localhost', '127.0.0.1'])
+    def test_en_local_conserva_el_puerto(self):
+        resp = self.client.get('/precios/', HTTP_HOST='127.0.0.1:8000')
+        self.assertEqual(resp['Location'], 'http://localhost:8000/precios/')
+
+    def test_post_conserva_el_metodo(self):
+        resp = self.client.post('/login/', {'a': 1}, HTTP_HOST='www.faciladmin.app')
+        self.assertEqual(resp.status_code, 308)
+
+    def test_service_worker_y_estaticos_no_se_redirigen(self):
+        # El navegador no sigue redirecciones al actualizar el Service Worker
+        self.assertEqual(self.client.get('/sw.js', HTTP_HOST='faciladmin.app').status_code, 200)
+        resp = self.client.get('/static/js/sw.js', HTTP_HOST='faciladmin.app')
+        self.assertNotIn(resp.status_code, (301, 308))
+
+    def test_dominio_oficial_no_se_redirige(self):
+        self.assertEqual(self.client.get('/', HTTP_HOST='facilacces.com').status_code, 200)
+
+    @override_settings(DOMINIO_OFICIAL='')
+    def test_sin_configurar_no_hace_nada(self):
+        self.assertEqual(self.client.get('/', HTTP_HOST='faciladmin.app').status_code, 200)
