@@ -5,7 +5,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agendar Cita - {{ negocio.nombre }}</title>
+    <title>Agendar cita en {{ negocio.nombre }}{% if negocio.ciudad %}, {{ negocio.ciudad }}{% endif %} | Reserva online</title>
+    <meta name="description" content="Reserva tu cita en {{ negocio.nombre }} en segundos: elige servicio, fecha y hora disponibles.">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="{{ url_canonica }}">
 
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">

@@ -16,7 +16,7 @@ def landing_page(request):
 
     # Para superadmin o usuarios no autenticados, mostrar landing
     context = {
-        'title': 'facilacces - Sistema de Gestión para Spas y Peluquerías',
+        'title': 'facilacces | Agenda online para spas, peluquerías y barberías',
         'total_negocios': Negocio.objects.filter(esta_activo=True).count(),
     }
     return render(request, 'landing/index.html', context)
@@ -27,7 +27,7 @@ def precios(request):
     Página de planes y precios
     """
     context = {
-        'title': 'Planes y Precios - facilacces',
+        'title': 'Precios | facilacces, agenda online para salones de belleza',
     }
     return render(request, 'landing/precios.html', context)
 
@@ -37,7 +37,7 @@ def como_funciona(request):
     Página explicativa de cómo funciona el sistema
     """
     context = {
-        'title': 'Cómo Funciona - facilacces',
+        'title': 'Cómo funciona | facilacces, reservas y recordatorios automáticos',
     }
     return render(request, 'landing/como_funciona.html', context)
 
@@ -47,7 +47,7 @@ def contacto(request):
     Página de contacto
     """
     context = {
-        'title': 'Contacto - facilacces',
+        'title': 'Contacto | facilacces',
     }
     return render(request, 'landing/contacto.html', context)
 
@@ -75,41 +75,6 @@ def service_worker(request):
         return response
     except FileNotFoundError:
         return HttpResponse('Service Worker not found', status=404)
-
-
-def robots_txt(request):
-    """
-    Sirve el archivo robots.txt para controlar indexación de buscadores
-    """
-    from django.http import HttpResponse
-
-    content = """# robots.txt - facilacces
-# Bloquear indexación mientras está en desarrollo
-
-User-agent: *
-Disallow: /
-
-# Bloquear específicamente a los principales buscadores
-User-agent: Googlebot
-Disallow: /
-
-User-agent: Bingbot
-Disallow: /
-
-User-agent: Slurp
-Disallow: /
-
-User-agent: DuckDuckBot
-Disallow: /
-
-User-agent: Baiduspider
-Disallow: /
-
-User-agent: YandexBot
-Disallow: /
-"""
-
-    return HttpResponse(content, content_type='text/plain')
 
 
 def health_check(request):

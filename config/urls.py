@@ -6,7 +6,7 @@ from django.contrib.auth.views import LogoutView
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from apps.core import views as core_views
+from apps.core import views as core_views, seo
 from apps.authentication.views import (
     RateLimitedLoginView,
     SolicitarRecuperacionView,
@@ -17,8 +17,9 @@ urlpatterns = [
     # Service Worker (debe ir primero para tener scope en toda la app)
     path('sw.js', core_views.service_worker, name='service_worker'),
 
-    # Robots.txt (bloquear indexación en buscadores)
-    path('robots.txt', core_views.robots_txt, name='robots_txt'),
+    # Buscadores: qué se puede indexar y lista de páginas públicas
+    path('robots.txt', seo.robots_txt, name='robots_txt'),
+    path('sitemap.xml', seo.sitemap_xml, name='sitemap_xml'),
 
     # Landing page y páginas principales
     path('', include('apps.core.urls')),

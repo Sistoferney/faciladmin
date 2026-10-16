@@ -143,3 +143,58 @@ class VistaPreviaRedesTests(TestCase):
         self.assertContains(resp, f'<link rel="canonical" href="https://facilacces.com/{negocio.slug}/">')
         self.assertContains(resp, 'content="Spa Ilusión · Agenda tu cita"')
         self.assertContains(resp, 'content="Uñas y pestañas en Bogotá"')
+
+
+@override_settings(DOMINIO_OFICIAL='facilacces.com', DOMINIOS_REDIRIGIDOS=(),
+                   ALLOWED_HOSTS=['facilacces.com', 'testserver'])
+class BuscadoresTests(TestCase):
+    """Google puede indexar las páginas públicas, no las privadas"""
+
+    def setUp(self):
+        self.negocio = _negocio('Spa Ilusión', '3001000001')
+        self.negocio.ciudad = 'Bogotá'
+        self.negocio.save()
+        Servicio.objects.create(negocio=self.negocio, nombre='Manicure', precio=20000, duracion_minutos=60)
+
+    def _get(self, url):
+        return self.client.get(url, HTTP_HOST='facilacces.com', secure=True)
+
+    def test_robots_permite_publicas_y_bloquea_privadas(self):
+        texto = self._get('/robots.txt').content.decode()
+        self.assertIn('Allow: /', texto)
+        self.assertNotIn('Disallow: /\n', texto)
+        self.assertIn('Disallow: /*/admin/', texto)
+        self.assertIn('Disallow: /*/mis-citas/', texto)
+        self.assertIn('Sitemap: https://facilacces.com/sitemap.xml', texto)
+
+    def test_sitemap_incluye_minipaginas_activas(self):
+        inactivo = _negocio('Cerrado', '3001000002')
+        inactivo.esta_activo = False
+        inactivo.save()
+        texto = self._get('/sitemap.xml').content.decode()
+        self.assertIn('<loc>https://facilacces.com/</loc>', texto)
+        self.assertIn(f'<loc>https://facilacces.com/{self.negocio.slug}/</loc>', texto)
+        self.assertNotIn(f'/{inactivo.slug}/', texto)
+
+    def test_portada_indexable_con_datos_estructurados(self):
+        resp = self._get('/')
+        self.assertContains(resp, '<meta name="robots" content="index, follow">')
+        self.assertContains(resp, '"@type": "SoftwareApplication"')
+
+    def test_minipagina_indexable_como_negocio_local(self):
+        resp = self._get(f'/{self.negocio.slug}/')
+        self.assertContains(resp, '<meta name="robots" content="index, follow">')
+        self.assertContains(resp, '"@type": "DaySpa"')
+        self.assertContains(resp, '"addressLocality": "Bogotá"')
+        self.assertContains(resp, '"name": "Manicure"')
+        self.assertContains(resp, 'Spa Ilusión | Spa en Bogotá')
+
+    def test_paginas_privadas_no_indexables(self):
+        resp = self._get(f'/{self.negocio.slug}/mis-citas/')
+        self.assertContains(resp, '<meta name="robots" content="noindex, nofollow">')
+
+    def test_datos_estructurados_escapan_html(self):
+        self.negocio.descripcion = '</script><script>alert(1)</script>'
+        self.negocio.save()
+        resp = self._get(f'/{self.negocio.slug}/')
+        self.assertNotContains(resp, '</script><script>alert(1)')
