@@ -917,6 +917,13 @@ class CambioDeDominioTests(TestCase):
         self.assertFalse(self.vieja.activa)
         self.assertTrue(self.otro_celular.activa)  # otro dispositivo: no se toca
 
+    def test_retira_aunque_chrome_se_haya_actualizado(self):
+        self.vieja.user_agent = self.UA.replace('Chrome/130', 'Chrome/128')
+        self.vieja.save()
+        self._suscribir('facilacces.com')
+        self.vieja.refresh_from_db()
+        self.assertFalse(self.vieja.activa)
+
     def test_en_el_dominio_anterior_no_retira_nada(self):
         self._suscribir('faciladmin.app')
         self.vieja.refresh_from_db()

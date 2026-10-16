@@ -562,7 +562,7 @@ function mismaClaveVapid(subscription, claveActual) {
  */
 function claveSuscripcionGuardada() {
     const app = window.location.pathname.includes('/admin/') ? 'panel' : 'cliente';
-    return `push_guardada_v2_${app}`;
+    return `push_guardada_v3_${app}`;
 }
 
 function necesitaGuardarse(subscription) {

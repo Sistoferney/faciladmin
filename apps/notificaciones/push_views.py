@@ -65,6 +65,12 @@ def _separar_de_la_otra_app(data, suscripcion):
     return total
 
 
+def _huella_navegador(user_agent):
+    """'... Android 10; K) ... Chrome/141.0.0.0 Mobile ...' sin los números de versión"""
+    import re
+    return re.sub(r'[\d._]+', '', user_agent or '')
+
+
 def _registrar_dominio(request, suscripcion):
     """
     Guarda el dominio de la suscripción y, si es el oficial, retira la que
@@ -73,7 +79,10 @@ def _registrar_dominio(request, suscripcion):
     Al pasar de faciladmin.app a facilacces.com, la app instalada en el
     dominio anterior conserva su propia suscripción (otro Service Worker):
     sin esto, la persona recibiría cada aviso dos veces. Se identifica el
-    mismo navegador por el user agent, para la misma persona.
+    mismo tipo de dispositivo y navegador por el user agent SIN números de
+    versión (Chrome se actualiza solo y cambia su versión): el celular Android
+    retira su suscripción anterior de Android, y el PC conserva la suya hasta
+    que también abra el dominio nuevo.
     """
     from django.conf import settings
     from .models import UsuarioPushSubscription
@@ -91,9 +100,13 @@ def _registrar_dominio(request, suscripcion):
         misma_persona = {'user_id': suscripcion.user_id, 'negocio_id': suscripcion.negocio_id}
     else:
         misma_persona = {'cliente_id': suscripcion.cliente_id}
-    total = modelo.objects.filter(
-        activa=True, user_agent=suscripcion.user_agent, **misma_persona
-    ).exclude(dominio=oficial).exclude(pk=suscripcion.pk).update(activa=False)
+    huella = _huella_navegador(suscripcion.user_agent)
+    anteriores = [
+        s.pk for s in modelo.objects.filter(activa=True, **misma_persona)
+        .exclude(dominio=oficial).exclude(pk=suscripcion.pk).only('pk', 'user_agent')
+        if _huella_navegador(s.user_agent) == huella
+    ]
+    total = modelo.objects.filter(pk__in=anteriores).update(activa=False)
     if total:
         logger.info('Desactivadas %s suscripciones del dominio anterior', total)
     return total
