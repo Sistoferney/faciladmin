@@ -114,6 +114,25 @@
             padding: 40px;
         }
 
+        /* Especialistas */
+        .especialistas-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+        .especialista-card {
+            border: 2px solid #e5e7eb; border-radius: 12px; padding: 14px 10px; text-align: center;
+            cursor: pointer; transition: all .2s; background: #fff;
+        }
+        .especialista-card:hover { border-color: var(--primary-color); }
+        .especialista-card.selected { border-color: var(--primary-color); background: rgba(0,0,0,.03); box-shadow: 0 0 0 3px rgba(0,0,0,.05); }
+        .especialista-avatar {
+            width: 64px; height: 64px; border-radius: 50%; object-fit: cover; margin: 0 auto 8px;
+            display: flex; align-items: center; justify-content: center; font-size: 1.6rem; font-weight: 700;
+            color: #fff; background: var(--primary-color);
+        }
+        .especialista-nombre { font-weight: 600; }
+        .especialista-cargo { font-size: .8rem; color: #6b7280; }
+        .libres-list { display: flex; flex-wrap: wrap; gap: 8px; }
+        .libre-chip { border: 2px solid #e5e7eb; border-radius: 999px; padding: 6px 14px; cursor: pointer; background: #fff; }
+        .libre-chip.selected { border-color: var(--primary-color); color: var(--primary-color); font-weight: 600; }
+
         .step-content {
             display: none;
         }
@@ -551,6 +570,15 @@
                         {% endfor %}
                     </div>
                     <input type="hidden" name="servicio" id="selectedService">
+
+                    {% if varios_especialistas %}
+                    <!-- Con varios especialistas: con quién (solo quienes hacen el servicio) -->
+                    <div id="especialistasBox" class="mt-4" style="display: none;">
+                        <h5 class="mb-3">¿Con quién quieres tu cita?</h5>
+                        <div class="especialistas-list" id="especialistasList"></div>
+                    </div>
+                    {% endif %}
+                    <input type="hidden" name="especialista" id="selectedEspecialista">
                 </div>
 
                 <!-- Step Contact: Contacto Directo para Servicios Especiales -->
@@ -624,10 +652,20 @@
                         <div id="noSlots" class="no-slots" style="display: none;">
                             <i class="bi bi-calendar-x fs-1 text-muted"></i>
                             <p class="mt-3">No hay horarios disponibles para este día.</p>
+                            <p class="verTodosBox" style="display: none;">
+                                <a href="#" class="verTodosLink">Ver las horas de todos los especialistas</a>
+                            </p>
                             <button type="button" class="btn btn-secondary-custom" onclick="goToStep(3)">
                                 Seleccionar Otra Fecha
                             </button>
                         </div>
+                    </div>
+                    <p class="text-center mt-3 verTodosBox" style="display: none;">
+                        ¿No encuentras tu hora? <a href="#" class="verTodosLink">Ver las horas de todos los especialistas</a>
+                    </p>
+                    <div id="libresBox" class="mt-4" style="display: none;">
+                        <h6 class="mb-2">¿Con quién? Disponibles a esa hora:</h6>
+                        <div class="libres-list" id="libresList"></div>
                     </div>
                     <input type="hidden" name="hora" id="selectedTime">
                 </div>
@@ -641,6 +679,12 @@
                             <span>Servicio:</span>
                             <strong id="summaryService">-</strong>
                         </div>
+                        {% if varios_especialistas %}
+                        <div class="summary-item">
+                            <span>Con:</span>
+                            <strong id="summaryEspecialista">-</strong>
+                        </div>
+                        {% endif %}
                         <div class="summary-item">
                             <span>Fecha:</span>
                             <strong id="summaryDate">-</strong>
@@ -697,7 +741,15 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
+    {{ especialistas|json_script:"datos-especialistas" }}
     <script>
+        // Especialistas (con 2 o más el cliente elige con quién)
+        const VARIOS_ESPECIALISTAS = {{ varios_especialistas|yesno:'true,false' }};
+        const ESPECIALISTAS = JSON.parse(document.getElementById('datos-especialistas').textContent);
+        const CUALQUIERA = 'cualquiera';
+        // {id: <id> | 'cualquiera', nombre, asignado}
+        let selectedEspecialista = null;
+
         // State
         let currentStep = 1;
         let selectedService = null;
@@ -728,11 +780,130 @@
                         requiresContact: this.dataset.requiresContact === 'true'
                     };
                     document.getElementById('selectedService').value = selectedService.id;
+                    selectedDate = null;
+                    selectedTime = null;
+                    if (VARIOS_ESPECIALISTAS) {
+                        mostrarEspecialistas();
+                        return;  // las fechas se cargan al elegir con quién
+                    }
 
                     // Cargar fechas disponibles cuando se selecciona un servicio
                     loadFechasDisponibles();
                 });
             });
+        }
+
+        // ---- Especialistas ----
+        function inicial(nombre) {
+            return (nombre || '?').trim().charAt(0).toUpperCase();
+        }
+
+        function avatar(especialista) {
+            if (especialista.foto) {
+                const img = document.createElement('img');
+                img.src = especialista.foto;
+                img.alt = '';
+                img.className = 'especialista-avatar';
+                return img;
+            }
+            const div = document.createElement('div');
+            div.className = 'especialista-avatar';
+            div.innerHTML = especialista.id === CUALQUIERA ? '<i class="bi bi-people-fill"></i>' : '';
+            if (especialista.id !== CUALQUIERA) {
+                div.textContent = inicial(especialista.nombre);
+            }
+            return div;
+        }
+
+        function tarjetaEspecialista(especialista) {
+            const card = document.createElement('div');
+            card.className = 'especialista-card';
+            card.dataset.id = especialista.id;
+            const nombre = document.createElement('div');
+            nombre.className = 'especialista-nombre';
+            nombre.textContent = especialista.nombre;
+            const cargo = document.createElement('div');
+            cargo.className = 'especialista-cargo';
+            cargo.textContent = especialista.cargo || '';
+            card.append(avatar(especialista), nombre, cargo);
+            card.addEventListener('click', () => elegirEspecialista(especialista));
+            return card;
+        }
+
+        function quienesHacen(servicioId) {
+            const id = Number(servicioId);
+            return ESPECIALISTAS.filter((e) => !e.servicios.length || e.servicios.includes(id));
+        }
+
+        function mostrarEspecialistas() {
+            const lista = document.getElementById('especialistasList');
+            lista.innerHTML = '';
+            lista.appendChild(tarjetaEspecialista({ id: CUALQUIERA, nombre: 'Me da igual', cargo: 'El primero disponible' }));
+            quienesHacen(selectedService.id).forEach((e) => lista.appendChild(tarjetaEspecialista(e)));
+            selectedEspecialista = null;
+            document.getElementById('selectedEspecialista').value = '';
+            document.getElementById('especialistasBox').style.display = 'block';
+        }
+
+        function elegirEspecialista(especialista) {
+            selectedEspecialista = { id: especialista.id, nombre: especialista.nombre, asignado: null };
+            document.getElementById('selectedEspecialista').value = especialista.id;
+            document.querySelectorAll('.especialista-card').forEach((c) =>
+                c.classList.toggle('selected', c.dataset.id === String(especialista.id)));
+            selectedDate = null;
+            loadFechasDisponibles();
+        }
+
+        function paramEspecialista() {
+            return selectedEspecialista && selectedEspecialista.id !== CUALQUIERA
+                ? `&especialista=${selectedEspecialista.id}` : '';
+        }
+
+        // "¿No encuentras tu hora?": pasar a ver las horas de todos
+        function verHorasDeTodos(evento) {
+            evento.preventDefault();
+            selectedEspecialista = { id: CUALQUIERA, nombre: 'Me da igual', asignado: null };
+            document.getElementById('selectedEspecialista').value = CUALQUIERA;
+            selectedTime = null;
+            document.getElementById('selectedTime').value = '';
+            loadFechasDisponibles();
+            loadTimeSlots();
+        }
+        document.querySelectorAll('.verTodosLink').forEach((a) => a.addEventListener('click', verHorasDeTodos));
+
+        // "Me da igual" + hora elegida: quiénes están libres a esa hora
+        function cargarLibres() {
+            const box = document.getElementById('libresBox');
+            box.style.display = 'none';
+            if (!VARIOS_ESPECIALISTAS || !selectedEspecialista || selectedEspecialista.id !== CUALQUIERA || !selectedTime) {
+                return;
+            }
+            const url = `/{{ negocio.slug }}/api/especialistas-disponibles/?servicio=${selectedService.id}&fecha=${selectedDate}&hora=${selectedTime}`;
+            fetch(url)
+                .then((r) => r.json())
+                .then((data) => {
+                    const lista = document.getElementById('libresList');
+                    lista.innerHTML = '';
+                    const opciones = [{ id: CUALQUIERA, nombre: 'Cualquiera (te asignamos)' }].concat(data.especialistas || []);
+                    opciones.forEach((e) => {
+                        const chip = document.createElement('button');
+                        chip.type = 'button';
+                        chip.className = 'libre-chip' + (e.id === CUALQUIERA ? ' selected' : '');
+                        chip.textContent = e.nombre;
+                        chip.addEventListener('click', () => {
+                            lista.querySelectorAll('.libre-chip').forEach((c) => c.classList.remove('selected'));
+                            chip.classList.add('selected');
+                            // Solo cambia a quién se asigna; las horas siguen siendo las de todos
+                            document.getElementById('selectedEspecialista').value = e.id;
+                            selectedEspecialista.asignado = e.id === CUALQUIERA ? null : e.nombre;
+                        });
+                        lista.appendChild(chip);
+                    });
+                    document.getElementById('selectedEspecialista').value = CUALQUIERA;
+                    selectedEspecialista.asignado = null;
+                    box.style.display = 'block';
+                })
+                .catch(() => {});
         }
 
         // Cargar fechas disponibles del mes
@@ -742,7 +913,7 @@
             const year = currentMonth.getFullYear();
             const month = currentMonth.getMonth() + 1; // JavaScript months are 0-indexed
 
-            fetch(`/{{ negocio.slug }}/api/fechas-disponibles/?servicio=${selectedService.id}&year=${year}&month=${month}`)
+            fetch(`/{{ negocio.slug }}/api/fechas-disponibles/?servicio=${selectedService.id}&year=${year}&month=${month}${paramEspecialista()}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.fechas) {
@@ -828,7 +999,12 @@
             noSlotsDiv.style.display = 'none';
 
             // Fetch available time slots
-            fetch(`/{{ negocio.slug }}/api/disponibilidad/?fecha=${selectedDate}&servicio=${selectedService.id}`)
+            // Enlace "ver las horas de todos": solo si se eligió un especialista
+            const conEspecialista = VARIOS_ESPECIALISTAS && selectedEspecialista && selectedEspecialista.id !== CUALQUIERA;
+            document.querySelectorAll('.verTodosBox').forEach((p) => { p.style.display = conEspecialista ? '' : 'none'; });
+            document.getElementById('libresBox').style.display = 'none';
+
+            fetch(`/{{ negocio.slug }}/api/disponibilidad/?fecha=${selectedDate}&servicio=${selectedService.id}${paramEspecialista()}`)
                 .then(response => response.json())
                 .then(data => {
                     loadingDiv.style.display = 'none';
@@ -854,6 +1030,7 @@
             element.classList.add('selected');
             selectedTime = element.dataset.time;
             document.getElementById('selectedTime').value = selectedTime;
+            cargarLibres();
         }
 
         // Navigation
@@ -913,6 +1090,10 @@
             }
             if (step === 2 && !selectedService) {
                 alert('Por favor selecciona un servicio');
+                return false;
+            }
+            if (step === 2 && VARIOS_ESPECIALISTAS && !selectedEspecialista && !selectedService.requiresContact) {
+                alert('Elige con quién quieres tu cita (o "Me da igual")');
                 return false;
             }
             if (step === 3 && !selectedDate) {
@@ -992,6 +1173,12 @@
 
         function updateSummary() {
             document.getElementById('summaryService').textContent = selectedService.name;
+            if (VARIOS_ESPECIALISTAS) {
+                const con = selectedEspecialista.id === CUALQUIERA
+                    ? (selectedEspecialista.asignado || 'El primero disponible')
+                    : selectedEspecialista.nombre;
+                document.getElementById('summaryEspecialista').textContent = con;
+            }
             document.getElementById('summaryDate').textContent = new Date(selectedDate + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             document.getElementById('summaryTime').textContent = selectedTime;
             document.getElementById('summaryDuration').textContent = selectedService.duration + ' minutos';

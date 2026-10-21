@@ -105,6 +105,7 @@
                     <div class="row align-items-center">
                         <div class="col-md-8">
                             <h5 class="card-title mb-1">{{ cita.servicio.nombre }}</h5>
+                            {% if cita.especialista %}<p class="small text-muted mb-1"><i class="bi bi-person"></i> con {{ cita.especialista.nombre }}</p>{% endif %}
                             <p class="text-muted mb-2">
                                 <i class="bi bi-calendar3"></i> {{ cita.fecha_hora|date:"d/m/Y" }} -
                                 <i class="bi bi-clock"></i> {{ cita.fecha_hora|date:"H:i" }}
@@ -173,6 +174,7 @@
                     <div class="row align-items-center">
                         <div class="col-md-12">
                             <h6 class="card-title mb-1">{{ cita.servicio.nombre }}</h6>
+                            {% if cita.especialista %}<p class="small text-muted mb-1">con {{ cita.especialista.nombre }}</p>{% endif %}
                             <p class="text-muted small mb-1">
                                 <i class="bi bi-calendar3"></i> {{ cita.fecha_hora|date:"d/m/Y" }} -
                                 <i class="bi bi-clock"></i> {{ cita.fecha_hora|date:"H:i" }}

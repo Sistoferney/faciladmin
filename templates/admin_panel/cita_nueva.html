@@ -45,6 +45,15 @@
                         </select>
                     </div>
 
+                    {% if varios_especialistas %}
+                    <div class="mb-3">
+                        <label for="especialista" class="form-label">Con</label>
+                        <select class="form-select" id="especialista" name="especialista">
+                            <option value="">Cualquiera disponible</option>
+                        </select>
+                    </div>
+                    {% endif %}
+
                     <div class="row">
                         <div class="col-6 mb-3">
                             <label for="fecha" class="form-label">Fecha</label>
@@ -87,8 +96,27 @@
 {% endblock %}
 
 {% block extra_js %}
+{{ especialistas|json_script:"datos-especialistas" }}
 <script>
 (function () {
+    const ESPECIALISTAS = JSON.parse(document.getElementById('datos-especialistas').textContent);
+    const selectEspecialista = document.getElementById('especialista');
+    let especialistaElegido = "{{ form.especialista|escapejs }}";
+
+    // Solo quienes hacen el servicio elegido
+    function llenarEspecialistas() {
+        if (!selectEspecialista) {
+            return;
+        }
+        const servicioId = Number(document.getElementById('servicio').value);
+        selectEspecialista.length = 1;
+        ESPECIALISTAS.filter((e) => !e.servicios.length || e.servicios.includes(servicioId))
+            .forEach((e) => selectEspecialista.add(new Option(e.nombre, e.id, false, String(e.id) === especialistaElegido)));
+    }
+    function paramEspecialista() {
+        return selectEspecialista && selectEspecialista.value ? `&especialista=${selectEspecialista.value}` : '';
+    }
+
     const URL_BUSCAR = "{% url 'public:admin_cliente_buscar' negocio.slug %}";
     const URL_HORARIOS = "{% url 'public:disponibilidad_api' negocio.slug %}";
     const DIAS_MINIMOS_ABONO = {{ dias_minimos_abono }};
@@ -155,7 +183,7 @@
         }
         hora.innerHTML = '<option value="">Cargando…</option>';
         try {
-            const respuesta = await fetch(`${URL_HORARIOS}?servicio=${servicio.value}&fecha=${fecha.value}`, { credentials: 'same-origin' });
+            const respuesta = await fetch(`${URL_HORARIOS}?servicio=${servicio.value}&fecha=${fecha.value}${paramEspecialista()}`, { credentials: 'same-origin' });
             const datos = await respuesta.json();
             const horarios = datos.horarios || [];
             hora.innerHTML = '';
@@ -174,7 +202,10 @@
         actualizarAbono();
     }
     hora.addEventListener('change', () => { horaElegida = hora.value; avisoHora.hidden = true; actualizarAbono(); });
-    servicio.addEventListener('change', cargarHoras);
+    servicio.addEventListener('change', () => { llenarEspecialistas(); cargarHoras(); });
+    if (selectEspecialista) {
+        selectEspecialista.addEventListener('change', () => { especialistaElegido = selectEspecialista.value; cargarHoras(); });
+    }
     fecha.addEventListener('change', cargarHoras);
 
     // ---- Anticipo: solo si el servicio lo lleva y faltan al menos 2 días ----
@@ -201,6 +232,7 @@
     }
 
     buscarCliente();
+    llenarEspecialistas();
     cargarHoras();
 })();
 </script>

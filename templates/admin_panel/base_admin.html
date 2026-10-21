@@ -250,6 +250,10 @@
                 <i class="bi bi-scissors"></i>
                 <span>Servicios</span>
             </a>
+            <a href="{% url 'public:admin_especialistas' negocio.slug %}" class="nav-link {% if seccion_activa == 'especialistas' %}active{% endif %}">
+                <i class="bi bi-person-badge"></i>
+                <span>Especialistas</span>
+            </a>
             <a href="{% url 'public:admin_clientes' negocio.slug %}" class="nav-link {% if seccion_activa == 'clientes' %}active{% endif %}">
                 <i class="bi bi-people"></i>
                 <span>Clientes</span>

@@ -277,6 +277,12 @@ class BloqueoAgenda(models.Model):
         max_length=200,
         help_text='Este motivo solo lo ve el administrador'
     )
+    # Vacío = bloquea todo el negocio; con especialista = solo su agenda
+    especialista = models.ForeignKey(
+        'Especialista', on_delete=models.CASCADE, null=True, blank=True,
+        related_name='bloqueos', verbose_name='Especialista',
+        help_text='Déjalo vacío para bloquear a todo el negocio'
+    )
     esta_activo = models.BooleanField('Activo', default=True)
     fecha_creacion = models.DateTimeField('Fecha de creación', auto_now_add=True)
 
@@ -287,3 +293,61 @@ class BloqueoAgenda(models.Model):
 
     def __str__(self):
         return f"{self.negocio.nombre} - {timezone.localtime(self.fecha_inicio).strftime('%d/%m/%Y %H:%M')} - {self.motivo_interno}"
+
+
+class Especialista(models.Model):
+    """
+    Colaborador del negocio que atiende citas (manicurista, estilista...).
+
+    - Con 0 o 1 especialista activo el negocio funciona como antes: una sola
+      agenda. Con 2 o más, el cliente elige con quién (o "me da igual") y
+      cada especialista tiene su propia agenda (ver disponibilidad.py).
+    - servicios vacío = hace todos los servicios del negocio.
+    - usa_horario_negocio: si es False, trabaja según sus HorarioEspecialista.
+    """
+    negocio = models.ForeignKey(
+        Negocio, on_delete=models.CASCADE, related_name='especialistas', verbose_name='Negocio'
+    )
+    nombre = models.CharField('Nombre', max_length=100)
+    cargo = models.CharField('Especialidad', max_length=100, blank=True,
+                             help_text='Ej: Manicurista, Estilista, Barbero')
+    foto = models.ImageField('Foto', upload_to='negocios/especialistas/', blank=True, null=True)
+    telefono = models.CharField('Celular', max_length=20, blank=True,
+                                help_text='Para escribirle por WhatsApp desde la agenda (opcional)')
+    servicios = models.ManyToManyField(
+        'servicios.Servicio', blank=True, related_name='especialistas', verbose_name='Servicios que hace',
+        help_text='Si no marcas ninguno, hace todos los servicios'
+    )
+    usa_horario_negocio = models.BooleanField('Trabaja el horario del negocio', default=True)
+    esta_activo = models.BooleanField('Activo', default=True)
+    orden = models.PositiveSmallIntegerField('Orden', default=0)
+    fecha_creacion = models.DateTimeField('Fecha de creación', auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Especialista'
+        verbose_name_plural = 'Especialistas'
+        ordering = ['orden', 'nombre']
+
+    def __str__(self):
+        return f'{self.nombre} ({self.negocio.nombre})'
+
+    def hace_servicio(self, servicio):
+        ids = [s.id for s in self.servicios.all()]
+        return not ids or servicio.id in ids
+
+
+class HorarioEspecialista(models.Model):
+    """Horario propio de un especialista para un día de la semana"""
+    especialista = models.ForeignKey(
+        Especialista, on_delete=models.CASCADE, related_name='horarios', verbose_name='Especialista'
+    )
+    dia_semana = models.IntegerField('Día de la semana', choices=ConfiguracionHorario.DIAS_SEMANA)
+    esta_abierto = models.BooleanField('Trabaja', default=True)
+    hora_apertura = models.TimeField('Desde')
+    hora_cierre = models.TimeField('Hasta')
+
+    class Meta:
+        verbose_name = 'Horario de especialista'
+        verbose_name_plural = 'Horarios de especialistas'
+        unique_together = ('especialista', 'dia_semana')
+        ordering = ['dia_semana']

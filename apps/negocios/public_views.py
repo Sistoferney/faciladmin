@@ -16,7 +16,10 @@ from functools import wraps
 import calendar
 import re
 from apps.core.formato import parsear_monto, pesos
-from .disponibilidad import horarios_disponibles, esta_disponible
+from .disponibilidad import (
+    especialista_de_peticion, especialistas_libres, especialistas_para, esta_disponible,
+    horarios_disponibles, resolver_especialista, tiene_varios_especialistas,
+)
 from . import novedades_cliente
 from .models import Negocio
 from apps.servicios.models import Servicio
@@ -209,8 +212,13 @@ def agendar_cita(request, slug):
                 Negocio.objects.select_for_update().get(pk=negocio.pk)
 
                 # Validar en el servidor lo mismo que muestra el calendario:
-                # horario de atención, bloqueos y citas que se cruzan
-                if not esta_disponible(negocio, fecha_hora, servicio.duracion_minutos):
+                # horario de atención, bloqueos y citas que se cruzan. Con
+                # varios especialistas, también quién atiende (el elegido o,
+                # si "me da igual", el libre con menos citas ese día).
+                disponible, especialista = resolver_especialista(
+                    negocio, fecha_hora, servicio, request.POST.get('especialista')
+                )
+                if not disponible:
                     messages.error(request, 'El horario seleccionado ya no está disponible. Por favor elige otro.')
                     return redirect('public:agendar', slug=slug)
 
@@ -247,6 +255,7 @@ def agendar_cita(request, slug):
                     duracion_minutos=servicio.duracion_minutos,
                     estado='pendiente_abono' if exige_abono else 'confirmada',
                     origen='web',
+                    especialista=especialista,
                     notas_cliente=notas
                 )
 
@@ -296,6 +305,9 @@ def agendar_cita(request, slug):
     context = {
         'negocio': negocio,
         'servicios': servicios,
+        # Con 2 o más especialistas el cliente elige con quién (ver disponibilidad.py)
+        'varios_especialistas': tiene_varios_especialistas(negocio),
+        'especialistas': [_datos_especialista(e) for e in especialistas_para(negocio)],
         'telefono_recordado': cliente_recordado.telefono.as_e164 if cliente_recordado else '',
         'title': f'Agendar Cita - {negocio.nombre}',
     }
@@ -349,14 +361,18 @@ def disponibilidad_api(request, slug):
     # Al editar una cita, su propio horario no debe contar como ocupado.
     # Solo se acepta si la cita es del cliente identificado en esta sesión.
     excluir_cita_id = None
+    especialista = especialista_de_peticion(negocio, request.GET.get('especialista'), servicio)
     cita_id = request.GET.get('cita')
     if cita_id and cita_id.isdigit():
         cita = Cita.objects.filter(id=cita_id, negocio=negocio).first()
         if cita and _cliente_puede_gestionar(request, cita):
             excluir_cita_id = cita.id
+            # Al mover su cita, el cliente ve las horas de su mismo especialista
+            especialista = especialista or especialista_de_peticion(negocio, cita.especialista_id, servicio)
 
     horarios = horarios_disponibles(
-        negocio, fecha_obj, servicio.duracion_minutos, excluir_cita_id=excluir_cita_id
+        negocio, fecha_obj, servicio.duracion_minutos, excluir_cita_id=excluir_cita_id,
+        especialista=especialista, servicio=servicio,
     )
     return JsonResponse({'horarios': horarios})
 
@@ -386,15 +402,48 @@ def fechas_disponibles_api(request, slug):
     _, dias_mes = calendar.monthrange(primer_dia.year, primer_dia.month)
     hoy = timezone.localdate()
 
+    especialista = especialista_de_peticion(negocio, request.GET.get('especialista'), servicio)
     fechas_con_disponibilidad = []
     for dia in range(dias_mes):
         fecha = primer_dia + timedelta(days=dia)
         if fecha < hoy:
             continue
-        if horarios_disponibles(negocio, fecha, servicio.duracion_minutos):
+        if horarios_disponibles(negocio, fecha, servicio.duracion_minutos,
+                                especialista=especialista, servicio=servicio):
             fechas_con_disponibilidad.append(fecha.isoformat())
 
     return JsonResponse({'fechas': fechas_con_disponibilidad})
+
+
+def _datos_especialista(especialista):
+    """Lo que la página de reserva necesita de un especialista (sin datos privados)"""
+    return {
+        'id': especialista.id,
+        'nombre': especialista.nombre,
+        'cargo': especialista.cargo,
+        'foto': especialista.foto.url if especialista.foto else '',
+        # Vacío = hace todos los servicios
+        'servicios': [s.id for s in especialista.servicios.all()],
+    }
+
+
+@ratelimit(key='ip', rate='60/m', block=True)
+def especialistas_disponibles_api(request, slug):
+    """
+    "Me da igual": quiénes están libres para el servicio en esa fecha y hora.
+    Rate limit: 60 consultas por minuto por IP
+    """
+    negocio = get_object_or_404(Negocio, slug=slug, esta_activo=True)
+    try:
+        servicio = Servicio.objects.get(id=request.GET.get('servicio'), negocio=negocio)
+        fecha_hora = timezone.make_aware(datetime.strptime(
+            f"{request.GET.get('fecha')} {request.GET.get('hora')}", '%Y-%m-%d %H:%M'
+        ))
+    except (Servicio.DoesNotExist, ValueError, TypeError):
+        return JsonResponse({'error': 'Parámetros inválidos'}, status=400)
+
+    libres = especialistas_libres(negocio, fecha_hora, servicio.duracion_minutos, servicio)
+    return JsonResponse({'especialistas': [_datos_especialista(e) for e in libres]})
 
 
 @ratelimit(key='ip', rate='30/m', block=True)
@@ -614,12 +663,17 @@ def editar_cita_cliente(request, slug, cita_id):
 
                 # Horario de atención, bloqueos y cruces con otras citas
                 # (excluyendo esta misma cita, que se está moviendo)
-                if not esta_disponible(negocio, nueva_fecha_hora, servicio.duracion_minutos,
-                                       excluir_cita_id=cita.id):
+                # Mismo especialista si todavía hace el servicio; si no, quien esté libre
+                actual = especialista_de_peticion(negocio, cita.especialista_id, servicio)
+                disponible, especialista = resolver_especialista(
+                    negocio, nueva_fecha_hora, servicio, actual and actual.id, excluir_cita_id=cita.id
+                )
+                if not disponible:
                     messages.error(request, 'El horario seleccionado no está disponible. Por favor elige otro.')
                     return redirect('public:editar_cita_cliente', slug=slug, cita_id=cita_id)
 
                 # Actualizar la cita
+                cita.especialista = especialista
                 cita.servicio = servicio
                 cita.fecha_hora = nueva_fecha_hora
                 cita.duracion_minutos = servicio.duracion_minutos

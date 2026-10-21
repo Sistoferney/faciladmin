@@ -1,0 +1,81 @@
+{% extends 'admin_panel/base_admin.html' %}
+
+{% block page_title %}Especialistas{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <p class="text-muted mb-0">Las personas que atienden las citas de tu negocio.</p>
+    <a href="{% url 'public:especialista_crear' negocio.slug %}" class="btn btn-primary">
+        <i class="bi bi-person-plus"></i> Nuevo especialista
+    </a>
+</div>
+
+{% if eligen %}
+<div class="alert alert-success">
+    <i class="bi bi-people-fill"></i>
+    Tienes {{ activos }} especialistas activos: al reservar, tus clientes eligen con quién quieren su cita
+    (o "Me da igual") y cada especialista tiene su propia agenda.
+</div>
+{% else %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i>
+    Con {{ minimo }} o más especialistas activos, tus clientes podrán elegir con quién quieren su cita y cada
+    uno tendrá su propia agenda. Mientras tanto, la reserva funciona como siempre: una sola agenda.
+</div>
+{% endif %}
+
+<div class="row g-3">
+    {% for especialista in especialistas %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 {% if not especialista.esta_activo %}opacity-50{% endif %}">
+            <div class="card-body">
+                <div class="d-flex align-items-center gap-3 mb-2">
+                    {% if especialista.foto %}
+                    <img src="{{ especialista.foto.url }}" alt="" class="rounded-circle" style="width: 56px; height: 56px; object-fit: cover;">
+                    {% else %}
+                    <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold fs-4"
+                         style="width: 56px; height: 56px; background: var(--primary-color);">{{ especialista.nombre|first|upper }}</div>
+                    {% endif %}
+                    <div>
+                        <h5 class="mb-0">{{ especialista.nombre }}</h5>
+                        <small class="text-muted">{{ especialista.cargo|default:"" }}</small>
+                        {% if not especialista.esta_activo %}<span class="badge bg-secondary ms-1">Inactivo</span>{% endif %}
+                    </div>
+                </div>
+                <p class="small mb-1">
+                    <i class="bi bi-scissors"></i>
+                    {% with servicios=especialista.servicios.all %}
+                    {% if servicios %}{% for s in servicios %}{{ s.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}{% else %}Todos los servicios{% endif %}
+                    {% endwith %}
+                </p>
+                <p class="small mb-1">
+                    <i class="bi bi-clock"></i>
+                    {% if especialista.usa_horario_negocio %}Horario del negocio{% else %}Horario propio{% endif %}
+                </p>
+                <p class="small mb-0"><i class="bi bi-calendar-check"></i> {{ especialista.proximas }} cita{{ especialista.proximas|pluralize }} próxima{{ especialista.proximas|pluralize }}</p>
+            </div>
+            <div class="card-footer bg-white d-flex gap-2">
+                <a href="{% url 'public:especialista_editar' negocio.slug especialista.id %}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-pencil"></i> Editar
+                </a>
+                <a href="{% url 'public:admin_agenda' negocio.slug %}?especialista={{ especialista.id }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-calendar-week"></i> Agenda
+                </a>
+                <form method="post" action="{% url 'public:especialista_eliminar' negocio.slug especialista.id %}" class="ms-auto"
+                      onsubmit="return confirm('¿Eliminar a {{ especialista.nombre|escapejs }}? Si ya tuvo citas, solo se desactiva.');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar"><i class="bi bi-trash"></i></button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center text-muted py-5">
+            <i class="bi bi-person-badge fs-1"></i>
+            <p class="mt-2">Aún no tienes especialistas. Agrégalos si en tu negocio atiende más de una persona.</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

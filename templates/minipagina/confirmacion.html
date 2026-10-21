@@ -68,6 +68,13 @@
                                 {{ cita.servicio.nombre }}
                             </p>
 
+                            {% if cita.especialista %}
+                            <p class="mb-2">
+                                <strong><i class="bi bi-person-badge me-2 text-primary"></i>Con:</strong><br>
+                                {{ cita.especialista.nombre }}
+                            </p>
+                            {% endif %}
+
                             <p class="mb-2">
                                 <strong><i class="bi bi-calendar3 me-2 text-primary"></i>Fecha:</strong><br>
                                 {{ cita.fecha_hora|date:"l, d \d\e F \d\e Y" }}

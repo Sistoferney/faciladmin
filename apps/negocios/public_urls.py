@@ -51,6 +51,13 @@ urlpatterns = [
     path('<slug:slug>/admin/pendientes/<int:pendiente_id>/revisado/', admin_views.pendiente_resolver, name='admin_pendiente_revisado'),
 
     # Otros
+    # Especialistas
+    path('<slug:slug>/admin/especialistas/', admin_views.especialistas_admin, name='admin_especialistas'),
+    path('<slug:slug>/admin/especialistas/nuevo/', admin_views.especialista_crear, name='especialista_crear'),
+    path('<slug:slug>/admin/especialistas/<int:especialista_id>/editar/', admin_views.especialista_editar, name='especialista_editar'),
+    path('<slug:slug>/admin/especialistas/<int:especialista_id>/eliminar/', admin_views.especialista_eliminar, name='especialista_eliminar'),
+    path('<slug:slug>/admin/citas/<int:cita_id>/especialista/', admin_views.cita_asignar_especialista, name='cita_asignar_especialista'),
+
     path('<slug:slug>/admin/clientes/', admin_views.clientes_admin, name='admin_clientes'),
     path('<slug:slug>/admin/clientes/recuperar/', admin_views.clientes_recuperar, name='admin_clientes_recuperar'),
     path('<slug:slug>/admin/clientes/<int:cliente_id>/baja/', admin_views.cliente_baja, name='cliente_baja'),
@@ -72,6 +79,7 @@ urlpatterns = [
 
     # API para disponibilidad
     path('<slug:slug>/api/disponibilidad/', public_views.disponibilidad_api, name='disponibilidad_api'),
+    path('<slug:slug>/api/especialistas-disponibles/', public_views.especialistas_disponibles_api, name='especialistas_disponibles_api'),
     path('<slug:slug>/api/fechas-disponibles/', public_views.fechas_disponibles_api, name='fechas_disponibles_api'),
     path('<slug:slug>/api/buscar-cliente/', public_views.buscar_cliente_api, name='buscar_cliente_api'),
 

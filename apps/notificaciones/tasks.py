@@ -45,7 +45,7 @@ Tu cita ha sido agendada exitosamente:
 
 📅 Fecha: {timezone.localtime(cita.fecha_hora).strftime('%d/%m/%Y')}
 🕐 Hora: {timezone.localtime(cita.fecha_hora).strftime('%H:%M')}
-✂️ Servicio: {cita.servicio.nombre}
+✂️ Servicio: {cita.servicio.nombre}{chr(10) + '👤 Con: ' + cita.especialista.nombre if cita.especialista else ''}
 💰 Precio: ${cita.servicio.precio}
 
 📍 {negocio.nombre}

@@ -249,7 +249,17 @@ def agenda_admin(request, slug):
         negocio=negocio,
         fecha_hora__gte=fecha_inicio_semana,
         fecha_hora__lte=fecha_fin_semana
-    ).select_related('cliente', 'servicio', 'abono').order_by('fecha_hora')
+    ).select_related('cliente', 'servicio', 'abono', 'especialista').order_by('fecha_hora')
+
+    # Con varios especialistas: ver la agenda de uno (sus citas, las que no
+    # tienen especialista asignado y los bloqueos suyos o de todo el negocio)
+    from .disponibilidad import especialistas_activos, MINIMO_ESPECIALISTAS
+    especialistas = especialistas_activos(negocio)
+    varios_especialistas = len(especialistas) >= MINIMO_ESPECIALISTAS
+    filtro = request.GET.get('especialista', '')
+    especialista_filtro = next((e for e in especialistas if str(e.id) == filtro), None) if varios_especialistas else None
+    if especialista_filtro:
+        citas_semana = citas_semana.filter(Q(especialista=especialista_filtro) | Q(especialista__isnull=True))
 
     # Obtener bloqueos de la semana
     bloqueos_semana = BloqueoAgenda.objects.filter(
@@ -258,6 +268,8 @@ def agenda_admin(request, slug):
         fecha_inicio__lte=fecha_fin_semana,
         fecha_fin__gte=fecha_inicio_semana
     ).order_by('fecha_inicio')
+    if especialista_filtro:
+        bloqueos_semana = bloqueos_semana.filter(Q(especialista=especialista_filtro) | Q(especialista__isnull=True))
 
     # Crear una matriz para mapear citas y bloqueos a cada celda del calendario
     calendario_grid = {}
@@ -282,6 +294,8 @@ def agenda_admin(request, slug):
             # Botón para escribirle al cliente por WhatsApp desde el detalle
             'whatsapp': enlace_negocio_a_cliente(cita),
             'pago': _resumen_pago(cita),
+            'especialista': cita.especialista.nombre if cita.especialista else '',
+            'especialista_id': cita.especialista_id,
         }
 
         # Marcar todos los slots que ocupa esta cita
@@ -376,6 +390,10 @@ def agenda_admin(request, slug):
         # (los nombres de clientes vienen del formulario público)
         'calendario_grid': calendario_grid,
         'stats': stats,
+        'varios_especialistas': varios_especialistas,
+        'especialistas': especialistas,
+        'especialista_filtro': especialista_filtro,
+        'especialistas_json': [{'id': e.id, 'nombre': e.nombre} for e in especialistas],
     }
 
     return render(request, 'admin_panel/agenda_calendario.html', context)
@@ -659,7 +677,7 @@ def bloqueo_crear(request, slug):
     negocio = get_object_or_404(Negocio, slug=slug)
 
     if request.method == 'POST':
-        form = BloqueoAgendaForm(request.POST)
+        form = BloqueoAgendaForm(request.POST, negocio=negocio)
         if form.is_valid():
             bloqueo = form.save(commit=False)
             bloqueo.negocio = negocio
@@ -687,7 +705,12 @@ def bloqueo_crear(request, slug):
             except ValueError:
                 pass
 
-        form = BloqueoAgendaForm(initial=initial_data if initial_data else None)
+        # Desde la agenda filtrada por especialista: bloquear solo a esa persona
+        especialista_param = request.GET.get('especialista', '')
+        if especialista_param.isdigit():
+            initial_data['especialista'] = especialista_param
+
+        form = BloqueoAgendaForm(initial=initial_data if initial_data else None, negocio=negocio)
 
     context = {
         'negocio': negocio,
@@ -710,7 +733,7 @@ def bloqueo_editar(request, slug, bloqueo_id):
     bloqueo = get_object_or_404(BloqueoAgenda, id=bloqueo_id, negocio=negocio)
 
     if request.method == 'POST':
-        form = BloqueoAgendaForm(request.POST, instance=bloqueo)
+        form = BloqueoAgendaForm(request.POST, instance=bloqueo, negocio=negocio)
         if form.is_valid():
             form.save()
             messages.success(request, '¡Bloqueo actualizado exitosamente!')
@@ -718,7 +741,7 @@ def bloqueo_editar(request, slug, bloqueo_id):
         else:
             messages.error(request, 'Por favor corrige los errores en el formulario.')
     else:
-        form = BloqueoAgendaForm(instance=bloqueo)
+        form = BloqueoAgendaForm(instance=bloqueo, negocio=negocio)
 
     context = {
         'negocio': negocio,
@@ -1249,7 +1272,7 @@ def cita_nueva(request, slug):
     from datetime import datetime
     from django.db import transaction
     from apps.authentication.telefonos import normalizar_telefono
-    from .disponibilidad import esta_disponible
+    from .disponibilidad import especialistas_para, resolver_especialista, tiene_varios_especialistas
 
     negocio = get_object_or_404(Negocio, slug=slug)
     servicios = Servicio.objects.filter(negocio=negocio, esta_activo=True).order_by('orden', 'nombre')
@@ -1263,7 +1286,9 @@ def cita_nueva(request, slug):
         'hora': datos.get('hora', ''),
         'notas': datos.get('notas', '').strip(),
         'pedir_abono': datos.get('pedir_abono') == '1',
+        'especialista': datos.get('especialista', ''),
     }
+    varios = tiene_varios_especialistas(negocio)
 
     def mostrar(error=None):
         if error:
@@ -1274,6 +1299,11 @@ def cita_nueva(request, slug):
             'servicios': servicios,
             'form': form,
             'dias_minimos_abono': DIAS_MINIMOS_ABONO,
+            'varios_especialistas': varios,
+            'especialistas': [
+                {'id': e.id, 'nombre': e.nombre, 'servicios': [s.id for s in e.servicios.all()]}
+                for e in especialistas_para(negocio)
+            ] if varios else [],
         })
 
     if request.method != 'POST':
@@ -1294,7 +1324,8 @@ def cita_nueva(request, slug):
         # Mismo bloqueo que la reserva web: nadie más toma ese horario a la vez
         Negocio.objects.select_for_update().get(pk=negocio.pk)
 
-        if not esta_disponible(negocio, fecha_hora, servicio.duracion_minutos):
+        disponible, especialista = resolver_especialista(negocio, fecha_hora, servicio, form['especialista'])
+        if not disponible:
             return mostrar('Ese horario ya no está disponible para este servicio. Elige otra hora.')
 
         cliente = Cliente.buscar_por_telefono(negocio, telefono)
@@ -1317,6 +1348,7 @@ def cita_nueva(request, slug):
             duracion_minutos=servicio.duracion_minutos,
             estado='pendiente_abono' if exige_abono else 'confirmada',
             origen='manual',
+            especialista=especialista,
             notas_internas=form['notas'],
         )
         if exige_abono:
@@ -1348,3 +1380,199 @@ def cita_agendada(request, slug, cita_id):
         'whatsapp': enlace_cita_agendada(cita, _enlace_mis_citas(negocio)),
         'abono': getattr(cita, 'abono', None),
     })
+
+
+# ---------- Especialistas (colaboradores que atienden citas) ----------
+
+ESTADOS_CITA_PROXIMA = ['pendiente_abono', 'confirmada']
+
+
+def _citas_proximas(especialista):
+    return especialista.citas.filter(fecha_hora__gte=timezone.now(), estado__in=ESTADOS_CITA_PROXIMA)
+
+
+@admin_required
+def especialistas_admin(request, slug):
+    """Lista de especialistas. Con 2 o más activos, el cliente elige con quién."""
+    from .disponibilidad import MINIMO_ESPECIALISTAS
+
+    negocio = get_object_or_404(Negocio, slug=slug)
+    especialistas = negocio.especialistas.prefetch_related('servicios').annotate(
+        proximas=Count('citas', filter=Q(
+            citas__fecha_hora__gte=timezone.now(), citas__estado__in=ESTADOS_CITA_PROXIMA,
+        ))
+    ).order_by('-esta_activo', 'orden', 'nombre')
+    activos = sum(1 for e in especialistas if e.esta_activo)
+    return render(request, 'admin_panel/especialistas.html', {
+        'negocio': negocio,
+        'seccion_activa': 'especialistas',
+        'especialistas': especialistas,
+        'activos': activos,
+        'minimo': MINIMO_ESPECIALISTAS,
+        'eligen': activos >= MINIMO_ESPECIALISTAS,
+    })
+
+
+def _dias_horario(negocio, especialista, datos=None):
+    """
+    Las 7 filas del horario propio: lo que envió el formulario, lo guardado,
+    o el horario del negocio como punto de partida.
+    """
+    from datetime import time
+    from .disponibilidad import horario_del_dia
+    from .forms import DIAS
+
+    guardados = {h.dia_semana: h for h in especialista.horarios.all()} if especialista and especialista.pk else {}
+    filas = []
+    hoy = timezone.localdate()
+    for numero, nombre in DIAS:
+        if datos is not None:
+            filas.append({
+                'numero': numero, 'nombre': nombre,
+                'trabaja': datos.get(f'dia_{numero}_trabaja') == '1',
+                'desde': datos.get(f'dia_{numero}_desde', ''),
+                'hasta': datos.get(f'dia_{numero}_hasta', ''),
+            })
+            continue
+        if numero in guardados:
+            h = guardados[numero]
+            trabaja, desde, hasta = h.esta_abierto, h.hora_apertura, h.hora_cierre
+        else:
+            # Fecha cualquiera de ese día de la semana, para leer el horario del negocio
+            fecha = hoy + timedelta(days=(numero - hoy.weekday()) % 7)
+            horario = horario_del_dia(negocio, fecha)
+            trabaja = horario is not None
+            desde, hasta = horario if horario else (time(9, 0), time(18, 0))
+        filas.append({
+            'numero': numero, 'nombre': nombre, 'trabaja': trabaja,
+            'desde': desde.strftime('%H:%M'), 'hasta': hasta.strftime('%H:%M'),
+        })
+    return filas
+
+
+def _validar_horario(filas):
+    from datetime import datetime
+    errores, horario = [], []
+    for fila in filas:
+        if not fila['trabaja']:
+            horario.append((fila['numero'], False, None, None))
+            continue
+        try:
+            desde = datetime.strptime(fila['desde'], '%H:%M').time()
+            hasta = datetime.strptime(fila['hasta'], '%H:%M').time()
+        except ValueError:
+            errores.append(f"{fila['nombre']}: escribe la hora de inicio y de fin.")
+            continue
+        if hasta <= desde:
+            errores.append(f"{fila['nombre']}: la hora de fin debe ser después de la de inicio.")
+            continue
+        horario.append((fila['numero'], True, desde, hasta))
+    return errores, horario
+
+
+def _formulario_especialista(request, negocio, especialista=None):
+    from datetime import time
+    from django.db import transaction
+    from .forms import EspecialistaForm
+    from .models import HorarioEspecialista
+
+    if request.method == 'POST':
+        form = EspecialistaForm(request.POST, request.FILES, instance=especialista, negocio=negocio)
+        filas = _dias_horario(negocio, especialista, request.POST)
+        errores_horario, horario = [], []
+        if not request.POST.get('usa_horario_negocio'):
+            errores_horario, horario = _validar_horario(filas)
+            if not errores_horario and not any(trabaja for _, trabaja, _, _ in horario):
+                errores_horario.append('Marca al menos un día de trabajo.')
+
+        if form.is_valid() and not errores_horario:
+            nuevo = form.save(commit=False)
+            nuevo.negocio = negocio
+            if especialista and especialista.esta_activo and not nuevo.esta_activo and _citas_proximas(especialista).exists():
+                messages.error(request, f'{especialista.nombre} tiene citas próximas: reasígnalas o cancélalas desde la agenda antes de desactivarlo.')
+            else:
+                with transaction.atomic():
+                    nuevo.save()
+                    form.save_m2m()
+                    for numero, trabaja, desde, hasta in horario:
+                        HorarioEspecialista.objects.update_or_create(
+                            especialista=nuevo, dia_semana=numero,
+                            defaults={'esta_abierto': trabaja, 'hora_apertura': desde or time(9, 0),
+                                      'hora_cierre': hasta or time(18, 0)},
+                        )
+                messages.success(request, f'Especialista "{nuevo.nombre}" guardado.')
+                return redirect('public:admin_especialistas', slug=negocio.slug)
+        for error in errores_horario:
+            messages.error(request, error)
+    else:
+        form = EspecialistaForm(instance=especialista, negocio=negocio)
+        filas = _dias_horario(negocio, especialista)
+
+    return render(request, 'admin_panel/especialista_form.html', {
+        'negocio': negocio,
+        'seccion_activa': 'especialistas',
+        'form': form,
+        'especialista': especialista,
+        'dias': filas,
+    })
+
+
+@admin_required
+def especialista_crear(request, slug):
+    return _formulario_especialista(request, get_object_or_404(Negocio, slug=slug))
+
+
+@admin_required
+def especialista_editar(request, slug, especialista_id):
+    from .models import Especialista
+    negocio = get_object_or_404(Negocio, slug=slug)
+    especialista = get_object_or_404(Especialista, id=especialista_id, negocio=negocio)
+    return _formulario_especialista(request, negocio, especialista)
+
+
+@admin_required
+def especialista_eliminar(request, slug, especialista_id):
+    """
+    Elimina al especialista si nunca tuvo citas; si tuvo, solo se desactiva
+    (conserva el historial). No se permite con citas próximas.
+    """
+    from .models import Especialista
+    negocio = get_object_or_404(Negocio, slug=slug)
+    especialista = get_object_or_404(Especialista, id=especialista_id, negocio=negocio)
+    if request.method != 'POST':
+        return redirect('public:admin_especialistas', slug=slug)
+
+    if _citas_proximas(especialista).exists():
+        messages.error(request, f'{especialista.nombre} tiene citas próximas: reasígnalas o cancélalas desde la agenda primero.')
+    elif especialista.citas.exists():
+        especialista.esta_activo = False
+        especialista.save(update_fields=['esta_activo'])
+        messages.success(request, f'{especialista.nombre} quedó desactivado (se conserva su historial de citas).')
+    else:
+        especialista.delete()
+        messages.success(request, f'{especialista.nombre} fue eliminado.')
+    return redirect('public:admin_especialistas', slug=slug)
+
+
+@admin_required
+def cita_asignar_especialista(request, slug, cita_id):
+    """Desde la agenda: cambiar quién atiende una cita (debe estar libre a esa hora)"""
+    from .disponibilidad import esta_disponible, especialista_de_peticion
+
+    negocio = get_object_or_404(Negocio, slug=slug)
+    cita = get_object_or_404(Cita, id=cita_id, negocio=negocio)
+    volver = f"{reverse('public:admin_agenda', args=[slug])}?fecha={timezone.localtime(cita.fecha_hora).date().isoformat()}"
+    if request.method != 'POST':
+        return redirect(volver)
+
+    nuevo = especialista_de_peticion(negocio, request.POST.get('especialista'), cita.servicio)
+    if nuevo is None:
+        messages.error(request, 'Elige un especialista que haga este servicio.')
+    elif not esta_disponible(negocio, cita.fecha_hora, cita.duracion_minutos,
+                             excluir_cita_id=cita.id, especialista=nuevo):
+        messages.error(request, f'{nuevo.nombre} no está libre a esa hora.')
+    else:
+        cita.especialista = nuevo
+        cita.save(update_fields=['especialista', 'fecha_actualizacion'])
+        messages.success(request, f'La cita de {cita.cliente.nombre} ahora es con {nuevo.nombre}.')
+    return redirect(volver)

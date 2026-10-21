@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Negocio, ConfiguracionHorario, BloqueoAgenda
+from .models import Negocio, ConfiguracionHorario, BloqueoAgenda, Especialista, HorarioEspecialista
 from .onboarding import OnboardingProgress
 
 
@@ -153,3 +153,17 @@ class OnboardingProgressAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         """No permitir eliminar OnboardingProgress"""
         return False
+
+
+class HorarioEspecialistaInline(admin.TabularInline):
+    model = HorarioEspecialista
+    extra = 0
+
+
+@admin.register(Especialista)
+class EspecialistaAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'negocio', 'cargo', 'usa_horario_negocio', 'esta_activo')
+    list_filter = ('esta_activo', 'negocio')
+    search_fields = ('nombre', 'negocio__nombre')
+    filter_horizontal = ('servicios',)
+    inlines = [HorarioEspecialistaInline]

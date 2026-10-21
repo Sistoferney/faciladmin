@@ -56,6 +56,12 @@ class Cita(models.Model):
     )
 
     # RF-17: Fecha y hora de la cita
+    # Quién atiende (negocios con varios especialistas). Vacío en negocios
+    # de una sola agenda; si se elimina el especialista la cita se conserva.
+    especialista = models.ForeignKey(
+        'negocios.Especialista', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='citas', verbose_name='Especialista'
+    )
     fecha_hora = models.DateTimeField('Fecha y hora')
 
     # RN-03: Duración basada en el servicio

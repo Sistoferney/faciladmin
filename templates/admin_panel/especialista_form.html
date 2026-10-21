@@ -1,0 +1,109 @@
+{% extends 'admin_panel/base_admin.html' %}
+
+{% block page_title %}{% if especialista %}Editar especialista{% else %}Nuevo especialista{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-person-badge"></i> {% if especialista %}{{ especialista.nombre }}{% else %}Nuevo especialista{% endif %}</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.nombre.id_for_label }}" class="form-label">Nombre <span class="text-danger">*</span></label>
+                            {{ form.nombre }}
+                            {% if form.nombre.errors %}<div class="text-danger small">{{ form.nombre.errors }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.cargo.id_for_label }}" class="form-label">{{ form.cargo.label }}</label>
+                            {{ form.cargo }}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.foto.id_for_label }}" class="form-label">{{ form.foto.label }} <small class="text-muted">(la ven tus clientes al reservar)</small></label>
+                            {{ form.foto }}
+                            {% if form.foto.errors %}<div class="text-danger small">{{ form.foto.errors }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.telefono.id_for_label }}" class="form-label">{{ form.telefono.label }}</label>
+                            {{ form.telefono }}
+                            <small class="text-muted">{{ form.telefono.help_text }}</small>
+                        </div>
+                    </div>
+
+                    <h6 class="border-bottom pb-2 mb-2"><i class="bi bi-scissors"></i> Servicios que hace</h6>
+                    <p class="small text-muted mb-2">{{ form.servicios.help_text }}</p>
+                    <div class="row mb-3">
+                        {% for opcion in form.servicios %}
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                {{ opcion.tag }}
+                                <label class="form-check-label" for="{{ opcion.id_for_label }}">{{ opcion.choice_label }}</label>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="text-muted small">Aún no tienes servicios activos.</p>
+                        {% endfor %}
+                    </div>
+
+                    <h6 class="border-bottom pb-2 mb-2"><i class="bi bi-clock"></i> Horario</h6>
+                    <div class="form-check form-switch mb-2">
+                        {{ form.usa_horario_negocio }}
+                        <label class="form-check-label" for="{{ form.usa_horario_negocio.id_for_label }}">Trabaja el horario del negocio</label>
+                    </div>
+                    <div id="horario-propio" class="table-responsive mb-3">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead><tr><th>Día</th><th>Trabaja</th><th>Desde</th><th>Hasta</th></tr></thead>
+                            <tbody>
+                            {% for dia in dias %}
+                            <tr>
+                                <td>{{ dia.nombre }}</td>
+                                <td><input type="checkbox" class="form-check-input dia-trabaja" name="dia_{{ dia.numero }}_trabaja" value="1" {% if dia.trabaja %}checked{% endif %}></td>
+                                <td><input type="time" class="form-control form-control-sm" name="dia_{{ dia.numero }}_desde" value="{{ dia.desde }}"></td>
+                                <td><input type="time" class="form-control form-control-sm" name="dia_{{ dia.numero }}_hasta" value="{{ dia.hasta }}"></td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                        <small class="text-muted">Para vacaciones o un día puntual, usa un bloqueo de agenda solo para esta persona.</small>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label for="{{ form.orden.id_for_label }}" class="form-label">{{ form.orden.label }}</label>
+                            {{ form.orden }}
+                            <small class="text-muted">{{ form.orden.help_text }}</small>
+                        </div>
+                        <div class="col-md-8 d-flex align-items-end">
+                            <div class="form-check form-switch">
+                                {{ form.esta_activo }}
+                                <label class="form-check-label" for="{{ form.esta_activo.id_for_label }}">Activo (recibe citas)</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-check-lg"></i> Guardar</button>
+                    <a href="{% url 'public:admin_especialistas' negocio.slug %}" class="btn btn-link w-100 mt-2">Volver</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const usaNegocio = document.getElementById('{{ form.usa_horario_negocio.id_for_label }}');
+    const tabla = document.getElementById('horario-propio');
+    function actualizar() { tabla.hidden = usaNegocio.checked; }
+    usaNegocio.addEventListener('change', actualizar);
+    actualizar();
+})();
+</script>
+{% endblock %}

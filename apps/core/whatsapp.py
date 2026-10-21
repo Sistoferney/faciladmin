@@ -73,9 +73,9 @@ def enlace_cita_agendada(cita, enlace_mis_citas):
     El dueño le confirma por WhatsApp al cliente la cita que le agendó por
     teléfono (un cliente nuevo todavía no tiene notificaciones activadas).
     """
-    from apps.notificaciones.textos_push import a_la_hora, fecha_corta
+    from apps.notificaciones.textos_push import a_la_hora, fecha_corta, servicio_con
     texto = (
-        f'Hola {cita.cliente.nombre}, tu cita de {cita.servicio.nombre} en '
+        f'Hola {cita.cliente.nombre}, tu cita de {servicio_con(cita)} en '
         f'{cita.negocio.nombre} quedó agendada para el '
         f'{fecha_corta(cita.fecha_hora, con_hora=False)} {a_la_hora(cita.fecha_hora)}.'
     )

@@ -39,9 +39,16 @@ def _frase(texto):
     return texto.replace('m..', 'm.')
 
 
+def servicio_con(cita):
+    """'Masaje' o 'Masaje con Laura' si la cita tiene especialista"""
+    if cita.especialista_id and cita.especialista:
+        return f'{cita.servicio.nombre} con {cita.especialista.nombre}'
+    return cita.servicio.nombre
+
+
 def resumen_cita(cita):
-    """'Ana López · Masaje · sáb 5 oct, 1:30 p. m.' (para el dueño)"""
-    return f'{cita.cliente.nombre} · {cita.servicio.nombre} · {fecha_corta(cita.fecha_hora)}'
+    """'Ana López · Masaje con Laura · sáb 5 oct, 1:30 p. m.' (para el dueño)"""
+    return f'{cita.cliente.nombre} · {servicio_con(cita)} · {fecha_corta(cita.fecha_hora)}'
 
 
 # ---------- Avisos al dueño ----------
@@ -85,7 +92,7 @@ def push_cliente(tipo, cita, negocio, asunto=''):
         # Sugerencias, reactivación, promociones: sin cita asociada
         return negocio.nombre, (asunto.split(' - ')[0] if asunto else 'Tienes un mensaje nuevo')
 
-    servicio = cita.servicio.nombre
+    servicio = servicio_con(cita)
     fecha = fecha_corta(cita.fecha_hora)
     dia = fecha_corta(cita.fecha_hora, con_hora=False)
 

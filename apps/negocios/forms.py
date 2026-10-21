@@ -2,7 +2,7 @@
 Formularios para gestión de negocios
 """
 from django import forms
-from .models import Negocio, BloqueoAgenda
+from .models import Negocio, BloqueoAgenda, Especialista
 from apps.servicios.models import Servicio
 
 
@@ -465,6 +465,7 @@ class BloqueoAgendaForm(forms.ModelForm):
     class Meta:
         model = BloqueoAgenda
         fields = [
+            'especialista',
             'fecha_inicio',
             'fecha_fin',
             'motivo_interno',
@@ -485,9 +486,11 @@ class BloqueoAgendaForm(forms.ModelForm):
                 'placeholder': 'Ej: Vacaciones, Mantenimiento, Evento privado'
             }),
             'esta_activo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'especialista': forms.Select(attrs={'class': 'form-select'}),
         }
 
         labels = {
+            'especialista': '¿A quién bloquear?',
             'fecha_inicio': 'Fecha y Hora de Inicio',
             'fecha_fin': 'Fecha y Hora de Fin',
             'motivo_interno': 'Motivo del Bloqueo',
@@ -501,6 +504,15 @@ class BloqueoAgendaForm(forms.ModelForm):
             'esta_activo': 'Si está desactivado, el bloqueo no afectará la disponibilidad',
         }
 
+    def __init__(self, *args, negocio=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Solo los especialistas de este negocio; sin especialistas, se bloquea todo el negocio
+        especialistas = Especialista.objects.filter(negocio=negocio, esta_activo=True) if negocio else Especialista.objects.none()
+        self.fields['especialista'].queryset = especialistas
+        self.fields['especialista'].empty_label = 'Todo el negocio'
+        if not especialistas.exists():
+            self.fields['especialista'].widget = forms.HiddenInput()
+
     def clean(self):
         cleaned_data = super().clean()
         fecha_inicio = cleaned_data.get('fecha_inicio')
@@ -513,6 +525,37 @@ class BloqueoAgendaForm(forms.ModelForm):
                 )
 
         return cleaned_data
+
+
+DIAS = [
+    (0, 'Lunes'), (1, 'Martes'), (2, 'Miércoles'), (3, 'Jueves'),
+    (4, 'Viernes'), (5, 'Sábado'), (6, 'Domingo'),
+]
+
+
+class EspecialistaForm(forms.ModelForm):
+    """Datos del especialista. El horario propio se maneja aparte (7 días)"""
+
+    class Meta:
+        model = Especialista
+        fields = ['nombre', 'cargo', 'foto', 'telefono', 'servicios', 'usa_horario_negocio', 'orden', 'esta_activo']
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Laura'}),
+            'cargo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Manicurista'}),
+            'foto': forms.ClearableFileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
+            'telefono': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '300 123 4567', 'inputmode': 'tel'}),
+            'servicios': forms.CheckboxSelectMultiple(),
+            'usa_horario_negocio': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'orden': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
+            'esta_activo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+        help_texts = {
+            'orden': 'Posición en la lista que ve el cliente (menor primero)',
+        }
+
+    def __init__(self, *args, negocio=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['servicios'].queryset = Servicio.objects.filter(negocio=negocio, esta_activo=True).order_by('orden', 'nombre')
 
 # Importar formularios de onboarding
 from .forms_onboarding import (

@@ -304,16 +304,28 @@
                 <i class="bi bi-calendar-week"></i>
                 Agenda - Semana del {{ inicio_semana|date:"d/m/Y" }}
             </h4>
+            {% if varios_especialistas %}
+            <form method="get" class="mt-2 d-flex align-items-center gap-2">
+                <input type="hidden" name="fecha" value="{{ fecha_referencia|date:'Y-m-d' }}">
+                <label for="filtro-especialista" class="small text-muted mb-0">Ver agenda de</label>
+                <select id="filtro-especialista" name="especialista" class="form-select form-select-sm" style="max-width: 220px;" onchange="this.form.submit()">
+                    <option value="">Todos los especialistas</option>
+                    {% for e in especialistas %}
+                    <option value="{{ e.id }}" {% if especialista_filtro and especialista_filtro.id == e.id %}selected{% endif %}>{{ e.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+            {% endif %}
         </div>
         <div class="col-md-6 text-end">
             <div class="btn-group" role="group">
-                <a href="?fecha={{ semana_anterior|date:'Y-m-d' }}" class="week-nav-btn">
+                <a href="?fecha={{ semana_anterior|date:'Y-m-d' }}{% if especialista_filtro %}&especialista={{ especialista_filtro.id }}{% endif %}" class="week-nav-btn">
                     <i class="bi bi-chevron-left"></i> Anterior
                 </a>
-                <a href="?fecha={{ fecha_hoy|date:'Y-m-d' }}" class="week-nav-btn">
+                <a href="?fecha={{ fecha_hoy|date:'Y-m-d' }}{% if especialista_filtro %}&especialista={{ especialista_filtro.id }}{% endif %}" class="week-nav-btn">
                     Hoy
                 </a>
-                <a href="?fecha={{ semana_siguiente|date:'Y-m-d' }}" class="week-nav-btn">
+                <a href="?fecha={{ semana_siguiente|date:'Y-m-d' }}{% if especialista_filtro %}&especialista={{ especialista_filtro.id }}{% endif %}" class="week-nav-btn">
                     Siguiente <i class="bi bi-chevron-right"></i>
                 </a>
             </div>
@@ -417,6 +429,17 @@
                 <p><strong>Servicio:</strong> <span id="modalServicio"></span></p>
                 <p><strong>Estado:</strong> <span id="modalEstado" class="badge"></span></p>
                 <p><strong>Pago:</strong> <span id="modalPago"></span></p>
+                {% if varios_especialistas %}
+                <form method="post" id="formEspecialista" class="d-flex align-items-center gap-2 mb-2">
+                    {% csrf_token %}
+                    <strong>Con:</strong>
+                    <select name="especialista" id="modalEspecialista" class="form-select form-select-sm" style="max-width: 200px;">
+                        <option value="">Sin asignar</option>
+                        {% for e in especialistas %}<option value="{{ e.id }}">{{ e.nombre }}</option>{% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-sm btn-outline-primary" id="btnCambiarEspecialista" hidden>Cambiar</button>
+                </form>
+                {% endif %}
                 <hr>
                 <div id="modalAcciones">
                     <!-- Las acciones se cargarán dinámicamente según el estado -->
@@ -470,12 +493,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Si es continuación, usar clase especial
                 if (cita.es_continuacion) {
                     citaDiv.className = `cita-block ${cita.estado} cita-continuacion`;
-                    citaDiv.onclick = () => verCita(cita.id, cita.estado, cita.cliente, cita.servicio, cita.whatsapp, cita.pago);
+                    citaDiv.onclick = () => verCita(cita.id, cita.estado, cita.cliente, cita.servicio, cita.whatsapp, cita.pago, cita.especialista_id);
                     citaDiv.title = `${cita.cliente} - ${cita.servicio} (Inicia a las ${cita.hora})`;
                     citaDiv.innerHTML = `<small><i class="bi bi-arrow-up"></i> Ocupado</small>`;
                 } else {
                     citaDiv.className = `cita-block ${cita.estado}`;
-                    citaDiv.onclick = () => verCita(cita.id, cita.estado, cita.cliente, cita.servicio, cita.whatsapp, cita.pago);
+                    citaDiv.onclick = () => verCita(cita.id, cita.estado, cita.cliente, cita.servicio, cita.whatsapp, cita.pago, cita.especialista_id);
 
                     // Mostrar duración si es mayor a 30 minutos
                     const duracionText = cita.duracion > 30 ? ` (${cita.duracion}min)` : '';
@@ -486,6 +509,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     nombre.textContent = cita.cliente;
                     citaDiv.append(nombre, document.createElement('br'),
                                    `${cita.servicio.substring(0, 20)}${duracionText}`);
+                    if (VARIOS_ESPECIALISTAS && !FILTRO_ESPECIALISTA) {
+                        const con = document.createElement('div');
+                        con.className = 'small fst-italic';
+                        con.textContent = cita.especialista ? `con ${cita.especialista}` : 'sin asignar';
+                        citaDiv.append(con);
+                    }
                 }
 
                 cell.appendChild(citaDiv);
@@ -575,6 +604,9 @@ function agendarCitaDesdeSeleccion() {
     const url = new URL('{% url "public:cita_nueva" negocio.slug %}', window.location.origin);
     url.searchParams.set('fecha', fecha);
     url.searchParams.set('hora', hora);
+    if (FILTRO_ESPECIALISTA) {
+        url.searchParams.set('especialista', FILTRO_ESPECIALISTA);
+    }
     window.location.href = url.toString();
 }
 
@@ -603,11 +635,30 @@ function crearBloqueoDesdeSeleccion() {
     const url = new URL('{% url "public:bloqueo_crear" negocio.slug %}', window.location.origin);
     url.searchParams.set('fecha_inicio', `${primerBloque[0]}T${primerBloque[1]}`);
     url.searchParams.set('fecha_fin', `${ultimoBloque[0]}T${horaFinCalculada}`);
+    if (FILTRO_ESPECIALISTA) {
+        url.searchParams.set('especialista', FILTRO_ESPECIALISTA);
+    }
 
     window.location.href = url.toString();
 }
 
-function verCita(citaId, estado, cliente, servicio, whatsapp, pago) {
+const VARIOS_ESPECIALISTAS = {{ varios_especialistas|yesno:'true,false' }};
+const FILTRO_ESPECIALISTA = "{{ especialista_filtro.id|default:'' }}";
+
+function verCita(citaId, estado, cliente, servicio, whatsapp, pago, especialistaId) {
+    // Con quién (y cambiarlo, si la cita sigue activa)
+    const formEspecialista = document.getElementById('formEspecialista');
+    if (formEspecialista) {
+        formEspecialista.action = `/{{ negocio.slug }}/admin/citas/${citaId}/especialista/`;
+        const select = document.getElementById('modalEspecialista');
+        const boton = document.getElementById('btnCambiarEspecialista');
+        select.value = especialistaId || '';
+        const activa = estado === 'confirmada' || estado === 'pendiente_abono';
+        select.disabled = !activa;
+        boton.hidden = true;
+        select.onchange = () => { boton.hidden = !select.value || select.value === String(especialistaId || ''); };
+    }
+
     // Actualizar información del modal
     document.getElementById('modalCliente').textContent = cliente;
     document.getElementById('modalServicio').textContent = servicio;
