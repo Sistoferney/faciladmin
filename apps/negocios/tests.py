@@ -407,6 +407,17 @@ class SesionPersistentePWATests(TestCase):
         self.assertContains(resp, 'Ana')
         self.assertContains(resp, reverse('public:editar_cita_cliente', args=[self.negocio.slug, self.cita.id]))
 
+    def test_mis_citas_limita_busquedas_por_ip(self, *mocks):
+        from django.core.cache import cache
+        cache.clear()
+        for _ in range(10):
+            self.client.post(self.url_mis_citas, {'telefono': '3009999999'})
+        # La búsqueda 11 se rechaza aunque el teléfono sea de un cliente
+        resp = self.client.post(self.url_mis_citas, {'telefono': '3001111111'}, follow=True)
+        self.assertContains(resp, 'muchas búsquedas')
+        self.assertNotContains(resp, reverse('public:editar_cita_cliente', args=[self.negocio.slug, self.cita.id]))
+        cache.clear()
+
     def test_buscar_con_otro_telefono_olvida_al_cliente(self, *mocks):
         self.client.post(self.url_mis_citas, {'telefono': '3001111111'})
         self.client.post(self.url_mis_citas, {'accion': 'salir'})

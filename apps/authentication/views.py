@@ -12,6 +12,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
+from apps.core.red import ip_cliente
 from .models import Usuario, TokenRecuperacion
 from .telefonos import filtrar_por_telefono
 
@@ -122,7 +123,7 @@ class SolicitarRecuperacionView(View):
             # Crear nuevo token
             token = TokenRecuperacion.objects.create(
                 usuario=usuario,
-                ip_solicitud=self._get_client_ip(request)
+                ip_solicitud=ip_cliente(request) or None
             )
 
             # Construir URL de recuperación
@@ -161,15 +162,6 @@ class SolicitarRecuperacionView(View):
         # Siempre mostrar mensaje de éxito
         messages.success(request, mensaje_exitoso)
         return redirect('login')
-
-    def _get_client_ip(self, request):
-        """Obtiene la IP real del cliente"""
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(',')[0]
-        else:
-            ip = request.META.get('REMOTE_ADDR')
-        return ip
 
 
 class RestablecerPasswordView(View):

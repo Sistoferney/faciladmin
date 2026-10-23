@@ -198,3 +198,41 @@ class BuscadoresTests(TestCase):
         self.negocio.save()
         resp = self._get(f'/{self.negocio.slug}/')
         self.assertNotContains(resp, '</script><script>alert(1)')
+
+
+class IpClienteTests(TestCase):
+    """IP del visitante para los límites de intentos (ver apps/core/red.py)"""
+
+    def _ip(self, **meta):
+        from django.test import RequestFactory
+        from apps.core.red import ip_cliente
+        return ip_cliente(RequestFactory().get('/', **meta))
+
+    @override_settings(CONFIAR_EN_PROXY=True)
+    def test_toma_la_ip_que_agrego_el_proxy(self):
+        # La primera la escribió el cliente: no sirve para saltarse el límite
+        self.assertEqual(self._ip(HTTP_X_FORWARDED_FOR='1.1.1.1, 200.1.2.3', REMOTE_ADDR='10.0.0.1'), '200.1.2.3')
+
+    @override_settings(CONFIAR_EN_PROXY=True)
+    def test_detras_de_cloudflare_usa_cf_connecting_ip(self):
+        # 104.16.0.1 es de Cloudflare: la petición pasó por ahí
+        self.assertEqual(self._ip(
+            HTTP_X_FORWARDED_FOR='1.1.1.1, 200.1.2.3, 104.16.0.1',
+            HTTP_CF_CONNECTING_IP='200.1.2.3', REMOTE_ADDR='10.0.0.1',
+        ), '200.1.2.3')
+
+    @override_settings(CONFIAR_EN_PROXY=True)
+    def test_cf_connecting_ip_falso_se_ignora_sin_cloudflare(self):
+        # Entró directo por *.up.railway.app escribiendo el encabezado a mano
+        self.assertEqual(self._ip(
+            HTTP_X_FORWARDED_FOR='200.1.2.3', HTTP_CF_CONNECTING_IP='9.9.9.9', REMOTE_ADDR='10.0.0.1',
+        ), '200.1.2.3')
+
+    @override_settings(CONFIAR_EN_PROXY=True)
+    def test_sin_encabezado_o_invalido_usa_remote_addr(self):
+        self.assertEqual(self._ip(REMOTE_ADDR='10.0.0.1'), '10.0.0.1')
+        self.assertEqual(self._ip(HTTP_X_FORWARDED_FOR='basura', REMOTE_ADDR='10.0.0.1'), '10.0.0.1')
+
+    @override_settings(CONFIAR_EN_PROXY=False)
+    def test_sin_proxy_ignora_el_encabezado(self):
+        self.assertEqual(self._ip(HTTP_X_FORWARDED_FOR='200.1.2.3', REMOTE_ADDR='127.0.0.1'), '127.0.0.1')

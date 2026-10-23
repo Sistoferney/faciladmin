@@ -523,11 +523,13 @@ def manifest_minipagina(request, slug):
     return JsonResponse(manifest, content_type='application/manifest+json')
 
 
+@ratelimit(key='ip', rate='10/h', method='POST', block=False)
 def mis_citas(request, slug):
     """
     Vista para que los clientes vean sus citas agendadas.
     La primera vez se identifican con su teléfono; después la sesión los
     recuerda (60 días), así la PWA instalada no vuelve a pedirlo.
+    Rate limit: 10 búsquedas por hora por IP (evita probar teléfonos en masa)
     """
     negocio = get_object_or_404(Negocio, slug=slug, esta_activo=True)
 
@@ -535,6 +537,10 @@ def mis_citas(request, slug):
         # "Buscar con otro teléfono": olvidar al cliente de esta sesión
         if request.POST.get('accion') == 'salir':
             _olvidar_cliente(request, negocio)
+            return redirect('public:mis_citas', slug=slug)
+
+        if getattr(request, 'limited', False):
+            messages.error(request, 'Hiciste muchas búsquedas seguidas. Intenta de nuevo en una hora.')
             return redirect('public:mis_citas', slug=slug)
 
         telefono = request.POST.get('telefono', '').strip()

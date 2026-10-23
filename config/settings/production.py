@@ -61,6 +61,10 @@ SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=False, cast=bool)
 # Confiar en el proxy de Railway para headers HTTPS
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
+# Límites de intentos por IP del visitante, no de Cloudflare ni del proxy (ver apps/core/red.py)
+CONFIAR_EN_PROXY = config('CONFIAR_EN_PROXY', default=True, cast=bool)
+RATELIMIT_IP_META_KEY = 'apps.core.red.ip_cliente'
+
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_BROWSER_XSS_FILTER = True
