@@ -171,7 +171,7 @@ class AvisosMisCitasTests(TestCase):
         self.negocio, self.servicio = _base()
         self.cliente = Cliente.objects.create(negocio=self.negocio, nombre='Ana', telefono='3001111111')
         self.url = reverse('public:mis_citas', args=[self.negocio.slug])
-        self.client.post(self.url, {'telefono': '3001111111'})
+        self.client.post(self.url, {'usuario': '3001111111'})
 
     def _cita(self, **extra):
         return Cita.objects.create(

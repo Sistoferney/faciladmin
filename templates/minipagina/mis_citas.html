@@ -28,24 +28,25 @@
         <div class="col-md-10">
 
             {% if not cliente %}
-            <!-- Formulario para ingresar teléfono -->
+            <!-- Formulario para identificarse con el usuario -->
             <div class="card shadow-sm">
                 <div class="card-body p-4">
-                    <h5 class="card-title mb-3">Ingresa tu teléfono para ver tus citas</h5>
+                    <h5 class="card-title mb-3">Ingresa tu usuario para ver tus citas</h5>
                     <form method="post">
                         {% csrf_token %}
                         <div class="mb-3">
-                            <label for="telefono" class="form-label">Número de teléfono</label>
+                            <label for="usuario" class="form-label">Usuario</label>
                             <div class="input-group">
-                                <span class="input-group-text"><i class="bi bi-telephone"></i></span>
-                                <input type="tel"
+                                <span class="input-group-text"><i class="bi bi-person"></i></span>
+                                <input type="text"
                                        class="form-control form-control-lg"
-                                       id="telefono"
-                                       name="telefono"
-                                       placeholder="3001234567"
+                                       id="usuario"
+                                       name="usuario"
+                                       placeholder="Tu usuario"
+                                       autocomplete="username"
+                                       autocapitalize="none"
                                        required>
                             </div>
-                            <div class="form-text">Ingresa el teléfono que usaste para agendar tu cita</div>
                         </div>
                         <button type="submit" class="btn btn-primary btn-lg w-100">
                             <i class="bi bi-search"></i> Ver mis citas
@@ -57,8 +58,8 @@
             <!-- Información adicional -->
             <div class="alert alert-info mt-4">
                 <i class="bi bi-info-circle"></i>
-                <strong>¿No recuerdas tu teléfono?</strong>
-                Usa el mismo número que ingresaste al agendar tu cita.
+                <strong>¿No recuerdas tu usuario?</strong>
+                <a href="{% whatsapp_negocio negocio %}" target="_blank" rel="noopener">Escríbenos por WhatsApp</a> y te ayudamos.
             </div>
 
             {% else %}
@@ -75,7 +76,7 @@
                         {% csrf_token %}
                         <input type="hidden" name="accion" value="salir">
                         <button type="submit" class="btn btn-sm btn-outline-secondary">
-                            <i class="bi bi-arrow-left"></i> Buscar con otro teléfono
+                            <i class="bi bi-arrow-left"></i> Cambiar de usuario
                         </button>
                     </form>
                 </div>
@@ -230,11 +231,11 @@
 </a>
 {% endif %}
 
-<!-- Script para auto-completar teléfono desde localStorage -->
+<!-- Script para auto-completar el usuario desde localStorage -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Auto-completar teléfono si está en localStorage
-    const telefonoInput = document.getElementById('telefono');
+    // Auto-completar el usuario si está en localStorage
+    const telefonoInput = document.getElementById('usuario');
     if (telefonoInput) {
         const telefonoGuardado = localStorage.getItem('cliente_telefono');
         if (telefonoGuardado) {

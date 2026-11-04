@@ -56,7 +56,7 @@ class GestionCitasClienteTests(TestCase):
     def _identificarse(self):
         self.client.post(
             reverse('public:mis_citas', args=[self.negocio.slug]),
-            {'telefono': '3001111111'},
+            {'usuario': '3001111111'},
         )
 
     def test_sin_identificarse_no_puede_cancelar(self, *mocks):
@@ -401,7 +401,7 @@ class SesionPersistentePWATests(TestCase):
         self.assertRedirects(resp, url_panel, fetch_redirect_response=False)
 
     def test_mis_citas_recuerda_al_cliente(self, *mocks):
-        self.client.post(self.url_mis_citas, {'telefono': '300 111 1111'})
+        self.client.post(self.url_mis_citas, {'usuario': '300 111 1111'})
         # Al volver a abrir (GET) ya no pide el teléfono
         resp = self.client.get(self.url_mis_citas)
         self.assertContains(resp, 'Ana')
@@ -411,24 +411,38 @@ class SesionPersistentePWATests(TestCase):
         from django.core.cache import cache
         cache.clear()
         for _ in range(10):
-            self.client.post(self.url_mis_citas, {'telefono': '3009999999'})
+            self.client.post(self.url_mis_citas, {'usuario': '3009999999'})
         # La búsqueda 11 se rechaza aunque el teléfono sea de un cliente
-        resp = self.client.post(self.url_mis_citas, {'telefono': '3001111111'}, follow=True)
+        resp = self.client.post(self.url_mis_citas, {'usuario': '3001111111'}, follow=True)
         self.assertContains(resp, 'muchas búsquedas')
         self.assertNotContains(resp, reverse('public:editar_cita_cliente', args=[self.negocio.slug, self.cita.id]))
         cache.clear()
 
     def test_buscar_con_otro_telefono_olvida_al_cliente(self, *mocks):
-        self.client.post(self.url_mis_citas, {'telefono': '3001111111'})
+        self.client.post(self.url_mis_citas, {'usuario': '3001111111'})
         self.client.post(self.url_mis_citas, {'accion': 'salir'})
         resp = self.client.get(self.url_mis_citas)
         self.assertNotContains(resp, reverse('public:editar_cita_cliente', args=[self.negocio.slug, self.cita.id]))
-        self.assertContains(resp, 'name="telefono"')
+        self.assertContains(resp, 'name="usuario"')
+
+    def test_mis_citas_no_revela_que_el_usuario_es_el_telefono(self, *mocks):
+        resp = self.client.get(self.url_mis_citas)
+        self.assertContains(resp, 'Ingresa tu usuario')
+        # (el ícono de teléfono del pie es el contacto del negocio: ese sí se muestra)
+        for pista in ('teléfono', 'type="tel"', '3001234567'):
+            self.assertNotContains(resp, pista)
+        # Un dato con formato inválido responde igual que un usuario que no existe
+        from django.core.cache import cache
+        cache.clear()
+        corto = self.client.post(self.url_mis_citas, {'usuario': 'abc'}, follow=True)
+        largo = self.client.post(self.url_mis_citas, {'usuario': '3009999999'}, follow=True)
+        self.assertEqual([str(m) for m in corto.context['messages']], [str(m) for m in largo.context['messages']])
+        self.assertContains(largo, 'No encontramos citas con ese usuario')
 
     def test_agendar_precarga_telefono_del_cliente_recordado(self, *mocks):
         url = reverse('public:agendar', args=[self.negocio.slug])
         self.assertNotContains(self.client.get(url), '+573001111111')
-        self.client.post(self.url_mis_citas, {'telefono': '3001111111'})
+        self.client.post(self.url_mis_citas, {'usuario': '3001111111'})
         self.assertContains(self.client.get(url), '+573001111111')
 
     def test_service_worker_sin_cache_http(self, *mocks):
@@ -437,7 +451,7 @@ class SesionPersistentePWATests(TestCase):
         self.assertIn("const CACHE_NAME = 'faciladmin-v", resp.content.decode())
 
     def test_confirmacion_ofrece_boton_de_recordatorios(self, *mocks):
-        self.client.post(self.url_mis_citas, {'telefono': '3001111111'})
+        self.client.post(self.url_mis_citas, {'usuario': '3001111111'})
         resp = self.client.get(reverse('public:confirmacion_cita', args=[self.negocio.slug, self.cita.id]))
         self.assertContains(resp, 'id="btn-activar-recordatorios"')
         self.assertNotContains(resp, 'confirm(')
@@ -466,7 +480,7 @@ class SesionPersistentePWATests(TestCase):
         self.assertNotContains(self.client.get(url), boton)
 
         # Cliente reconocido con una cita próxima: botón con contador
-        self.client.post(self.url_mis_citas, {'telefono': '3001111111'})
+        self.client.post(self.url_mis_citas, {'usuario': '3001111111'})
         resp = self.client.get(url)
         self.assertContains(resp, boton)
         self.assertContains(resp, 'title="Citas próximas">1</span>')

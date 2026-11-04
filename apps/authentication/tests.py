@@ -117,5 +117,39 @@ class RecuperacionPorTelefonoTests(TestCase):
         usuario = Usuario(telefono='300 123 4567', nombre='Ana', email='a@a.com')
         usuario.set_password('x')
         usuario.save()
-        self.client.post(reverse('solicitar_recuperacion'), {'telefono': '+573001234567'})
+        self.client.post(reverse('solicitar_recuperacion'), {'usuario': '+573001234567'})
         self.assertTrue(TokenRecuperacion.objects.filter(usuario=usuario).exists())
+
+
+class AccesoNoRevelaElTelefonoTests(TestCase):
+    """
+    Se entra con el teléfono, pero las pantallas de acceso dicen "Usuario":
+    no anuncian qué dato se usa como usuario.
+    """
+
+    def assertSinPistas(self, resp):
+        html = resp.content.decode().lower()
+        for pista in ('teléfono', 'telefono', 'type="tel"', 'bi-telephone', '3001234567'):
+            self.assertNotIn(pista, html, pista)
+
+    def test_login(self):
+        resp = self.client.get(reverse('login'))
+        self.assertContains(resp, '>Usuario<')
+        self.assertSinPistas(resp)
+
+    def test_login_fallido_no_nombra_el_telefono(self):
+        resp = self.client.post(reverse('login'), {'username': '3000000000', 'password': 'mala'}, follow=True)
+        self.assertSinPistas(resp)
+
+    def test_recuperar_contrasena(self):
+        resp = self.client.get(reverse('solicitar_recuperacion'))
+        self.assertContains(resp, '>Usuario<')
+        self.assertSinPistas(resp)
+
+    def test_login_de_django_admin(self):
+        resp = self.client.get('/admin/login/')
+        self.assertContains(resp, 'Usuario')
+        self.assertSinPistas(resp)
+        resp = self.client.post('/admin/login/', {'username': '3000000000', 'password': 'mala'})
+        self.assertContains(resp, 'Usuario o contraseña incorrectos')
+        self.assertSinPistas(resp)

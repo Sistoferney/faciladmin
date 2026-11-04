@@ -325,7 +325,7 @@ def confirmacion_cita(request, slug, cita_id):
     cita = get_object_or_404(Cita, id=cita_id, negocio=negocio)
 
     if not _cliente_puede_gestionar(request, cita):
-        messages.info(request, 'Ingresa tu número de teléfono para ver tus citas.')
+        messages.info(request, 'Ingresa tu usuario para ver tus citas.')
         return redirect('public:mis_citas', slug=slug)
 
     context = {
@@ -543,22 +543,16 @@ def mis_citas(request, slug):
             messages.error(request, 'Hiciste muchas búsquedas seguidas. Intenta de nuevo en una hora.')
             return redirect('public:mis_citas', slug=slug)
 
-        telefono = request.POST.get('telefono', '').strip()
-
-        # Validar que el teléfono no esté vacío
+        # El teléfono es el usuario, pero no se anuncia: un formato inválido da
+        # el mismo mensaje que un usuario que no existe
+        telefono = request.POST.get('usuario', '').strip()
         if not telefono:
-            messages.error(request, 'Por favor ingresa tu número de teléfono.')
-            return redirect('public:mis_citas', slug=slug)
-
-        # Validar formato de teléfono (mínimo 10 dígitos)
-        telefono_digitos = re.sub(r'\D', '', telefono)
-        if len(telefono_digitos) < 10:
-            messages.error(request, 'El número de teléfono debe tener al menos 10 dígitos.')
+            messages.error(request, 'Por favor ingresa tu usuario.')
             return redirect('public:mis_citas', slug=slug)
 
         cliente = Cliente.buscar_por_telefono(negocio, telefono)
         if not cliente:
-            messages.warning(request, f'No encontramos citas asociadas al teléfono {telefono} en {negocio.nombre}.')
+            messages.warning(request, f'No encontramos citas con ese usuario en {negocio.nombre}.')
             return redirect('public:mis_citas', slug=slug)
 
         _marcar_cliente_verificado(request, cliente)
@@ -612,7 +606,7 @@ def editar_cita_cliente(request, slug, cita_id):
     cita = get_object_or_404(Cita, id=cita_id, negocio=negocio)
 
     if not _cliente_puede_gestionar(request, cita):
-        messages.error(request, 'Ingresa tu número de teléfono para gestionar tus citas.')
+        messages.error(request, 'Ingresa tu usuario para gestionar tus citas.')
         return redirect('public:mis_citas', slug=slug)
 
     # Validar que la cita no esté cancelada o completada
@@ -738,7 +732,7 @@ def cancelar_cita_cliente(request, slug, cita_id):
     cita = get_object_or_404(Cita, id=cita_id, negocio=negocio)
 
     if not _cliente_puede_gestionar(request, cita):
-        messages.error(request, 'Ingresa tu número de teléfono para gestionar tus citas.')
+        messages.error(request, 'Ingresa tu usuario para gestionar tus citas.')
         return redirect('public:mis_citas', slug=slug)
 
     # Validar que la cita no esté ya cancelada o completada
@@ -823,7 +817,7 @@ def subir_comprobante(request, slug, cita_id):
     cita = get_object_or_404(Cita, id=cita_id, negocio=negocio)
 
     if not _cliente_puede_gestionar(request, cita):
-        messages.error(request, 'Ingresa tu número de teléfono para gestionar tus citas.')
+        messages.error(request, 'Ingresa tu usuario para gestionar tus citas.')
         return redirect('public:mis_citas', slug=slug)
 
     abono = getattr(cita, 'abono', None)

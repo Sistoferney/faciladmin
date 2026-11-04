@@ -7,6 +7,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from apps.core import views as core_views, seo
+from apps.authentication.forms import FormularioAccesoAdmin
 from apps.authentication.views import (
     RateLimitedLoginView,
     SolicitarRecuperacionView,
@@ -61,6 +62,7 @@ if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 # Personalización del admin
+admin.site.login_form = FormularioAccesoAdmin
 admin.site.site_header = "facilacces - Administración"
 admin.site.site_title = "facilacces"
 admin.site.index_title = "Panel de Administración"

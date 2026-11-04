@@ -14,6 +14,7 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from apps.core.red import ip_cliente
 from .models import Usuario, TokenRecuperacion
+from .forms import FormularioAcceso
 from .telefonos import filtrar_por_telefono
 
 
@@ -28,6 +29,7 @@ class RateLimitedLoginView(LoginView):
     (Más permisivo porque ahora tenemos recuperación de contraseña)
     """
     template_name = 'registration/login.html'
+    authentication_form = FormularioAcceso
 
     def form_invalid(self, form):
         """Mensaje personalizado cuando falla el login"""
@@ -93,17 +95,17 @@ class SolicitarRecuperacionView(View):
 
     def post(self, request):
         """Procesa la solicitud de recuperación"""
-        telefono = request.POST.get('telefono', '').strip()
+        telefono = request.POST.get('usuario', '').strip()
 
-        # Validar que se ingresó un teléfono
+        # Validar que se ingresó el usuario
         if not telefono:
-            messages.error(request, 'Por favor ingresa tu número de teléfono.')
+            messages.error(request, 'Por favor ingresa tu usuario.')
             return render(request, self.template_name)
 
-        # Siempre mostrar el mismo mensaje para no revelar si el teléfono existe
+        # Siempre mostrar el mismo mensaje para no revelar si el usuario existe
         # (seguridad contra enumeración de usuarios)
         mensaje_exitoso = (
-            'Si el teléfono está registrado, '
+            'Si el usuario está registrado, '
             'recibirás un enlace para restablecer tu contraseña en los próximos minutos.'
         )
 

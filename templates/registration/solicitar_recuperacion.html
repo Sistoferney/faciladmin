@@ -177,7 +177,7 @@
             <div class="info-box">
                 <i class="bi bi-info-circle-fill"></i>
                 <p>
-                    Ingresa tu número de teléfono registrado. Si existe en nuestro sistema,
+                    Ingresa tu usuario. Si existe en nuestro sistema,
                     recibirás un enlace para restablecer tu contraseña en los próximos minutos.
                 </p>
             </div>
@@ -186,18 +186,19 @@
                 {% csrf_token %}
 
                 <div class="mb-4">
-                    <label for="id_telefono" class="form-label">Número de Teléfono</label>
+                    <label for="id_usuario" class="form-label">Usuario</label>
                     <div class="input-group">
                         <span class="input-group-text">
-                            <i class="bi bi-telephone"></i>
+                            <i class="bi bi-person"></i>
                         </span>
                         <input
-                            type="tel"
-                            name="telefono"
+                            type="text"
+                            name="usuario"
                             class="form-control"
-                            id="id_telefono"
-                            placeholder="3001234567"
-                            autocomplete="tel"
+                            id="id_usuario"
+                            placeholder="Tu usuario"
+                            autocomplete="username"
+                            autocapitalize="none"
                             required
                             autofocus
                         >
@@ -233,9 +234,6 @@
             const button = document.querySelector('.btn-recovery');
 
             form.addEventListener('submit', function(e) {
-                console.log('Formulario enviándose...');
-                console.log('Teléfono ingresado:', document.getElementById('id_telefono').value);
-
                 // Deshabilitar botón para evitar doble submit
                 button.disabled = true;
                 button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Enviando...';

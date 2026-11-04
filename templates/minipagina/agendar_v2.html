@@ -477,16 +477,16 @@
                 <!-- Step 1: User Data -->
                 <div class="step-content active" id="step-1">
                     <h4 class="mb-4 text-center">Datos de Contacto</h4>
-                    <p class="text-center text-muted mb-4">Ingresa tu teléfono para comenzar</p>
+                    <p class="text-center text-muted mb-4">Ingresa tus datos para comenzar</p>
 
                     <div class="row justify-content-center">
                         <div class="col-md-8">
                             <div class="mb-4">
-                                <label class="form-label">Teléfono *</label>
+                                <label class="form-label">Celular de contacto *</label>
                                 <input type="tel" name="telefono" id="telefono_step1" class="form-control form-control-lg"
                                        inputmode="tel" autocomplete="tel"
                                        placeholder="+57 300 123 4567" required pattern="[+]?[0-9\s()-]{10,}">
-                                <small class="form-text text-muted">Usamos tu teléfono como identificador. Si ya tienes citas previas, cargaremos tus datos automáticamente.</small>
+                                <small class="form-text text-muted">Lo usamos para contactarte sobre tu cita.</small>
                                 <div id="searchingUser" class="text-muted mt-2" style="display: none;">
                                     <i class="bi bi-search"></i> Buscando usuario...
                                 </div>
@@ -1066,7 +1066,7 @@
                 const telefono = document.getElementById('telefono_step1').value.trim();
                 const nombre = document.getElementById('nombre_step1').value.trim();
                 if (!telefono || telefono.length < 10) {
-                    alert('Por favor ingresa un teléfono válido');
+                    alert('Por favor ingresa un celular válido');
                     return false;
                 }
                 if (!nombre && !clienteExistente) {

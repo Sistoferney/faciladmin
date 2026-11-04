@@ -169,7 +169,7 @@ def subscribe_push(request):
             return JsonResponse({
                 'success': False,
                 'codigo': 'identificacion_requerida',
-                'error': 'Ingresa tu teléfono en "Mis citas" para activar las notificaciones'
+                'error': 'Ingresa tu usuario en "Mis citas" para activar las notificaciones'
             }, status=403)
 
         # Crear o actualizar la suscripción
