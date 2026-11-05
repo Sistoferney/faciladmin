@@ -1,4 +1,5 @@
 {% extends 'admin_panel/base_admin.html' %}
+{% load formato %}
 
 {% block page_title %}Rechazar Abono{% endblock %}
 
@@ -33,7 +34,7 @@
                     </tr>
                     <tr>
                         <th>Monto del Abono:</th>
-                        <td><strong>${{ abono.monto }}</strong></td>
+                        <td><strong>{{ abono.monto|pesos }}</strong></td>
                     </tr>
                     {% if abono.numero_referencia %}
                     <tr>

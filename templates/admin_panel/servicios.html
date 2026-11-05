@@ -1,4 +1,5 @@
 {% extends 'admin_panel/base_admin.html' %}
+{% load formato %}
 
 {% block page_title %}Gestión de Servicios{% endblock %}
 
@@ -41,7 +42,7 @@
                         <div class="col-6">
                             <div class="text-center p-2 bg-light rounded">
                                 <i class="bi bi-currency-dollar text-success"></i>
-                                <div class="fw-bold">${{ servicio.precio }}</div>
+                                <div class="fw-bold">{{ servicio.precio|pesos }}</div>
                                 <small class="text-muted">Precio</small>
                             </div>
                         </div>
@@ -58,9 +59,9 @@
                     <div class="alert alert-info alert-sm py-2 mb-3">
                         <i class="bi bi-cash-coin"></i>
                         {% if servicio.porcentaje_abono %}
-                            Abono: {{ servicio.porcentaje_abono }}% (${servicio.calcular_monto_abono})
+                            Abono: {{ servicio.porcentaje_abono|floatformat:-2 }}% ({{ servicio.precio_abono|pesos }})
                         {% else %}
-                            Abono: ${{ servicio.monto_abono }}
+                            Abono: {{ servicio.monto_abono|pesos }}
                         {% endif %}
                     </div>
                     {% endif %}

@@ -3,19 +3,34 @@
 
 {% block page_title %}Configuración de tu Mini-Página{% endblock %}
 
+{% block extra_css %}
+<style>
+    .paleta {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 6px 12px; font-size: .875rem;
+        background: #fff; border: 1px solid #dee2e6; border-radius: 999px;
+    }
+    .paleta:hover, .paleta.seleccionada { border-color: #212529; }
+    .paleta-muestra { width: 28px; height: 16px; border-radius: 999px; }
+
+    .vista-celular-contenedor { max-width: 260px; margin: 0 auto; }
+    @media (min-width: 992px) {
+        .vista-celular-contenedor { position: sticky; top: 90px; }
+    }
+    .vista-celular { border: 6px solid #212529; border-radius: 24px; overflow: hidden; background: #fff; }
+    .vista-barra { display: flex; align-items: center; gap: 8px; padding: 10px 12px; font-weight: 600; font-size: .9rem; }
+    .vista-barra img { max-height: 36px; max-width: 110px; }
+    .vista-portada { height: 90px; background-size: cover; background-position: center; }
+    .vista-boton { padding: 8px; border-radius: 6px; text-align: center; font-size: .875rem; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row mb-4">
     <div class="col-md-12">
         <h4><i class="bi bi-gear"></i> Configuración de tu Mini-Página</h4>
         <p class="text-muted">Personaliza la información, imágenes y colores de tu mini-página</p>
     </div>
-</div>
-
-<!-- Alerta de guía -->
-<div class="alert alert-info alert-dismissible fade show" role="alert">
-    <i class="bi bi-info-circle"></i>
-    <strong>Guía de Imágenes:</strong> Para mejores resultados, sube un <strong>logo de 800x400 px (horizontal)</strong> y una <strong>imagen de portada de 1600x900 px (16:9)</strong>.
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
 </div>
 
 <form method="post" enctype="multipart/form-data" id="configForm">
@@ -44,8 +59,8 @@
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="redes-tab" data-bs-toggle="tab" data-bs-target="#redes" type="button">
-                <i class="bi bi-share"></i> Redes & Config
+            <button class="nav-link" id="compartir-tab" data-bs-toggle="tab" data-bs-target="#compartir" type="button">
+                <i class="bi bi-share"></i> Compartir
             </button>
         </li>
     </ul>
@@ -125,7 +140,7 @@
                     </div>
 
                     <div class="row">
-                        <div class="col-md-4 mb-3">
+                        <div class="col-md-6 mb-3">
                             <label class="form-label">{{ form.ciudad.label }}</label>
                             {{ form.ciudad }}
                             {% if form.ciudad.errors %}
@@ -133,19 +148,11 @@
                             {% endif %}
                         </div>
 
-                        <div class="col-md-4 mb-3">
+                        <div class="col-md-6 mb-3">
                             <label class="form-label">{{ form.estado.label }}</label>
                             {{ form.estado }}
                             {% if form.estado.errors %}
                                 <div class="text-danger small">{{ form.estado.errors }}</div>
-                            {% endif %}
-                        </div>
-
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label">{{ form.codigo_postal.label }}</label>
-                            {{ form.codigo_postal }}
-                            {% if form.codigo_postal.errors %}
-                                <div class="text-danger small">{{ form.codigo_postal.errors }}</div>
                             {% endif %}
                         </div>
                     </div>
@@ -168,6 +175,29 @@
                         <i class="bi bi-info-circle"></i>
                         <strong>Nota:</strong> Si marcas "Servicio a Domicilio", al momento de agendar una cita se solicitará la dirección del cliente donde se prestará el servicio. Ideal para spas móviles, masajistas o estilistas que trabajan a domicilio.
                     </div>
+
+                    <hr class="my-4">
+                    <h6 class="mb-3"><i class="bi bi-toggle-on"></i> Estado de tu Mini-Página</h6>
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            {{ form.esta_activo }}
+                            <label class="form-check-label" for="{{ form.esta_activo.id_for_label }}">
+                                {{ form.esta_activo.label }}
+                            </label>
+                        </div>
+                        <small class="text-muted">{{ form.esta_activo.help_text }}</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            {{ form.acepta_reservas_online }}
+                            <label class="form-check-label" for="{{ form.acepta_reservas_online.id_for_label }}">
+                                {{ form.acepta_reservas_online.label }}
+                            </label>
+                        </div>
+                        <small class="text-muted">{{ form.acepta_reservas_online.help_text }}</small>
+                    </div>
                 </div>
             </div>
         </div>
@@ -179,117 +209,103 @@
                     <h5 class="card-title mb-4">Personaliza tu Mini-Página</h5>
 
                     <div class="row">
-                        <!-- Logo -->
-                        <div class="col-md-6 mb-4">
-                            <label class="form-label">{{ form.logo.label }}</label>
-                            {% if negocio.logo %}
-                                <div class="mb-2">
-                                    <img src="{{ negocio.logo.url }}" alt="Logo actual" class="img-thumbnail" style="max-width: 200px;">
-                                    <p class="small text-muted mt-1">Logo actual</p>
+                        <div class="col-lg-8 order-2 order-lg-1">
+                            <div class="row">
+                                <!-- Logo -->
+                                <div class="col-md-6 mb-4">
+                                    <label class="form-label">{{ form.logo.label }}</label>
+                                    {% if negocio.logo %}
+                                        <div class="mb-2">
+                                            <img src="{{ negocio.logo.url }}" alt="Logo actual" class="img-thumbnail rounded-4" style="max-width: 200px;">
+                                            <p class="small text-muted mt-1">Logo actual</p>
+                                        </div>
+                                    {% endif %}
+                                    {{ form.logo }}
+                                    <small class="text-muted d-block mt-1">{{ form.logo.help_text }}</small>
+                                    {% if form.logo.errors %}
+                                        <div class="text-danger small">{{ form.logo.errors }}</div>
+                                    {% endif %}
                                 </div>
-                            {% endif %}
-                            {{ form.logo }}
-                            <small class="text-muted d-block mt-1">{{ form.logo.help_text }}</small>
-                            {% if form.logo.errors %}
-                                <div class="text-danger small">{{ form.logo.errors }}</div>
-                            {% endif %}
-                        </div>
 
-                        <!-- Imagen de Portada -->
-                        <div class="col-md-6 mb-4">
-                            <label class="form-label">{{ form.imagen_portada.label }}</label>
-                            {% if negocio.imagen_portada %}
-                                <div class="mb-2">
-                                    <img src="{{ negocio.imagen_portada.url }}" alt="Portada actual" class="img-thumbnail" style="max-width: 100%; max-height: 150px;">
-                                    <p class="small text-muted mt-1">Imagen de portada actual</p>
-                                </div>
-                            {% endif %}
-                            {{ form.imagen_portada }}
-                            <small class="text-muted d-block mt-1">{{ form.imagen_portada.help_text }}</small>
-                            {% if form.imagen_portada.errors %}
-                                <div class="text-danger small">{{ form.imagen_portada.errors }}</div>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <hr class="my-4">
-                    <h6 class="mb-3">Colores de la Marca</h6>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">{{ form.color_primario.label }}</label>
-                            <div class="input-group">
-                                {{ form.color_primario }}
-                                <span class="input-group-text">
-                                    <div class="rounded" style="width: 30px; height: 30px; background: {{ negocio.color_primario }}; border: 1px solid #ddd;"></div>
-                                </span>
-                            </div>
-                            <small class="text-muted">{{ form.color_primario.help_text }}</small>
-                            {% if form.color_primario.errors %}
-                                <div class="text-danger small">{{ form.color_primario.errors }}</div>
-                            {% endif %}
-                        </div>
-
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">{{ form.color_secundario.label }}</label>
-                            <div class="input-group">
-                                {{ form.color_secundario }}
-                                <span class="input-group-text">
-                                    <div class="rounded" style="width: 30px; height: 30px; background: {{ negocio.color_secundario }}; border: 1px solid #ddd;"></div>
-                                </span>
-                            </div>
-                            <small class="text-muted">{{ form.color_secundario.help_text }}</small>
-                            {% if form.color_secundario.errors %}
-                                <div class="text-danger small">{{ form.color_secundario.errors }}</div>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <hr class="my-4">
-                    <h6 class="mb-3">Vista Previa y Compartir</h6>
-
-                    <div class="mb-3">
-                        <label class="form-label">URL de tu Mini-Página</label>
-                        <div class="input-group">
-                            <input type="text" class="form-control" value="{{ request.scheme }}://{{ request.get_host }}/{{ negocio.slug }}/" readonly>
-                            <button class="btn btn-outline-secondary" type="button" onclick="copiarURL()">
-                                <i class="bi bi-clipboard"></i> Copiar
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="text-center mt-4">
-                        <a href="{% url 'public:minipagina' negocio.slug %}" target="_blank" class="btn btn-outline-primary">
-                            <i class="bi bi-eye"></i> Vista Previa de tu Mini-Página
-                        </a>
-                    </div>
-
-                    <hr class="my-4">
-                    <h6 class="mb-3"><i class="bi bi-qr-code"></i> Código QR</h6>
-
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="alert alert-info">
-                                <i class="bi bi-info-circle"></i>
-                                <strong>Comparte tu mini-página fácilmente:</strong> Descarga el código QR y compártelo con tus clientes. Pueden escanearlo para acceder directamente a tu mini-página.
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mx-auto text-center">
-                            <div class="card border-2" style="border-color: {{ negocio.color_primario }};">
-                                <div class="card-body p-4">
-                                    <img src="{% url 'public:generar_qr' negocio.slug %}" alt="Código QR" class="img-fluid mb-3" style="max-width: 250px;">
-                                    <p class="text-muted small mb-3">Escanea para acceder a<br><strong>{{ negocio.nombre }}</strong></p>
-                                    <a href="{% url 'public:generar_qr' negocio.slug %}" download="qr_{{ negocio.slug }}.png" class="btn btn-primary">
-                                        <i class="bi bi-download"></i> Descargar QR
-                                    </a>
+                                <!-- Imagen de Portada -->
+                                <div class="col-md-6 mb-4">
+                                    <label class="form-label">{{ form.imagen_portada.label }}</label>
+                                    {% if negocio.imagen_portada %}
+                                        <div class="mb-2">
+                                            <img src="{{ negocio.imagen_portada.url }}" alt="Portada actual" class="img-thumbnail" style="max-width: 100%; max-height: 150px;">
+                                            <p class="small text-muted mt-1">Imagen de portada actual</p>
+                                        </div>
+                                    {% endif %}
+                                    {{ form.imagen_portada }}
+                                    <small class="text-muted d-block mt-1">{{ form.imagen_portada.help_text }}</small>
+                                    {% if form.imagen_portada.errors %}
+                                        <div class="text-danger small">{{ form.imagen_portada.errors }}</div>
+                                    {% endif %}
                                 </div>
                             </div>
-                            <p class="text-muted small mt-2">
-                                <i class="bi bi-lightbulb"></i> <strong>Tip:</strong> Imprime este QR y colócalo en tu local para que tus clientes puedan agendar citas fácilmente.
-                            </p>
+
+                            <hr class="my-4">
+                            <h6 class="mb-1">Colores de la Marca</h6>
+                            <p class="small text-muted mb-3">Elige una combinación lista o tus propios colores.</p>
+
+                            <div class="d-flex flex-wrap gap-2 mb-4">
+                                {% for nombre, principal, secundario in form.paletas %}
+                                <button type="button" class="paleta" data-principal="{{ principal }}" data-secundario="{{ secundario }}">
+                                    <span class="paleta-muestra" style="background: linear-gradient(90deg, {{ principal }}, {{ secundario }});"></span>
+                                    {{ nombre }}
+                                </button>
+                                {% endfor %}
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">{{ form.color_primario.label }}</label>
+                                    {{ form.color_primario }}
+                                    <small class="text-muted">{{ form.color_primario.help_text }}</small>
+                                    {% if form.color_primario.errors %}
+                                        <div class="text-danger small">{{ form.color_primario.errors }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">{{ form.color_secundario.label }}</label>
+                                    {{ form.color_secundario }}
+                                    <small class="text-muted">{{ form.color_secundario.help_text }}</small>
+                                    {% if form.color_secundario.errors %}
+                                        <div class="text-danger small">{{ form.color_secundario.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="form-check form-switch">
+                                {{ form.usar_degradado }}
+                                <label class="form-check-label" for="{{ form.usar_degradado.id_for_label }}">
+                                    {{ form.usar_degradado.label }}
+                                </label>
+                            </div>
+                            <small class="text-muted">{{ form.usar_degradado.help_text }}</small>
+                        </div>
+
+                        <!-- Vista previa: cambia al instante, antes de guardar -->
+                        <div class="col-lg-4 order-1 order-lg-2 mb-4">
+                            <div class="vista-celular-contenedor">
+                                <p class="small text-muted text-center mb-2">Así se verá en el celular</p>
+                                <div class="vista-celular">
+                                    <div class="vista-barra" id="vistaBarra">
+                                        <img id="vistaLogo" class="rounded-3" alt="" hidden
+                                             {% if negocio.logo %}src="{{ negocio.logo.url }}"{% endif %}>
+                                        <span id="vistaNombre">{{ negocio.nombre }}</span>
+                                        <i class="bi bi-list ms-auto"></i>
+                                    </div>
+                                    <div class="vista-portada" id="vistaPortada"
+                                         {% if negocio.imagen_portada %}data-imagen="{{ negocio.imagen_portada.url }}"{% endif %}></div>
+                                    <div class="p-3">
+                                        <div class="fw-semibold">Tu servicio</div>
+                                        <div class="fw-bold fs-5 mb-2" id="vistaPrecio">$50.000</div>
+                                        <div class="vista-boton" id="vistaBoton">Agendar</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -500,11 +516,50 @@
             </div>
         </div>
 
-        <!-- Tab 5: Redes Sociales -->
-        <div class="tab-pane fade" id="redes" role="tabpanel">
+        <!-- Tab 5: Compartir -->
+        <div class="tab-pane fade" id="compartir" role="tabpanel">
             <div class="card shadow-sm border-0">
                 <div class="card-body">
-                    <h5 class="card-title mb-4">Redes Sociales</h5>
+                    <h5 class="card-title mb-4">Comparte tu Mini-Página</h5>
+
+                    <div class="mb-3">
+                        <label class="form-label">URL de tu Mini-Página</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" value="{{ request.scheme }}://{{ request.get_host }}/{{ negocio.slug }}/" readonly>
+                            <button class="btn btn-outline-secondary" type="button" onclick="copiarURL()">
+                                <i class="bi bi-clipboard"></i> Copiar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-4">
+                        <a href="{% url 'public:minipagina' negocio.slug %}" target="_blank" class="btn btn-outline-primary">
+                            <i class="bi bi-eye"></i> Ver mi Mini-Página
+                        </a>
+                    </div>
+
+                    <hr class="my-4">
+                    <h6 class="mb-3"><i class="bi bi-qr-code"></i> Código QR</h6>
+
+                    <div class="row">
+                        <div class="col-md-6 mx-auto text-center">
+                            <div class="card border-2" style="border-color: {{ negocio.color_primario }};">
+                                <div class="card-body p-4">
+                                    <img src="{% url 'public:generar_qr' negocio.slug %}" alt="Código QR" class="img-fluid mb-3" style="max-width: 250px;">
+                                    <p class="text-muted small mb-3">Escanea para acceder a<br><strong>{{ negocio.nombre }}</strong></p>
+                                    <a href="{% url 'public:generar_qr' negocio.slug %}" download="qr_{{ negocio.slug }}.png" class="btn btn-primary">
+                                        <i class="bi bi-download"></i> Descargar QR
+                                    </a>
+                                </div>
+                            </div>
+                            <p class="text-muted small mt-2">
+                                <i class="bi bi-lightbulb"></i> <strong>Tip:</strong> Imprime este QR y colócalo en tu local para que tus clientes puedan agendar citas fácilmente.
+                            </p>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+                    <h6 class="mb-3">Redes Sociales</h6>
 
                     <div class="mb-3">
                         <label class="form-label">
@@ -528,35 +583,12 @@
 
                     <div class="mb-3">
                         <label class="form-label">
-                            <i class="bi bi-twitter text-info"></i> {{ form.twitter.label }}
+                            <i class="bi bi-tiktok"></i> {{ form.tiktok.label }}
                         </label>
-                        {{ form.twitter }}
-                        {% if form.twitter.errors %}
-                            <div class="text-danger small">{{ form.twitter.errors }}</div>
+                        {{ form.tiktok }}
+                        {% if form.tiktok.errors %}
+                            <div class="text-danger small">{{ form.tiktok.errors }}</div>
                         {% endif %}
-                    </div>
-
-                    <hr class="my-4">
-                    <h6 class="mb-3">Configuración General</h6>
-
-                    <div class="mb-3">
-                        <div class="form-check form-switch">
-                            {{ form.esta_activo }}
-                            <label class="form-check-label" for="{{ form.esta_activo.id_for_label }}">
-                                {{ form.esta_activo.label }}
-                            </label>
-                        </div>
-                        <small class="text-muted">{{ form.esta_activo.help_text }}</small>
-                    </div>
-
-                    <div class="mb-3">
-                        <div class="form-check form-switch">
-                            {{ form.acepta_reservas_online }}
-                            <label class="form-check-label" for="{{ form.acepta_reservas_online.id_for_label }}">
-                                {{ form.acepta_reservas_online.label }}
-                            </label>
-                        </div>
-                        <small class="text-muted">{{ form.acepta_reservas_online.help_text }}</small>
                     </div>
                 </div>
             </div>
@@ -590,6 +622,108 @@ function copiarURL() {
     });
 }
 
+// Vista previa de la personalización (mismas reglas de contraste de apps/negocios/colores.py)
+(function() {
+    const principal = document.getElementById('{{ form.color_primario.id_for_label }}');
+    const secundario = document.getElementById('{{ form.color_secundario.id_for_label }}');
+    const degradado = document.getElementById('{{ form.usar_degradado.id_for_label }}');
+    const nombre = document.getElementById('{{ form.nombre.id_for_label }}');
+    const inputLogo = document.getElementById('{{ form.logo.id_for_label }}');
+    const inputPortada = document.getElementById('{{ form.imagen_portada.id_for_label }}');
+    const barra = document.getElementById('vistaBarra');
+    const logo = document.getElementById('vistaLogo');
+    const textoNombre = document.getElementById('vistaNombre');
+    const portada = document.getElementById('vistaPortada');
+    const precio = document.getElementById('vistaPrecio');
+    const boton = document.getElementById('vistaBoton');
+    const BLANCO = '#ffffff';
+    const OSCURO = '#212529';
+
+    const aRgb = (color) => [1, 3, 5].map(i => parseInt(color.slice(i, i + 2), 16));
+    const aHex = (rgb) => '#' + rgb.map(c => c.toString(16).padStart(2, '0')).join('');
+
+    function luminancia(color) {
+        const [r, g, b] = aRgb(color).map(canal => {
+            const c = canal / 255;
+            return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    }
+
+    function contraste(a, b) {
+        const [claro, oscuro] = [luminancia(a), luminancia(b)].sort((x, y) => y - x);
+        return (claro + 0.05) / (oscuro + 0.05);
+    }
+
+    function textoLegible(...fondos) {
+        const peorContraste = (texto) => Math.min(...fondos.map(f => contraste(texto, f)));
+        if (peorContraste(BLANCO) >= 3) return BLANCO;
+        return peorContraste(OSCURO) > peorContraste(BLANCO) ? OSCURO : BLANCO;
+    }
+
+    function legibleSobreBlanco(color) {
+        let rgb = aRgb(color);
+        while (contraste(aHex(rgb), BLANCO) < 4.5) {
+            rgb = rgb.map(canal => Math.floor(canal * 0.92));
+        }
+        return aHex(rgb);
+    }
+
+    function actualizar() {
+        const p = principal.value;
+        const s = secundario.value;
+        const fondo = degradado.checked ? `linear-gradient(90deg, ${p}, ${s})` : p;
+        const texto = degradado.checked ? textoLegible(p, s) : textoLegible(p);
+
+        barra.style.background = fondo;
+        barra.style.color = texto;
+        boton.style.background = fondo;
+        boton.style.color = texto;
+        precio.style.color = legibleSobreBlanco(p);
+
+        const imagen = portada.dataset.imagen;
+        portada.style.backgroundImage = imagen
+            ? `url("${imagen}")`
+            : `linear-gradient(${degradado.checked ? '90deg' : '135deg'}, ${p}, ${s})`;
+
+        textoNombre.textContent = nombre.value;
+        const hayLogo = logo.hasAttribute('src');
+        logo.hidden = !hayLogo;
+        textoNombre.hidden = hayLogo;
+
+        document.querySelectorAll('.paleta').forEach(b => {
+            b.classList.toggle('seleccionada', b.dataset.principal === p && b.dataset.secundario === s);
+        });
+    }
+
+    document.querySelectorAll('.paleta').forEach(b => {
+        b.addEventListener('click', () => {
+            principal.value = b.dataset.principal;
+            secundario.value = b.dataset.secundario;
+            formModificado = true;
+            actualizar();
+        });
+    });
+
+    [principal, secundario, degradado, nombre].forEach(campo => campo.addEventListener('input', actualizar));
+
+    inputLogo.addEventListener('change', () => {
+        if (inputLogo.files[0]) {
+            logo.src = URL.createObjectURL(inputLogo.files[0]);
+            actualizar();
+        }
+    });
+
+    inputPortada.addEventListener('change', () => {
+        if (inputPortada.files[0]) {
+            portada.dataset.imagen = URL.createObjectURL(inputPortada.files[0]);
+            actualizar();
+        }
+    });
+
+    actualizar();
+})();
+
 // Mostrar/ocultar configuración de abonos
 document.getElementById('{{ form.requiere_abono.id_for_label }}').addEventListener('change', function() {
     document.getElementById('abonosConfig').style.display = this.checked ? 'block' : 'none';
@@ -618,13 +752,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Mapeo de campos a pestañas
     const camposPorTab = {
         'info': ['nombre', 'tipo', 'descripcion', 'telefono', 'email', 'whatsapp',
-                 'direccion', 'ciudad', 'estado', 'codigo_postal', 'es_a_domicilio'],
-        'personalizacion': ['logo', 'imagen_portada', 'color_primario', 'color_secundario'],
+                 'direccion', 'ciudad', 'estado', 'es_a_domicilio', 'esta_activo', 'acepta_reservas_online'],
+        'personalizacion': ['logo', 'imagen_portada', 'color_primario', 'color_secundario', 'usar_degradado'],
         'horarios': ['horario_apertura', 'horario_cierre', 'dia_lunes', 'dia_martes', 'dia_miercoles', 'dia_jueves', 'dia_viernes', 'dia_sabado', 'dia_domingo'],
         'abonos': ['requiere_abono', 'porcentaje_abono', 'monto_abono_fijo',
                    'banco', 'numero_cuenta', 'clabe', 'titular_cuenta',
                    'nequi', 'daviplata', 'llave_breb', 'qr_pago'],
-        'redes': ['facebook', 'instagram', 'twitter', 'esta_activo', 'acepta_reservas_online']
+        'compartir': ['facebook', 'instagram', 'tiktok']
     };
 
     // Buscar campos con errores

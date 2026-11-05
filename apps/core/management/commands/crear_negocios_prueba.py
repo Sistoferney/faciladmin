@@ -10,6 +10,8 @@ Cubre los casos de la agenda:
 - Spa Serenidad: 1 especialista (una sola agenda)
 - Peluquería Doña Rosa: sin especialistas (una sola agenda)
 
+Y los de la marca: Uñas Bella usa degradado y Doña Rosa un color claro.
+
 Todos los dueños entran con su celular y la contraseña CONTRASENA.
 Las notificaciones se desactivan mientras se crean las citas.
 """
@@ -33,6 +35,7 @@ NEGOCIOS = [
         'dueno': ('Valentina Ríos', '3009900001'),
         'nombre': 'Uñas Bella', 'tipo': 'salon_belleza', 'ciudad': 'Bogotá',
         'direccion': 'Calle 85 # 15-20', 'color': '#d63384',
+        'color_secundario': '#6f42c1', 'degradado': True,
         'descripcion': 'Manicure, pedicure y pestañas en Chapinero. Atención con cita.',
         'horario': SEMANA_COMPLETA,
         'servicios': [
@@ -82,7 +85,7 @@ NEGOCIOS = [
     {
         'dueno': ('Rosa Henao', '3009900004'),
         'nombre': 'Peluquería Doña Rosa', 'tipo': 'peluqueria', 'ciudad': 'La Estrella',
-        'direccion': 'Calle 80 Sur # 60-12', 'color': '#6f42c1',
+        'direccion': 'Calle 80 Sur # 60-12', 'color': '#ffd166',
         'descripcion': 'Peluquería de barrio: cortes, tintes y peinados.',
         'horario': SEMANA_COMPLETA,
         'servicios': [
@@ -159,6 +162,8 @@ class Command(BaseCommand):
             administrador=dueno, nombre=datos['nombre'], tipo=datos['tipo'], telefono=telefono,
             whatsapp=telefono, ciudad=datos['ciudad'], direccion=datos['direccion'],
             descripcion=datos['descripcion'], color_primario=datos['color'],
+            color_secundario=datos.get('color_secundario', '#6c757d'),
+            usar_degradado=datos.get('degradado', False),
             horario_apertura=time(8, 0), horario_cierre=time(19, 0),
             nequi=telefono, porcentaje_abono=Decimal('30'),
         )

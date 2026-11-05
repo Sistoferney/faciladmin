@@ -42,6 +42,7 @@
         :root {
             --primary-color: {{ negocio.color_primario|default:'#6366f1' }};
             --secondary-color: {{ negocio.color_secundario|default:'#8b5cf6' }};
+            --sidebar-rgb: {% if negocio and negocio.texto_sobre_degradado != '#ffffff' %}33, 37, 41{% else %}255, 255, 255{% endif %};
         }
 
         body {
@@ -66,18 +67,18 @@
         .sidebar-header {
             padding: 20px;
             background: rgba(0, 0, 0, 0.1);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(var(--sidebar-rgb), 0.1);
         }
 
         .sidebar-header h4 {
-            color: white;
+            color: rgb(var(--sidebar-rgb));
             margin: 0;
             font-size: 1.2rem;
             font-weight: 600;
         }
 
         .sidebar-header p {
-            color: rgba(255, 255, 255, 0.8);
+            color: rgba(var(--sidebar-rgb), 0.8);
             margin: 5px 0 0 0;
             font-size: 0.85rem;
         }
@@ -87,7 +88,7 @@
         }
 
         .sidebar-menu .nav-link {
-            color: rgba(255, 255, 255, 0.85);
+            color: rgba(var(--sidebar-rgb), 0.85);
             padding: 12px 20px;
             margin: 2px 10px;
             border-radius: 8px;
@@ -103,14 +104,14 @@
         }
 
         .sidebar-menu .nav-link:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
+            background: rgba(var(--sidebar-rgb), 0.1);
+            color: rgb(var(--sidebar-rgb));
             transform: translateX(5px);
         }
 
         .sidebar-menu .nav-link.active {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
+            background: rgba(var(--sidebar-rgb), 0.2);
+            color: rgb(var(--sidebar-rgb));
             font-weight: 600;
         }
 
@@ -267,7 +268,7 @@
                 <span>Configuración</span>
             </a>
 
-            <hr style="border-color: rgba(255,255,255,0.2); margin: 20px 15px;">
+            <hr style="border-color: rgba(var(--sidebar-rgb), 0.2); margin: 20px 15px;">
 
             <a href="{% url 'public:minipagina' negocio.slug %}" target="_blank" class="nav-link">
                 <i class="bi bi-eye"></i>

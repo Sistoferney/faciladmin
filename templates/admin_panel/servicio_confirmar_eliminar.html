@@ -1,4 +1,5 @@
 {% extends 'admin_panel/base_admin.html' %}
+{% load formato %}
 
 {% block page_title %}Eliminar Servicio{% endblock %}
 
@@ -33,7 +34,7 @@
                             <div class="col-6">
                                 <div class="text-center p-2 bg-light rounded">
                                     <i class="bi bi-currency-dollar text-success"></i>
-                                    <div class="fw-bold">${{ servicio.precio }}</div>
+                                    <div class="fw-bold">{{ servicio.precio|pesos }}</div>
                                     <small class="text-muted">Precio</small>
                                 </div>
                             </div>

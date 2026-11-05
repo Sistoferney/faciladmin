@@ -1,4 +1,5 @@
 {% extends 'admin_panel/base_admin.html' %}
+{% load formato %}
 
 {% block page_title %}Clientes{% endblock %}
 
@@ -94,7 +95,7 @@
                                     {% endif %}
                                 </td>
                                 <td class="align-middle"><strong>{{ cliente.total_citas }}</strong></td>
-                                <td class="align-middle"><strong>${{ cliente.total_gastado|floatformat:0 }}</strong></td>
+                                <td class="align-middle"><strong>{{ cliente.total_gastado|pesos }}</strong></td>
                                 <td class="align-middle">
                                     {% if cliente.ultima_visita %}
                                         {{ cliente.ultima_visita|date:"d/m/Y" }}

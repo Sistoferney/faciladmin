@@ -9,6 +9,8 @@ from django.core.exceptions import ValidationError
 import uuid
 from django.utils import timezone
 
+from .colores import a_rgb, legible_sobre_blanco, texto_legible
+
 # Palabras reservadas del sistema que no se pueden usar como slugs
 SLUGS_RESERVADOS = [
     'admin', 'login', 'logout', 'registro', 'dashboard',
@@ -147,6 +149,7 @@ class Negocio(models.Model):
     imagen_portada = models.ImageField('Imagen de portada', upload_to='negocios/portadas/', blank=True, null=True)
     color_primario = models.CharField('Color primario', max_length=7, default='#007bff')
     color_secundario = models.CharField('Color secundario', max_length=7, default='#6c757d')
+    usar_degradado = models.BooleanField('Usar degradado', default=False)
 
     # Configuración
     esta_activo = models.BooleanField('Activo', default=True)
@@ -156,6 +159,7 @@ class Negocio(models.Model):
     facebook = models.URLField('Facebook', blank=True)
     instagram = models.URLField('Instagram', blank=True)
     twitter = models.URLField('Twitter', blank=True)
+    tiktok = models.URLField('TikTok', blank=True)
 
     # Metadata
     fecha_creacion = models.DateTimeField('Fecha de creación', auto_now_add=True)
@@ -200,6 +204,26 @@ class Negocio(models.Model):
         # Validación final antes de guardar
         self.full_clean()
         super().save(*args, **kwargs)
+
+    @property
+    def texto_sobre_marca(self):
+        """Color del texto sobre la barra y los botones"""
+        if self.usar_degradado:
+            return self.texto_sobre_degradado
+        return texto_legible(self.color_primario)
+
+    @property
+    def texto_sobre_degradado(self):
+        return texto_legible(self.color_primario, self.color_secundario)
+
+    @property
+    def color_acento(self):
+        """Color de marca para textos e íconos sobre fondo blanco"""
+        return legible_sobre_blanco(self.color_primario)
+
+    @property
+    def color_acento_rgb(self):
+        return ', '.join(str(canal) for canal in a_rgb(self.color_acento))
 
     @property
     def url_publica(self):

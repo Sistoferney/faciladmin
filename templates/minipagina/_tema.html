@@ -1,0 +1,50 @@
+<!-- Colores del negocio: se incluye después de Bootstrap -->
+<style>
+    :root {
+        --negocio-primary: {{ negocio.color_primario }};
+        --negocio-secondary: {{ negocio.color_secundario }};
+        /* Barra y botones: color sólido, o degradado si el dueño lo activó */
+        --negocio-fondo: {% if negocio.usar_degradado %}linear-gradient(90deg, {{ negocio.color_primario }}, {{ negocio.color_secundario }}){% else %}{{ negocio.color_primario }}{% endif %};
+        --negocio-texto: {{ negocio.texto_sobre_marca }};
+        /* Portada sin imagen y encabezado de agendar: siempre con los dos colores */
+        --negocio-degradado: linear-gradient({% if negocio.usar_degradado %}90deg{% else %}135deg{% endif %}, {{ negocio.color_primario }}, {{ negocio.color_secundario }});
+        --negocio-texto-degradado: {{ negocio.texto_sobre_degradado }};
+        /* Textos e íconos sobre fondo blanco */
+        --negocio-acento: {{ negocio.color_acento }};
+        --negocio-acento-rgb: {{ negocio.color_acento_rgb }};
+        --bs-primary-rgb: {{ negocio.color_acento_rgb }};
+        --bs-link-color-rgb: {{ negocio.color_acento_rgb }};
+        --bs-link-hover-color-rgb: {{ negocio.color_acento_rgb }};
+    }
+
+    .navbar {
+        background: var(--negocio-fondo) !important;
+    }
+
+    .navbar .nav-link {
+        color: var(--negocio-texto);
+    }
+
+    .btn-primary {
+        --bs-btn-color: var(--negocio-texto);
+        --bs-btn-hover-color: var(--negocio-texto);
+        --bs-btn-active-color: var(--negocio-texto);
+        --bs-btn-disabled-color: var(--negocio-texto);
+        background: var(--negocio-fondo) !important;
+        background-origin: border-box !important;
+        border-color: transparent !important;
+    }
+
+    .btn-primary:hover {
+        filter: brightness(0.92);
+    }
+
+    .btn-outline-primary {
+        --bs-btn-color: var(--negocio-acento);
+        --bs-btn-border-color: var(--negocio-acento);
+        --bs-btn-hover-bg: var(--negocio-acento);
+        --bs-btn-hover-border-color: var(--negocio-acento);
+        --bs-btn-active-bg: var(--negocio-acento);
+        --bs-btn-active-border-color: var(--negocio-acento);
+    }
+</style>

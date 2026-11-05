@@ -1,4 +1,5 @@
 {% extends 'admin_panel/base_admin.html' %}
+{% load formato %}
 
 {% block page_title %}Confirmar Abono{% endblock %}
 
@@ -33,7 +34,7 @@
                     </tr>
                     <tr>
                         <th>Monto del Abono:</th>
-                        <td><strong class="text-success">${{ abono.monto }}</strong></td>
+                        <td><strong class="text-success">{{ abono.monto|pesos }}</strong></td>
                     </tr>
                     <tr>
                         <th>Método de Pago:</th>

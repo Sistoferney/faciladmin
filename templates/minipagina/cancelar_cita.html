@@ -1,4 +1,5 @@
 {% extends 'minipagina/base_publica.html' %}
+{% load formato %}
 {% block robots %}noindex, nofollow{% endblock %}
 {% load whatsapp %}
 {% load static %}
@@ -21,7 +22,7 @@
         <img src="{{ negocio.imagen_portada.url }}" alt="{{ negocio.nombre }}"
              class="w-100 h-100" style="object-fit: cover;">
     {% else %}
-        <div class="w-100 h-100" style="background: linear-gradient(135deg, var(--negocio-primary), var(--negocio-secondary));"></div>
+        <div class="w-100 h-100" style="background: var(--negocio-degradado);"></div>
     {% endif %}
     <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
          style="background: rgba(0,0,0,0.4);">
@@ -75,7 +76,7 @@
                             </p>
                             <p class="mb-2">
                                 <strong><i class="bi bi-currency-dollar"></i> Precio:</strong><br>
-                                ${{ cita.servicio.precio|floatformat:0 }}
+                                {{ cita.servicio.precio|pesos }}
                             </p>
                             <p class="mb-2">
                                 <strong><i class="bi bi-tag"></i> Estado:</strong><br>

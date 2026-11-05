@@ -1,18 +1,26 @@
 """
 Tests de la mini página pública del negocio
 """
+import tempfile
 from datetime import timedelta
+from io import BytesIO
 from unittest.mock import patch
 
-from django.test import TestCase
+from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile, UploadedFile
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
+from PIL import Image
 
 from apps.authentication.models import Usuario
 from apps.citas.models import Cita
 from apps.clientes.models import Cliente
 from apps.servicios.models import Servicio
 
+from .colores import BLANCO, OSCURO, PALETAS, RESPALDO, contraste, legible_sobre_blanco, texto_legible
+from .forms import ConfiguracionNegocioForm
+from .imagenes import LADO_LOGO, PESO_MAXIMO_MB, ajustar_imagen
 from .models import Negocio
 
 
@@ -526,3 +534,205 @@ class SesionPersistentePWATests(TestCase):
         # Fondo para cerrar el menú al tocar fuera
         self.assertContains(resp, 'id="sidebar-fondo"')
         self.assertContains(resp, 'function cerrarSidebar()')
+
+
+class ColoresMarcaTests(TestCase):
+    """El texto se lee con cualquier color que elija el dueño"""
+
+    def test_blanco_mientras_se_lea(self):
+        for color in ('#007bff', '#212529', '#d63384', '#198754'):
+            self.assertEqual(texto_legible(color), BLANCO)
+
+    def test_oscuro_sobre_colores_claros(self):
+        for color in ('#ffd166', '#ffffff', '#fce4ec'):
+            self.assertEqual(texto_legible(color), OSCURO)
+
+    def test_degradado_mira_los_dos_extremos(self):
+        self.assertEqual(texto_legible('#007bff', '#ffd166'), OSCURO)
+
+    def test_acento_oscurece_solo_lo_necesario(self):
+        self.assertEqual(legible_sobre_blanco('#212529'), '#212529')
+        for color in ('#ffd166', '#ffffff', '#007bff'):
+            self.assertGreaterEqual(contraste(legible_sobre_blanco(color), BLANCO), 4.5)
+
+    def test_color_guardado_invalido_no_rompe_la_pagina(self):
+        self.assertEqual(texto_legible(''), BLANCO)
+        self.assertEqual(legible_sobre_blanco(None), legible_sobre_blanco(RESPALDO))
+
+
+class TemaMinipaginaTests(TestCase):
+
+    def setUp(self):
+        admin = Usuario.objects.create_user(
+            telefono='3000000000', password='x', nombre='Admin', email='a@a.com'
+        )
+        self.negocio = Negocio.objects.create(
+            administrador=admin, nombre='Spa Prueba', telefono='3000000000',
+            color_primario='#d63384', color_secundario='#6f42c1',
+        )
+
+    def _paginas(self):
+        return [
+            self.client.get(reverse('public:minipagina', args=[self.negocio.slug])),
+            self.client.get(reverse('public:agendar', args=[self.negocio.slug])),
+        ]
+
+    def test_sin_degradado_la_barra_sigue_solida(self):
+        for resp in self._paginas():
+            self.assertContains(resp, '--negocio-fondo: #d63384;')
+            self.assertContains(resp, 'linear-gradient(135deg, #d63384, #6f42c1)')
+
+    def test_degradado_va_de_izquierda_a_derecha(self):
+        self.negocio.usar_degradado = True
+        self.negocio.save()
+        for resp in self._paginas():
+            self.assertContains(resp, '--negocio-fondo: linear-gradient(90deg, #d63384, #6f42c1);')
+
+    def test_el_azul_y_morado_fijos_ya_no_aparecen(self):
+        for resp in self._paginas():
+            self.assertContains(resp, '--bs-primary-rgb: 214, 51, 132;')
+            self.assertNotContains(resp, '99, 102, 241')
+
+    def test_barra_con_color_claro_usa_texto_oscuro(self):
+        self.negocio.color_primario = '#ffd166'
+        self.negocio.save()
+        resp = self.client.get(reverse('public:minipagina', args=[self.negocio.slug]))
+        self.assertContains(resp, '--negocio-texto: #212529;')
+        self.assertNotContains(resp, 'navbar-dark')
+
+    def test_activar_degradado_desde_la_configuracion(self):
+        self.client.force_login(self.negocio.administrador)
+        url = reverse('public:admin_configuracion', args=[self.negocio.slug])
+        self.assertContains(self.client.get(url), 'name="usar_degradado"')
+
+        datos = ConfiguracionNegocioForm(instance=self.negocio).initial
+        datos = {k: v for k, v in datos.items() if v not in (None, '') and k not in ('logo', 'imagen_portada', 'qr_pago')}
+        datos['usar_degradado'] = 'on'
+        self.client.post(url, datos)
+        self.negocio.refresh_from_db()
+        self.assertTrue(self.negocio.usar_degradado)
+
+
+class ConfiguracionFacilTests(TestCase):
+
+    def setUp(self):
+        admin = Usuario.objects.create_user(
+            telefono='3000000000', password='x', nombre='Admin', email='a@a.com'
+        )
+        self.negocio = Negocio.objects.create(
+            administrador=admin, nombre='Spa Prueba', telefono='3000000000'
+        )
+        self.client.force_login(admin)
+        self.url = reverse('public:admin_configuracion', args=[self.negocio.slug])
+
+    def _subida(self, tamano=(3000, 2000), modo='RGB', formato='JPEG', nombre='foto.jpg', **opciones):
+        salida = BytesIO()
+        Image.new(modo, tamano).save(salida, formato, **opciones)
+        return SimpleUploadedFile(nombre, salida.getvalue())
+
+    def test_foto_grande_se_reduce(self):
+        ajustada = ajustar_imagen(self._subida(), LADO_LOGO, 'logo')
+        imagen = Image.open(ajustada)
+        self.assertEqual(ajustada.name, 'logo.jpg')
+        self.assertEqual(imagen.size, (800, 533))
+
+    def test_foto_pequena_no_se_agranda(self):
+        imagen = Image.open(ajustar_imagen(self._subida((300, 200)), LADO_LOGO, 'logo'))
+        self.assertEqual(imagen.size, (300, 200))
+
+    def test_png_transparente_lo_sigue_siendo(self):
+        subida = self._subida((1000, 1000), 'RGBA', 'PNG', 'logo.png')
+        ajustada = ajustar_imagen(subida, LADO_LOGO, 'logo')
+        self.assertEqual(ajustada.name, 'logo.png')
+        self.assertEqual(Image.open(ajustada).mode, 'RGBA')
+
+    def test_foto_del_celular_queda_derecha(self):
+        exif = Image.Exif()
+        exif[0x0112] = 6  # girada 90° por la cámara
+        ajustada = ajustar_imagen(self._subida((300, 200), exif=exif), LADO_LOGO, 'logo')
+        self.assertEqual(Image.open(ajustada).size, (200, 300))
+
+    def test_imagen_demasiado_pesada(self):
+        subida = self._subida((10, 10))
+        subida.size = (PESO_MAXIMO_MB + 1) * 1024 * 1024
+        with self.assertRaises(ValidationError):
+            ajustar_imagen(subida, LADO_LOGO, 'logo')
+
+    def test_archivo_que_no_es_imagen_no_rompe(self):
+        with self.assertRaises(ValidationError):
+            ajustar_imagen(SimpleUploadedFile('a.jpg', b'no soy una imagen'), LADO_LOGO, 'logo')
+
+    def test_guardar_sin_imagen_nueva_conserva_la_actual(self):
+        form = ConfiguracionNegocioForm(instance=self.negocio)
+        self.assertNotIsInstance(self.negocio.logo, UploadedFile)
+        form.cleaned_data = {'logo': self.negocio.logo}
+        self.assertIs(form.clean_logo(), self.negocio.logo)
+
+    def test_paletas_legibles_con_degradado(self):
+        for nombre, principal, secundario in PALETAS:
+            for color in (principal, secundario):
+                self.assertGreaterEqual(contraste(BLANCO, color), 3, nombre)
+
+    def test_pantalla_de_configuracion(self):
+        resp = self.client.get(self.url)
+        self.assertContains(resp, 'id="compartir"')
+        self.assertContains(resp, 'name="tiktok"')
+        self.assertContains(resp, 'id="vistaBarra"')
+        self.assertContains(resp, 'data-principal="#d63384"')
+        self.assertContains(resp, 'Departamento')
+        self.assertNotContains(resp, 'name="twitter"')
+        self.assertNotContains(resp, 'name="codigo_postal"')
+        self.assertNotContains(resp, 'Guía de Imágenes')
+
+    def test_guardar_no_borra_twitter_ni_codigo_postal(self):
+        Negocio.objects.filter(pk=self.negocio.pk).update(
+            twitter='https://twitter.com/spa', codigo_postal='050001'
+        )
+        self.negocio.refresh_from_db()
+        form = ConfiguracionNegocioForm(instance=self.negocio)
+        datos = {k: v for k, v in form.initial.items()
+                 if v not in (None, '') and k not in ('logo', 'imagen_portada', 'qr_pago')}
+        self.client.post(self.url, datos)
+        self.negocio.refresh_from_db()
+        self.assertEqual(self.negocio.twitter, 'https://twitter.com/spa')
+        self.assertEqual(self.negocio.codigo_postal, '050001')
+
+    def test_tiktok_se_muestra_en_la_minipagina(self):
+        Negocio.objects.filter(pk=self.negocio.pk).update(tiktok='https://tiktok.com/@spa')
+        resp = self.client.get(reverse('public:minipagina', args=[self.negocio.slug]))
+        self.assertContains(resp, 'bi-tiktok')
+        self.assertContains(resp, 'https://tiktok.com/@spa')
+
+    def test_subir_logo_guarda_la_version_ajustada(self):
+        form = ConfiguracionNegocioForm(instance=self.negocio)
+        datos = {k: v for k, v in form.initial.items()
+                 if v not in (None, '') and k not in ('logo', 'imagen_portada', 'qr_pago')}
+        datos['logo'] = self._subida()
+        with tempfile.TemporaryDirectory() as carpeta, override_settings(MEDIA_ROOT=carpeta):
+            resp = self.client.post(self.url, datos)
+            self.assertEqual(resp.status_code, 302)
+            self.negocio.refresh_from_db()
+            with self.negocio.logo.open() as guardado:
+                self.assertEqual(Image.open(guardado).size, (800, 533))
+
+    def test_precios_con_formato_de_pesos(self):
+        Servicio.objects.create(negocio=self.negocio, nombre='Corte', precio=20000, duracion_minutos=30)
+        for nombre in ('public:minipagina', 'public:agendar'):
+            resp = self.client.get(reverse(nombre, args=[self.negocio.slug]))
+            self.assertContains(resp, '$20.000')
+            self.assertNotContains(resp, '20000,00')
+
+    def test_barra_lateral_legible_con_color_claro(self):
+        dashboard = reverse('public:admin_dashboard', args=[self.negocio.slug])
+        self.assertContains(self.client.get(dashboard), '--sidebar-rgb: 255, 255, 255;')
+
+        Negocio.objects.filter(pk=self.negocio.pk).update(color_primario='#ffd166', color_secundario='#ffe0ec')
+        self.assertContains(self.client.get(dashboard), '--sidebar-rgb: 33, 37, 41;')
+
+    def test_abono_de_servicio_legible_en_el_panel(self):
+        Servicio.objects.create(
+            negocio=self.negocio, nombre='Corte', precio=45000, duracion_minutos=30,
+            requiere_abono=True, porcentaje_abono=30,
+        )
+        resp = self.client.get(reverse('public:admin_servicios', args=[self.negocio.slug]))
+        self.assertContains(resp, 'Abono: 30% ($13.500)')

@@ -1,4 +1,5 @@
 {% extends 'admin_panel/base_admin.html' %}
+{% load formato %}
 
 {% block page_title %}Confirmar Cita{% endblock %}
 
@@ -15,7 +16,7 @@
                 {% if abono %}
                 <div class="alert alert-info">
                     <i class="bi bi-info-circle"></i>
-                    Esta cita tiene un abono de <strong>${{ abono.monto|floatformat:0 }}</strong>
+                    Esta cita tiene un abono de <strong>{{ abono.monto|pesos }}</strong>
                     {% if abono.estado == 'vencido' %}(vencido){% else %}pendiente{% endif %}.
                     ¿Cómo quieres confirmarla?
                 </div>
@@ -41,7 +42,7 @@
                             <strong><i class="bi bi-clock"></i> Hora:</strong> {{ cita.fecha_hora|date:"H:i" }}
                         </p>
                         <p class="mb-2">
-                            <strong><i class="bi bi-currency-dollar"></i> Precio:</strong> ${{ cita.servicio.precio }}
+                            <strong><i class="bi bi-currency-dollar"></i> Precio:</strong> {{ cita.servicio.precio|pesos }}
                         </p>
                         <p class="mb-0">
                             <strong><i class="bi bi-telephone"></i> Teléfono:</strong> {{ cita.cliente.telefono }}

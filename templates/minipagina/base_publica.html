@@ -56,32 +56,17 @@
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
-    <!-- Colores personalizados del negocio -->
-    <style>
-        :root {
-            --negocio-primary: {{ negocio.color_primario }};
-            --negocio-secondary: {{ negocio.color_secundario }};
-        }
-
-        .btn-primary {
-            background-color: var(--negocio-primary) !important;
-            border-color: var(--negocio-primary) !important;
-        }
-
-        .navbar {
-            background-color: var(--negocio-primary) !important;
-        }
-    </style>
+    {% include 'minipagina/_tema.html' %}
 
     {% block extra_css %}{% endblock %}
 </head>
 <body>
     <!-- Navbar del negocio -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
+    <nav class="navbar navbar-expand-lg{% if negocio.texto_sobre_marca == '#ffffff' %} navbar-dark{% endif %}">
         <div class="container">
             <a class="navbar-brand" href="{% url 'public:minipagina' negocio.slug %}">
                 {% if negocio.logo %}
-                    <img src="{{ negocio.logo.url }}" alt="{{ negocio.nombre }}" height="120" style="max-width: 350px; object-fit: contain;">
+                    <img src="{{ negocio.logo.url }}" alt="{{ negocio.nombre }}" class="rounded-4" style="max-height: 120px; max-width: min(350px, 70vw);">
                 {% else %}
                     {{ negocio.nombre }}
                 {% endif %}
@@ -194,13 +179,16 @@
                             <i class="bi bi-envelope"></i> {{ negocio.email }}
                         {% endif %}
                     </p>
-                    {% if negocio.facebook or negocio.instagram %}
+                    {% if negocio.facebook or negocio.instagram or negocio.tiktok %}
                         <div class="social-links">
                             {% if negocio.facebook %}
                                 <a href="{{ negocio.facebook }}" class="text-white me-3" target="_blank">Facebook</a>
                             {% endif %}
                             {% if negocio.instagram %}
-                                <a href="{{ negocio.instagram }}" class="text-white" target="_blank">Instagram</a>
+                                <a href="{{ negocio.instagram }}" class="text-white me-3" target="_blank">Instagram</a>
+                            {% endif %}
+                            {% if negocio.tiktok %}
+                                <a href="{{ negocio.tiktok }}" class="text-white" target="_blank">TikTok</a>
                             {% endif %}
                         </div>
                     {% endif %}

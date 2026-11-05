@@ -35,10 +35,10 @@ class NegocioAdmin(admin.ModelAdmin):
                       'banco', 'numero_cuenta', 'clabe', 'titular_cuenta')
         }),
         ('Personalización', {
-            'fields': ('logo', 'imagen_portada', 'color_primario', 'color_secundario')
+            'fields': ('logo', 'imagen_portada', 'color_primario', 'color_secundario', 'usar_degradado')
         }),
         ('Redes Sociales', {
-            'fields': ('facebook', 'instagram', 'twitter'),
+            'fields': ('facebook', 'instagram', 'tiktok', 'twitter'),
             'classes': ('collapse',)
         }),
         ('Configuración', {

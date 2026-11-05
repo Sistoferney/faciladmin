@@ -153,7 +153,7 @@ def datos_negocio(negocio, base):
             'addressCountry': 'CO',
         }
         datos['address'] = {k: v for k, v in datos['address'].items() if v}
-    redes = [r for r in (negocio.facebook, negocio.instagram, negocio.twitter) if r]
+    redes = [r for r in (negocio.facebook, negocio.instagram, negocio.tiktok, negocio.twitter) if r]
     if redes:
         datos['sameAs'] = redes
 

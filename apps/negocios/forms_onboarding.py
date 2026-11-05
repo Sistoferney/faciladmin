@@ -2,6 +2,7 @@
 Formularios para el sistema de Onboarding Guiado
 """
 from django import forms
+from .imagenes import ImagenesAjustadasMixin, TIPOS_ACEPTADOS
 from .models import Negocio
 
 
@@ -34,7 +35,7 @@ class DatosBasicosOnboardingForm(forms.ModelForm):
         }
 
 
-class IdentidadVisualOnboardingForm(forms.ModelForm):
+class IdentidadVisualOnboardingForm(ImagenesAjustadasMixin, forms.ModelForm):
     """
     Formulario para el paso 2: Identidad Visual
     """
@@ -44,11 +45,11 @@ class IdentidadVisualOnboardingForm(forms.ModelForm):
         widgets = {
             'logo': forms.FileInput(attrs={
                 'class': 'form-control',
-                'accept': 'image/*'
+                'accept': TIPOS_ACEPTADOS
             }),
             'imagen_portada': forms.FileInput(attrs={
                 'class': 'form-control',
-                'accept': 'image/*'
+                'accept': TIPOS_ACEPTADOS
             }),
             'color_primario': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -66,8 +67,8 @@ class IdentidadVisualOnboardingForm(forms.ModelForm):
             'color_secundario': 'Color secundario',
         }
         help_texts = {
-            'logo': 'Recomendado: 500x500px, formato PNG con fondo transparente',
-            'imagen_portada': 'Recomendado: 1920x600px, formato JPG',
+            'logo': 'Sube la imagen que tengas: la ajustamos por ti',
+            'imagen_portada': 'Una foto horizontal. En celular se recorta un poco: deja lo importante en el centro',
             'color_primario': 'Este color se usará en botones y elementos destacados',
             'color_secundario': 'Color complementario para detalles',
         }

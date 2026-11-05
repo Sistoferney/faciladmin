@@ -2,14 +2,18 @@
 Formularios para gestión de negocios
 """
 from django import forms
+from .colores import PALETAS
+from .imagenes import ImagenesAjustadasMixin, TIPOS_ACEPTADOS
 from .models import Negocio, BloqueoAgenda, Especialista
 from apps.servicios.models import Servicio
 
 
-class ConfiguracionNegocioForm(forms.ModelForm):
+class ConfiguracionNegocioForm(ImagenesAjustadasMixin, forms.ModelForm):
     """
     Formulario para que el admin del negocio configure su mini-página
     """
+    paletas = PALETAS
+
     # Checkboxes para días laborables
     dia_lunes = forms.BooleanField(required=False, label='Lunes')
     dia_martes = forms.BooleanField(required=False, label='Martes')
@@ -34,7 +38,6 @@ class ConfiguracionNegocioForm(forms.ModelForm):
             'direccion',
             'ciudad',
             'estado',
-            'codigo_postal',
 
             # Tipo de servicio
             'es_a_domicilio',
@@ -48,11 +51,12 @@ class ConfiguracionNegocioForm(forms.ModelForm):
             'imagen_portada',
             'color_primario',
             'color_secundario',
+            'usar_degradado',
 
             # Redes sociales
             'facebook',
             'instagram',
-            'twitter',
+            'tiktok',
 
             # Configuración de abonos
             'requiere_abono',
@@ -105,11 +109,7 @@ class ConfiguracionNegocioForm(forms.ModelForm):
             }),
             'estado': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Estado'
-            }),
-            'codigo_postal': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'C.P.'
+                'placeholder': 'Departamento'
             }),
             'es_a_domicilio': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'horario_apertura': forms.TimeInput(attrs={
@@ -122,11 +122,11 @@ class ConfiguracionNegocioForm(forms.ModelForm):
             }),
             'logo': forms.FileInput(attrs={
                 'class': 'form-control',
-                'accept': 'image/*'
+                'accept': TIPOS_ACEPTADOS
             }),
             'imagen_portada': forms.FileInput(attrs={
                 'class': 'form-control',
-                'accept': 'image/*'
+                'accept': TIPOS_ACEPTADOS
             }),
             'color_primario': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -136,6 +136,7 @@ class ConfiguracionNegocioForm(forms.ModelForm):
                 'class': 'form-control',
                 'type': 'color'
             }),
+            'usar_degradado': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'facebook': forms.URLInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'https://facebook.com/tu-pagina'
@@ -144,9 +145,9 @@ class ConfiguracionNegocioForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': 'https://instagram.com/tu-usuario'
             }),
-            'twitter': forms.URLInput(attrs={
+            'tiktok': forms.URLInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'https://twitter.com/tu-usuario'
+                'placeholder': 'https://tiktok.com/@tu-usuario'
             }),
             'requiere_abono': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'porcentaje_abono': forms.NumberInput(attrs={
@@ -199,18 +200,18 @@ class ConfiguracionNegocioForm(forms.ModelForm):
             'whatsapp': 'WhatsApp',
             'direccion': 'Dirección',
             'ciudad': 'Ciudad',
-            'estado': 'Estado',
-            'codigo_postal': 'Código Postal',
+            'estado': 'Departamento',
             'es_a_domicilio': 'Servicio a Domicilio',
             'horario_apertura': 'Hora de Apertura',
             'horario_cierre': 'Hora de Cierre',
-            'logo': 'Logo (500x500 px recomendado)',
-            'imagen_portada': 'Imagen de Portada (1920x600 px recomendado)',
+            'logo': 'Logo',
+            'imagen_portada': 'Imagen de Portada',
             'color_primario': 'Color Primario',
             'color_secundario': 'Color Secundario',
+            'usar_degradado': 'Usar degradado',
             'facebook': 'Facebook',
             'instagram': 'Instagram',
-            'twitter': 'Twitter',
+            'tiktok': 'TikTok',
             'requiere_abono': 'Requiere Abono para Reservar',
             'porcentaje_abono': 'Porcentaje de Abono (%)',
             'monto_abono_fijo': 'Monto Fijo de Abono ($)',
@@ -225,10 +226,11 @@ class ConfiguracionNegocioForm(forms.ModelForm):
         help_texts = {
             'descripcion': 'Describe brevemente tu negocio y servicios',
             'es_a_domicilio': 'Marcar si ofreces servicios a domicilio (sin local fijo). Se solicitará la dirección del cliente al agendar.',
-            'logo': 'Formato: PNG (transparente recomendado) o JPG. Tamaño: 500x500 px. Peso máximo: 500 KB',
-            'imagen_portada': 'Formato: JPG o PNG. Tamaño: 1920x600 px. Peso máximo: 1 MB',
+            'logo': 'Sube la imagen que tengas: la ajustamos por ti',
+            'imagen_portada': 'Una foto horizontal. En celular se recorta un poco: deja lo importante en el centro',
             'color_primario': 'Color principal de tu marca (botones, enlaces)',
-            'color_secundario': 'Color secundario (textos, bordes)',
+            'color_secundario': 'Se combina con el principal en la portada y en el degradado',
+            'usar_degradado': 'La barra superior y los botones pasan del color primario al secundario, de izquierda a derecha',
             'requiere_abono': 'Marcar si deseas que los clientes paguen un abono al reservar',
             'porcentaje_abono': 'Porcentaje del servicio que se requiere como abono',
             'monto_abono_fijo': 'O define un monto fijo en lugar del porcentaje',
