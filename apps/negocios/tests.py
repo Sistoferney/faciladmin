@@ -1,6 +1,7 @@
 """
 Tests de la mini página pública del negocio
 """
+import importlib
 import tempfile
 from datetime import timedelta
 from io import BytesIO
@@ -18,7 +19,7 @@ from apps.citas.models import Cita
 from apps.clientes.models import Cliente
 from apps.servicios.models import Servicio
 
-from .colores import BLANCO, OSCURO, PALETAS, RESPALDO, contraste, legible_sobre_blanco, texto_legible
+from .colores import BLANCO, MARCA_PRINCIPAL, MARCA_SECUNDARIO, OSCURO, PALETAS, RESPALDO, contraste, legible_sobre_blanco, texto_legible
 from .forms import ConfiguracionNegocioForm
 from .imagenes import LADO_LOGO, PESO_MAXIMO_MB, ajustar_imagen
 from .models import Negocio
@@ -722,12 +723,27 @@ class ConfiguracionFacilTests(TestCase):
             self.assertContains(resp, '$20.000')
             self.assertNotContains(resp, '20000,00')
 
-    def test_barra_lateral_legible_con_color_claro(self):
-        dashboard = reverse('public:admin_dashboard', args=[self.negocio.slug])
-        self.assertContains(self.client.get(dashboard), '--sidebar-rgb: 255, 255, 255;')
-
+    def test_panel_con_colores_corporativos(self):
         Negocio.objects.filter(pk=self.negocio.pk).update(color_primario='#ffd166', color_secundario='#ffe0ec')
-        self.assertContains(self.client.get(dashboard), '--sidebar-rgb: 33, 37, 41;')
+        resp = self.client.get(reverse('public:admin_dashboard', args=[self.negocio.slug]))
+        self.assertContains(resp, '--primary-color: var(--fa-navy);')
+        self.assertContains(resp, 'images/marca/logo-sobre-navy')
+        self.assertNotContains(resp, '#ffd166')
+
+    def test_negocio_nuevo_usa_los_colores_de_facilacces(self):
+        self.assertEqual(self.negocio.color_primario, MARCA_PRINCIPAL)
+        self.assertEqual(self.negocio.color_secundario, MARCA_SECUNDARIO)
+        resp = self.client.get(reverse('public:minipagina', args=[self.negocio.slug]))
+        self.assertContains(resp, '--negocio-fondo: #021a58;')
+
+    def test_paginas_cargan_la_identidad_de_marca(self):
+        paginas = [
+            reverse('public:minipagina', args=[self.negocio.slug]),
+            reverse('public:agendar', args=[self.negocio.slug]),
+            reverse('public:admin_dashboard', args=[self.negocio.slug]),
+        ]
+        for url in paginas:
+            self.assertContains(self.client.get(url), 'css/marca')
 
     def test_abono_de_servicio_legible_en_el_panel(self):
         Servicio.objects.create(
@@ -736,3 +752,25 @@ class ConfiguracionFacilTests(TestCase):
         )
         resp = self.client.get(reverse('public:admin_servicios', args=[self.negocio.slug]))
         self.assertContains(resp, 'Abono: 30% ($13.500)')
+
+
+class MigracionColoresDeMarcaTests(TestCase):
+    """Solo cambia a los negocios que nunca eligieron sus colores"""
+
+    def test_solo_los_colores_de_fabrica(self):
+        from django.apps import apps
+        migracion = importlib.import_module('apps.negocios.migrations.0009_colores_de_marca')
+
+        admin = Usuario.objects.create_user(telefono='3000000000', password='x', nombre='A', email='a@a.com')
+        otro = Usuario.objects.create_user(telefono='3000000001', password='x', nombre='B', email='b@a.com')
+        de_fabrica = Negocio.objects.create(administrador=admin, nombre='Sin elegir', telefono='3000000000',
+                                            color_primario='#007BFF', color_secundario='#6c757d')
+        elegido = Negocio.objects.create(administrador=otro, nombre='Con azul', telefono='3000000001',
+                                         color_primario='#007bff', color_secundario='#ff0000')
+
+        migracion.usar_colores_de_marca(apps, None)
+
+        de_fabrica.refresh_from_db()
+        elegido.refresh_from_db()
+        self.assertEqual((de_fabrica.color_primario, de_fabrica.color_secundario), (MARCA_PRINCIPAL, MARCA_SECUNDARIO))
+        self.assertEqual((elegido.color_primario, elegido.color_secundario), ('#007bff', '#ff0000'))

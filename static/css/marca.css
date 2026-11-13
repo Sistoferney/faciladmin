@@ -1,0 +1,276 @@
+/* ==========================================================================
+   facilacces · Identidad visual (Manual de identidad 2026)
+
+   Se carga justo después de Bootstrap en todas las páginas: letra, colores y
+   formas de la marca. Sitio, panel y acceso cargan además los componentes
+   (marca-componentes.css) y su hoja propia. La mini-página carga después sus
+   colores (minipagina/_tema.html), que tienen prioridad.
+
+   Los colores derivados están calculados (sin color-mix) para que funcionen
+   en celulares con navegador antiguo.
+   ========================================================================== */
+
+@font-face { font-family: "Rubik"; src: url("../fonts/rubik-300.woff2") format("woff2"); font-weight: 300; font-style: normal; font-display: swap; }
+@font-face { font-family: "Rubik"; src: url("../fonts/rubik-400.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Rubik"; src: url("../fonts/rubik-400i.woff2") format("woff2"); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: "Rubik"; src: url("../fonts/rubik-500.woff2") format("woff2"); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: "Rubik"; src: url("../fonts/rubik-600.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "Rubik"; src: url("../fonts/rubik-700.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
+
+:root {
+    /* Paleta oficial */
+    --fa-navy: #021A58;
+    --fa-royal: #042981;
+    --fa-orange: #FE641A;
+    --fa-cream: #F7F4EE;
+    --fa-white: #FFFFFF;
+    --fa-ink: #353534;
+
+    /* Variaciones de la paleta */
+    --fa-orange-strong: #db5a23;
+    --fa-orange-soft: #ffece4;
+    --fa-orange-tint: #ffddcd;
+    --fa-royal-soft: #ebeef5;
+    --fa-royal-tint: #d7ddeb;
+    --fa-navy-90: #1b3169;
+    --fa-ink-70: #616161;
+    --fa-ink-soft: #efefef;
+    --fa-line: #e1e4eb;
+    --fa-line-strong: #c2c8d7;
+    --fa-cream-deep: #f7ede4;
+    --fa-on-dark-muted: #c2c8d7;
+
+    /* Degradados de marca (naranja → navy) */
+    --fa-gradient: linear-gradient(120deg, var(--fa-orange) 0%, #744453 38%, var(--fa-royal) 68%, var(--fa-navy) 100%);
+    --fa-gradient-deep: radial-gradient(120% 140% at 0% 0%, #d85923 0%, #4e3045 35%, var(--fa-navy) 70%);
+
+    /* Tipografía */
+    --fa-font: "Rubik", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --fa-fs-xs: 0.8125rem;
+    --fa-fs-sm: 0.875rem;
+    --fa-fs-base: 1rem;
+    --fa-fs-md: 1.125rem;
+    --fa-fs-lg: 1.375rem;
+    --fa-fs-xl: 1.75rem;
+    --fa-fs-2xl: 2.25rem;
+    --fa-fs-3xl: clamp(2.25rem, 1.6rem + 2.6vw, 3.5rem);
+    --fa-lh-tight: 1.15;
+    --fa-lh: 1.55;
+
+    /* Espaciado (base 4) */
+    --fa-s1: 4px; --fa-s2: 8px; --fa-s3: 12px; --fa-s4: 16px; --fa-s5: 20px;
+    --fa-s6: 24px; --fa-s8: 32px; --fa-s10: 40px; --fa-s12: 48px; --fa-s16: 64px; --fa-s20: 80px; --fa-s24: 96px;
+
+    /* Formas y sombras suaves en navy */
+    --fa-r-sm: 10px;
+    --fa-r: 16px;
+    --fa-r-lg: 24px;
+    --fa-r-xl: 32px;
+    --fa-r-pill: 999px;
+    --fa-shadow-sm: 0 1px 2px rgba(2, 26, 88, .06), 0 1px 3px rgba(2, 26, 88, .06);
+    --fa-shadow: 0 6px 24px -8px rgba(2, 26, 88, .16);
+    --fa-shadow-lg: 0 24px 60px -20px rgba(2, 26, 88, .32);
+
+    /* Área táctil mínima accesible */
+    --fa-control-h: 48px;
+    --fa-focus: 0 0 0 3px var(--fa-white), 0 0 0 6px var(--fa-royal);
+
+    --fa-container: 1200px;
+    --fa-sidebar-w: 272px;
+
+    /* Bootstrap con los valores de la marca */
+    --bs-body-font-family: var(--fa-font);
+    --bs-body-color: var(--fa-ink);
+    --bs-body-color-rgb: 53, 53, 52;
+    --bs-primary: var(--fa-navy);
+    --bs-primary-rgb: 2, 26, 88;
+    --bs-link-color-rgb: 4, 41, 129;
+    --bs-link-hover-color-rgb: 2, 26, 88;
+    --bs-border-color: var(--fa-line);
+    --bs-border-radius: var(--fa-r-sm);
+    --bs-border-radius-lg: var(--fa-r);
+    --bs-border-radius-xl: var(--fa-r-lg);
+    --bs-focus-ring-color: rgba(4, 41, 129, .3);
+}
+
+body {
+    font-family: var(--fa-font);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Sitio, panel y acceso: títulos de la marca (la mini-página usa los del negocio) */
+:where(.fa-ui) h1, :where(.fa-ui) h2, :where(.fa-ui) h3, :where(.fa-ui) h4, :where(.fa-ui) h5, :where(.fa-ui) h6 {
+    font-weight: 700;
+    line-height: var(--fa-lh-tight);
+    color: var(--fa-navy);
+    letter-spacing: -0.01em;
+}
+
+:where(.fa-ui) strong {
+    font-weight: 500;
+}
+
+/* Botones: redondeados y fáciles de tocar */
+.btn {
+    --bs-btn-font-weight: 500;
+    --bs-btn-border-radius: 999px;
+    --bs-btn-padding-x: 1.25rem;
+}
+
+.btn-sm {
+    --bs-btn-padding-x: .875rem;
+}
+
+.btn-primary {
+    --bs-btn-bg: var(--fa-navy);
+    --bs-btn-border-color: var(--fa-navy);
+    --bs-btn-hover-bg: var(--fa-royal);
+    --bs-btn-hover-border-color: var(--fa-royal);
+    --bs-btn-active-bg: var(--fa-royal);
+    --bs-btn-active-border-color: var(--fa-royal);
+    --bs-btn-disabled-bg: var(--fa-navy);
+    --bs-btn-disabled-border-color: var(--fa-navy);
+}
+
+.btn-outline-primary {
+    --bs-btn-color: var(--fa-navy);
+    --bs-btn-border-color: var(--fa-line-strong);
+    --bs-btn-hover-color: var(--fa-navy);
+    --bs-btn-hover-bg: var(--fa-royal-soft);
+    --bs-btn-hover-border-color: var(--fa-navy);
+    --bs-btn-active-color: var(--fa-navy);
+    --bs-btn-active-bg: var(--fa-royal-soft);
+    --bs-btn-active-border-color: var(--fa-navy);
+    border-width: 2px;
+}
+
+/* Acción destacada (naranja con texto navy, contraste AA) */
+.btn-acento {
+    --bs-btn-color: var(--fa-navy);
+    --bs-btn-bg: var(--fa-orange);
+    --bs-btn-border-color: var(--fa-orange);
+    --bs-btn-hover-color: var(--fa-white);
+    --bs-btn-hover-bg: var(--fa-orange-strong);
+    --bs-btn-hover-border-color: var(--fa-orange-strong);
+    --bs-btn-active-color: var(--fa-white);
+    --bs-btn-active-bg: var(--fa-orange-strong);
+    --bs-btn-active-border-color: var(--fa-orange-strong);
+    --bs-btn-font-weight: 600;
+}
+
+/* Campos de formulario: altos y con foco visible */
+.form-control:not(.form-control-sm):not(textarea),
+.form-select:not(.form-select-sm) {
+    min-height: var(--fa-control-h);
+}
+
+.form-control,
+.form-select {
+    border-width: 1.5px;
+    border-color: var(--fa-line-strong);
+}
+
+.form-control:focus,
+.form-select:focus,
+.form-check-input:focus {
+    border-color: var(--fa-royal);
+    box-shadow: 0 0 0 4px var(--fa-royal-tint);
+}
+
+.form-check-input:checked {
+    background-color: var(--fa-navy);
+    border-color: var(--fa-navy);
+}
+
+.form-label {
+    font-weight: 500;
+}
+
+:where(.fa-ui) .form-label {
+    color: var(--fa-navy);
+}
+
+.card {
+    --bs-card-border-color: var(--fa-line);
+    --bs-card-border-radius: var(--fa-r-lg);
+    --bs-card-inner-border-radius: calc(var(--fa-r-lg) - 1px);
+}
+
+/* Foco visible con teclado */
+a:focus-visible,
+.btn:focus-visible {
+    outline: none;
+    box-shadow: var(--fa-focus);
+}
+
+::selection {
+    background: var(--fa-orange-tint);
+    color: var(--fa-navy);
+}
+
+/* Iconos de la marca (trazo lineal, toman el color del texto) */
+.fa-icon {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    flex: none;
+    vertical-align: middle;
+    color: currentColor;
+}
+
+/* --------------------------------------------------------------------------
+   Utilidades del sistema de diseño (prefijo fa-, no chocan con Bootstrap)
+   -------------------------------------------------------------------------- */
+:where(.fa-ui) h1 { font-size: var(--fa-fs-3xl); }
+:where(.fa-ui) h2 { font-size: clamp(1.75rem, 1.4rem + 1.4vw, 2.5rem); }
+:where(.fa-ui) h3 { font-size: var(--fa-fs-lg); }
+:where(.fa-ui) h4 { font-size: var(--fa-fs-md); }
+:where(.fa-ui) h5, :where(.fa-ui) h6 { font-size: var(--fa-fs-base); }
+
+/* Listas del diseño: sin sangría ni viñetas */
+.hero__checks, .how__steps, .site-nav__links, .timeline, .plan__list, .appt-list,
+.sidebar__nav, .profile-steps, .fa-steps, .auth__benefits, .site-footer ul,
+.mp-cover__meta, .mp-nav, .mp-hours {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.fa-container { width: 100%; max-width: var(--fa-container); margin-inline: auto; padding-inline: var(--fa-s6); }
+@media (max-width: 600px) { .fa-container { padding-inline: var(--fa-s4); } }
+
+.fa-stack { display: flex; flex-direction: column; gap: var(--fa-s4); }
+.fa-row { display: flex; align-items: center; gap: var(--fa-s3); flex-wrap: wrap; }
+.fa-between { justify-content: space-between; }
+.fa-grid { display: grid; gap: var(--fa-s6); }
+.fa-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.fa-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.fa-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 1024px) { .fa-grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .fa-grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 680px) { .fa-grid-2, .fa-grid-3, .fa-grid-4 { grid-template-columns: 1fr; } }
+
+.fa-muted { color: var(--fa-ink-70); }
+.fa-small { font-size: var(--fa-fs-sm); }
+.fa-xs { font-size: var(--fa-fs-xs); }
+.fa-center { text-align: center; }
+.fa-mt-0 { margin-top: 0; }
+.fa-mb-0 { margin-bottom: 0; }
+
+.fa-sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+.fa-skip {
+    position: absolute; left: var(--fa-s4); top: -60px; z-index: 100;
+    padding: var(--fa-s3) var(--fa-s4); background: var(--fa-navy); color: var(--fa-white);
+    border-radius: var(--fa-r-sm); text-decoration: none;
+}
+.fa-skip:focus { top: var(--fa-s4); color: var(--fa-white); }
+
+.fa-icon-lg { width: 32px; height: 32px; }
+.fa-icon-xl { width: 48px; height: 48px; }
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

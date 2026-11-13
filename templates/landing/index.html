@@ -1,237 +1,174 @@
 {% extends 'landing/base_landing.html' %}
 {% block descripcion %}Agenda online para spas, peluquerías, barberías y salones de belleza en Colombia. Tus clientes reservan 24/7, reciben recordatorios automáticos y tú lo manejas todo desde el celular.{% endblock %}
-{% load static %}
+{% load static iconos %}
+
+{% block extra_css %}
+<style>
+    /* Sin fotos por ahora: la composición del hero muestra el producto */
+    .hero__preview {
+        position: absolute; left: 50%; bottom: 8%; z-index: 1; width: 78%;
+        transform: translateX(-50%); border-radius: var(--fa-r-lg); overflow: hidden;
+        border: 8px solid var(--fa-white); box-shadow: var(--fa-shadow-lg); background: var(--fa-white);
+    }
+    .hero__preview img { width: 100%; height: auto; display: block; }
+    .float-card--a { top: 14%; }
+    .float-card--c { bottom: 2%; }
+
+    .how__media--marca { position: relative; isolation: isolate; }
+    .how__media--marca img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: var(--fa-r-xl) var(--fa-r-xl) var(--fa-r-xl) 160px; }
+    .how__media--marca .how__iso { position: absolute; inset: 0; display: grid; place-items: center; }
+    .how__media--marca .how__iso img { width: 46%; height: auto; aspect-ratio: auto; border-radius: 0; }
+</style>
+{% endblock %}
 
 {% block content %}
-<!-- Hero Section -->
-<section class="hero-section position-relative">
-    <div class="container position-relative">
-        <div class="row align-items-center">
-            <div class="col-lg-6 mb-5 mb-lg-0">
-                <h1 class="display-4 fw-bold mb-4">
-                    Gestiona tu negocio de belleza con un solo sistema
-                </h1>
-                <p class="lead mb-4">
-                    Agenda online, gestión de clientes, recordatorios automáticos y más.
-                    Todo lo que necesitas para hacer crecer tu negocio.
-                </p>
-                <div class="d-flex gap-3 flex-wrap">
-                    <a href="{% url 'suscripciones:registro_negocio' %}" class="btn btn-light btn-lg px-4 py-3">
-                        <i class="bi bi-rocket-takeoff-fill me-2"></i> Empieza Gratis
-                    </a>
-                    <a href="{% url 'core:como_funciona' %}" class="btn btn-outline-light btn-lg px-4 py-3">
-                        <i class="bi bi-play-circle me-2"></i> Ver Demo
-                    </a>
-                </div>
-                <p class="mt-4 small opacity-75">
-                    <i class="bi bi-check-circle-fill me-2"></i> Sin tarjeta de crédito
-                    <i class="bi bi-check-circle-fill ms-3 me-2"></i> Configuración en 5 minutos
-                </p>
-            </div>
-            <div class="col-lg-6">
-                <div class="text-center">
-                    <img src="{% static 'images/dashboard-preview.png' %}"
-                         alt="Dashboard Preview - facilacces"
-                         class="img-fluid rounded-4 shadow-lg"
-                         style="border: 10px solid rgba(255,255,255,0.2);">
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Stats Section -->
-<section class="stats-section">
-    <div class="container">
-        <div class="row">
-            <div class="col-md-3 mb-4">
-                <div class="stat-card">
-                    <div class="stat-number">{{ total_negocios }}+</div>
-                    <p class="text-muted">Negocios Activos</p>
-                </div>
-            </div>
-            <div class="col-md-3 mb-4">
-                <div class="stat-card">
-                    <div class="stat-number">98%</div>
-                    <p class="text-muted">Satisfacción</p>
-                </div>
-            </div>
-            <div class="col-md-3 mb-4">
-                <div class="stat-card">
-                    <div class="stat-number">24/7</div>
-                    <p class="text-muted">Disponibilidad</p>
-                </div>
-            </div>
-            <div class="col-md-3 mb-4">
-                <div class="stat-card">
-                    <div class="stat-number">+35%</div>
-                    <p class="text-muted">Más Citas</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Features Section -->
-<section class="py-5">
-    <div class="container">
-        <div class="text-center mb-5">
-            <h2 class="display-5 fw-bold mb-3">Todo lo que necesitas en un solo lugar</h2>
-            <p class="lead text-muted">Funcionalidades diseñadas específicamente para spas y peluquerías</p>
-        </div>
-
-        <div class="row g-4">
-            <div class="col-md-4">
-                <div class="feature-card">
-                    <div class="feature-icon bg-gradient-1 text-white">
-                        <i class="bi bi-calendar-check"></i>
-                    </div>
-                    <h4>Agenda Online 24/7</h4>
-                    <p class="text-muted">
-                        Tus clientes pueden agendar citas desde cualquier lugar, cualquier hora.
-                        Sistema inteligente que evita solapamientos.
-                    </p>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="feature-card">
-                    <div class="feature-icon bg-gradient-2 text-white">
-                        <i class="bi bi-people"></i>
-                    </div>
-                    <h4>CRM de Clientes</h4>
-                    <p class="text-muted">
-                        Gestiona tu base de clientes, historial de servicios y preferencias.
-                        Identifica clientes frecuentes e inactivos.
-                    </p>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="feature-card">
-                    <div class="feature-icon bg-gradient-3 text-white">
-                        <i class="bi bi-bell"></i>
-                    </div>
-                    <h4>Recordatorios Automáticos</h4>
-                    <p class="text-muted">
-                        WhatsApp, SMS y Email. Reduce el ausentismo con recordatorios
-                        automáticos 24h antes de cada cita.
-                    </p>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="feature-card">
-                    <div class="feature-icon bg-gradient-4 text-white">
-                        <i class="bi bi-cash-coin"></i>
-                    </div>
-                    <h4>Sistema de Abonos</h4>
-                    <p class="text-muted">
-                        Asegura tus citas con sistema de abonos. Confirmación manual
-                        de pagos para mayor control.
-                    </p>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="feature-card">
-                    <div class="feature-icon bg-gradient-5 text-white">
-                        <i class="bi bi-megaphone"></i>
-                    </div>
-                    <h4>Promociones y Fidelización</h4>
-                    <p class="text-muted">
-                        Crea campañas segmentadas. Reactiva clientes inactivos y
-                        premia a los frecuentes.
-                    </p>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="feature-card">
-                    <div class="feature-icon bg-gradient-6 text-white">
-                        <i class="bi bi-graph-up"></i>
-                    </div>
-                    <h4>Reportes y Estadísticas</h4>
-                    <p class="text-muted">
-                        Analiza tu negocio con reportes detallados. Ingresos,
-                        servicios más solicitados y más.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- How It Works -->
-<section class="py-5 bg-light">
-    <div class="container">
-        <div class="text-center mb-5">
-            <h2 class="display-5 fw-bold mb-3">Comienza en 3 simples pasos</h2>
-            <p class="lead text-muted">Configura tu negocio en minutos</p>
-        </div>
-
-        <div class="row g-4">
-            <div class="col-md-4 text-center">
-                <div class="mb-3">
-                    <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center"
-                         style="width: 80px; height: 80px; font-size: 2rem; font-weight: bold;">
-                        1
-                    </div>
-                </div>
-                <h4>Regístrate</h4>
-                <p class="text-muted">
-                    Crea tu cuenta gratis en menos de 2 minutos.
-                    Sin tarjeta de crédito.
-                </p>
-            </div>
-
-            <div class="col-md-4 text-center">
-                <div class="mb-3">
-                    <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center"
-                         style="width: 80px; height: 80px; font-size: 2rem; font-weight: bold;">
-                        2
-                    </div>
-                </div>
-                <h4>Configura tu negocio</h4>
-                <p class="text-muted">
-                    Agrega tus servicios, horarios y personaliza tu mini página.
-                </p>
-            </div>
-
-            <div class="col-md-4 text-center">
-                <div class="mb-3">
-                    <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center"
-                         style="width: 80px; height: 80px; font-size: 2rem; font-weight: bold;">
-                        3
-                    </div>
-                </div>
-                <h4>Comparte tu enlace</h4>
-                <p class="text-muted">
-                    Recibe reservas automáticamente. Tus clientes agendan 24/7.
-                </p>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- CTA Section -->
-<section class="py-5">
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-lg-8 text-center">
-                <h2 class="display-5 fw-bold mb-4">
-                    ¿Listo para modernizar tu negocio?
-                </h2>
-                <p class="lead mb-4">
-                    Únete a cientos de negocios que ya confían en facilacces
-                </p>
-                <a href="{% url 'suscripciones:registro_negocio' %}" class="btn btn-primary-gradient btn-lg px-5 py-3">
-                    <i class="bi bi-rocket-takeoff-fill me-2"></i> Comenzar Ahora - Es Gratis
+<section class="hero">
+    <div class="fa-container hero__inner">
+        <div>
+            <span class="fa-tag fa-tag--on-dark">Para spas, peluquerías y barberías</span>
+            <h1>Gestiona tu negocio de belleza con <em>un solo sistema</em></h1>
+            <p class="hero__lead">
+                Agenda online, gestión de clientes, recordatorios automáticos y más.
+                Todo lo que necesitas para hacer crecer tu negocio.
+            </p>
+            <div class="hero__ctas">
+                <a class="fa-btn fa-btn--accent fa-btn--lg" href="{% url 'suscripciones:registro_negocio' %}">
+                    Empieza gratis {% icono 'flecha-der' %}
                 </a>
-                <p class="mt-3 text-muted small">
-                    <i class="bi bi-shield-check me-2"></i> Cancela cuando quieras · Sin compromisos
-                </p>
+                <a class="fa-btn fa-btn--on-dark fa-btn--lg" href="{% url 'core:como_funciona' %}">
+                    {% icono 'play' %} Ver demo
+                </a>
             </div>
+            <ul class="hero__checks">
+                <li>{% icono 'check-circulo' %} Sin tarjeta de crédito</li>
+                <li>{% icono 'check-circulo' %} Configuración en 5 minutos</li>
+            </ul>
+        </div>
+        <div class="hero__visual" aria-hidden="true">
+            <span class="hero__shape hero__shape--arch"></span>
+            <span class="hero__shape hero__shape--quarter"></span>
+            <span class="hero__shape hero__shape--circle"></span>
+            <div class="hero__preview">
+                <img src="{% static 'images/dashboard-preview.png' %}" alt="">
+            </div>
+            <div class="float-card float-card--a">
+                <span class="fa-tile">{% icono 'cita' %}</span>
+                <div><strong>Nueva cita</strong>Hoy · 3:30 p. m.</div>
+            </div>
+            <div class="float-card float-card--b">
+                <span class="fa-tile fa-tile--orange">{% icono 'recordatorio' %}</span>
+                <div><strong>Recordatorio enviado</strong>Antes de cada cita</div>
+            </div>
+            <div class="float-card float-card--c">
+                <span class="fa-tile fa-tile--royal">{% icono 'abonos' %}</span>
+                <div><strong>Abono recibido</strong>Cita asegurada</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="stats" aria-label="facilacces en números">
+    <div class="fa-container">
+        <div class="stats__grid">
+            <div class="stat">
+                <span class="fa-tile fa-tile--orange">{% icono 'tienda' %}</span>
+                <div><span class="stat__value">{{ total_negocios }}+</span><span class="stat__label">Negocios activos</span></div>
+            </div>
+            <div class="stat">
+                <span class="fa-tile fa-tile--orange">{% icono 'satisfecho' %}</span>
+                <div><span class="stat__value">98%</span><span class="stat__label">Satisfacción</span></div>
+            </div>
+            <div class="stat">
+                <span class="fa-tile fa-tile--orange">{% icono 'reloj' %}</span>
+                <div><span class="stat__value">24/7</span><span class="stat__label">Disponibilidad</span></div>
+            </div>
+            <div class="stat">
+                <span class="fa-tile fa-tile--orange">{% icono 'crecimiento' %}</span>
+                <div><span class="stat__value">+35%</span><span class="stat__label">Más citas</span></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section">
+    <div class="fa-container">
+        <header class="section__head">
+            <span class="fa-eyebrow">Funcionalidades</span>
+            <h2>Todo lo que necesitas en un solo lugar</h2>
+            <p>Funcionalidades diseñadas específicamente para spas y peluquerías</p>
+        </header>
+        <div class="fa-grid fa-grid-3">
+            <article class="feature">
+                <span class="fa-tile">{% icono 'agenda' %}</span>
+                <h3>Agenda Online 24/7</h3>
+                <p>Tus clientes pueden agendar citas desde cualquier lugar, cualquier hora. Sistema inteligente que evita solapamientos.</p>
+            </article>
+            <article class="feature">
+                <span class="fa-tile fa-tile--royal">{% icono 'clientes' %}</span>
+                <h3>CRM de Clientes</h3>
+                <p>Gestiona tu base de clientes, historial de servicios y preferencias. Identifica clientes frecuentes e inactivos.</p>
+            </article>
+            <article class="feature">
+                <span class="fa-tile fa-tile--orange">{% icono 'recordatorio' %}</span>
+                <h3>Recordatorios Automáticos</h3>
+                <p>WhatsApp, SMS y Email. Reduce el ausentismo con recordatorios automáticos 24h antes de cada cita.</p>
+            </article>
+            <article class="feature">
+                <span class="fa-tile">{% icono 'abonos' %}</span>
+                <h3>Sistema de Abonos</h3>
+                <p>Asegura tus citas con sistema de abonos. Confirmación manual de pagos para mayor control.</p>
+            </article>
+            <article class="feature">
+                <span class="fa-tile fa-tile--royal">{% icono 'regalo' %}</span>
+                <h3>Promociones y Fidelización</h3>
+                <p>Crea campañas segmentadas. Reactiva clientes inactivos y premia a los frecuentes.</p>
+            </article>
+            <article class="feature">
+                <span class="fa-tile fa-tile--orange">{% icono 'estadisticas' %}</span>
+                <h3>Reportes y Estadísticas</h3>
+                <p>Analiza tu negocio con reportes detallados. Ingresos, servicios más solicitados y más.</p>
+            </article>
+        </div>
+    </div>
+</section>
+
+<section class="section section--cream">
+    <div class="fa-container how">
+        <div class="how__media how__media--marca" aria-hidden="true">
+            <img src="{% static 'images/fondos/degradado-07.jpg' %}" alt="" loading="lazy">
+            <div class="how__iso"><img src="{% static 'images/marca/isotipo-sobre-navy.svg' %}" alt=""></div>
+        </div>
+        <div>
+            <span class="fa-eyebrow">Así de fácil</span>
+            <h2>Comienza en 3 simples pasos</h2>
+            <p class="fa-muted" style="font-size: 1.125rem; margin-bottom: 40px;">Configura tu negocio en minutos</p>
+            <ol class="how__steps">
+                <li class="how__step">
+                    <span class="how__num">1</span>
+                    <div><h3>Regístrate</h3><p>Crea tu cuenta gratis en menos de 2 minutos. Sin tarjeta de crédito.</p></div>
+                </li>
+                <li class="how__step">
+                    <span class="how__num">2</span>
+                    <div><h3>Configura tu negocio</h3><p>Agrega tus servicios, horarios y personaliza tu mini página.</p></div>
+                </li>
+                <li class="how__step">
+                    <span class="how__num">3</span>
+                    <div><h3>Comparte tu enlace</h3><p>Recibe reservas automáticamente. Tus clientes agendan 24/7.</p></div>
+                </li>
+            </ol>
+        </div>
+    </div>
+</section>
+
+<section class="section section--tight">
+    <div class="fa-container">
+        <div class="cta">
+            <h2>¿Listo para modernizar tu negocio?</h2>
+            <p>Únete a cientos de negocios que ya confían en facilacces</p>
+            <a class="fa-btn fa-btn--accent fa-btn--lg" href="{% url 'suscripciones:registro_negocio' %}">
+                Comenzar ahora - Es gratis {% icono 'flecha-der' %}
+            </a>
+            <div><span class="cta__note">{% icono 'check-circulo' %} Cancela cuando quieras · Sin compromisos</span></div>
         </div>
     </div>
 </section>

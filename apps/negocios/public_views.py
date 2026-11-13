@@ -21,6 +21,7 @@ from .disponibilidad import (
     horarios_disponibles, resolver_especialista, tiene_varios_especialistas,
 )
 from . import novedades_cliente
+from .colores import MARCA_PRINCIPAL
 from .models import Negocio
 from apps.servicios.models import Servicio
 from apps.clientes.models import Cliente
@@ -489,7 +490,7 @@ def manifest_minipagina(request, slug):
         "scope": f"/{slug}/",
         "display": "standalone",
         "background_color": "#ffffff",
-        "theme_color": negocio.color_primario or "#6366f1",
+        "theme_color": negocio.color_primario or MARCA_PRINCIPAL,
         "orientation": "portrait-primary",
         "icons": []
     }
@@ -898,7 +899,7 @@ def manifest_admin(request, slug):
         "scope": f"/{slug}/admin/",
         "display": "standalone",
         "background_color": "#ffffff",
-        "theme_color": negocio.color_primario or "#6366f1",
+        "theme_color": MARCA_PRINCIPAL,  # el panel usa los colores de facilacces
         "orientation": "portrait-primary",
         "icons": []
     }

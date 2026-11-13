@@ -24,6 +24,8 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
 
+from apps.negocios.colores import MARCA_SECUNDARIO
+
 CONTRASENA = 'prueba1234'
 
 # Lunes=0 ... Domingo=6: (abre, cierra) o None si cierra
@@ -162,7 +164,7 @@ class Command(BaseCommand):
             administrador=dueno, nombre=datos['nombre'], tipo=datos['tipo'], telefono=telefono,
             whatsapp=telefono, ciudad=datos['ciudad'], direccion=datos['direccion'],
             descripcion=datos['descripcion'], color_primario=datos['color'],
-            color_secundario=datos.get('color_secundario', '#6c757d'),
+            color_secundario=datos.get('color_secundario', MARCA_SECUNDARIO),
             usar_degradado=datos.get('degradado', False),
             horario_apertura=time(8, 0), horario_cierre=time(19, 0),
             nequi=telefono, porcentaje_abono=Decimal('30'),

@@ -8,9 +8,12 @@
     <!-- Buscadores: páginas públicas indexables (las privadas lo cambian a noindex) -->
     <meta name="robots" content="{% block robots %}index, follow{% endblock %}">
 
-    {% load static %}
+    {% load static iconos %}
     <meta name="description" content="{% block descripcion %}Agenda online, recordatorios automáticos y gestión de clientes para spas, peluquerías y barberías.{% endblock %}">
     <title>{% block title %}{{ title }}{% endblock %}</title>
+    <meta name="theme-color" content="#021A58">
+    <link rel="icon" type="image/png" href="{% static 'images/facilacces-favicon.png' %}">
+    <link rel="apple-touch-icon" href="{% static 'images/apple-touch-icon.png' %}">
 
     <!-- Dirección oficial y vista previa al compartir en redes (WhatsApp, Facebook, Instagram) -->
     <link rel="canonical" href="{{ url_canonica }}">
@@ -26,213 +29,94 @@
     <meta name="twitter:card" content="summary_large_image">
     {% load seo %}{% block datos_estructurados %}{% datos_estructurados_plataforma %}{% endblock %}
 
+    <link rel="preload" href="{% static 'fonts/rubik-400.woff2' %}" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="{% static 'fonts/rubik-700.woff2' %}" as="font" type="font/woff2" crossorigin>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/marca.css' %}">
+    <link rel="stylesheet" href="{% static 'css/marca-componentes.css' %}">
+    <link rel="stylesheet" href="{% static 'css/marca-sitio.css' %}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
     <style>
-        :root {
-            --primary-color: #052981;
-            --secondary-color: #021A58;
-            --accent-color: #FD651A;
-            --dark: #1e293b;
-            --light: #f8fafc;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        }
-
-        .navbar-brand {
-            font-weight: 700;
-            font-size: 1.5rem;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .hero-section {
-            background: linear-gradient(135deg, #052981 0%, #021A58 100%);
-            color: white;
-            padding: 100px 0;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .hero-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="2" fill="white" opacity="0.1"/></svg>');
-            opacity: 0.5;
-        }
-
+        /* Las páginas internas aún usan estas clases */
         .btn-primary-gradient {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            border: none;
-            color: white;
-            padding: 12px 32px;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: transform 0.2s;
+            --bs-btn-color: var(--fa-navy);
+            --bs-btn-bg: var(--fa-orange);
+            --bs-btn-border-color: var(--fa-orange);
+            --bs-btn-hover-color: var(--fa-white);
+            --bs-btn-hover-bg: var(--fa-orange-strong);
+            --bs-btn-hover-border-color: var(--fa-orange-strong);
+            --bs-btn-font-weight: 600;
         }
 
-        .btn-primary-gradient:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(5, 41, 129, 0.3);
-        }
-
-        .feature-card {
-            border: none;
-            border-radius: 16px;
-            padding: 30px;
-            height: 100%;
-            transition: transform 0.3s, box-shadow 0.3s;
-            background: white;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        }
-
-        .feature-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-        }
-
-        .feature-icon {
-            width: 60px;
-            height: 60px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            margin-bottom: 20px;
-        }
-
-        .bg-gradient-1 { background: linear-gradient(135deg, #052981 0%, #021A58 100%); }
-        .bg-gradient-2 { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-        .bg-gradient-3 { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-        .bg-gradient-4 { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
-        .bg-gradient-5 { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
-        .bg-gradient-6 { background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); }
-
-        .stats-section {
-            background: var(--light);
-            padding: 60px 0;
-        }
-
-        .stat-card {
-            text-align: center;
-        }
-
-        .stat-number {
-            font-size: 3rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        footer {
-            background: var(--dark);
-            color: white;
-            padding: 40px 0 20px;
-        }
+        .site-header .fa-logo img { height: 34px; width: auto; }
+        .site-nav__links { margin: 0; padding: 0; }
+        .site-nav__links a.dropdown-toggle::after { margin-left: 6px; }
+        .site-footer ul { margin: 0; padding: 0; }
+        .site-footer p { color: var(--fa-on-dark-muted); }
+        .site-footer h2 { margin-bottom: var(--fa-s4); }
+        .site-footer__bottom p { margin: 0; }
     </style>
 
     {% block extra_css %}{% endblock %}
 </head>
-<body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
-        <div class="container">
-            <a class="navbar-brand d-flex align-items-center" href="{% url 'core:landing' %}">
-                <img src="{% static 'images/facilacces-icon-192.png' %}" alt="" style="height: 40px;" class="me-2">
-                <span>facilacces</span>
+<body class="fa-ui">
+    <a class="fa-skip" href="#contenido">Saltar al contenido</a>
+
+    {% with pagina=request.resolver_match.url_name %}
+    <header class="site-header">
+        <div class="fa-container site-header__inner">
+            <a class="fa-logo" href="{% url 'core:landing' %}" aria-label="facilacces, ir al inicio">
+                <img src="{% static 'images/marca/logo-principal.svg' %}" alt="facilacces" width="164" height="34">
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
+            <button class="fa-btn fa-btn--outline fa-btn--icon site-menu-btn" type="button" data-toggle-nav aria-controls="site-nav" aria-expanded="false" aria-label="Abrir menú">
+                {% icono 'menu' %}
             </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'core:landing' %}">Inicio</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'core:como_funciona' %}">Cómo Funciona</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'core:precios' %}">Precios</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'core:contacto' %}">Contacto</a>
-                    </li>
-
+            <nav class="site-nav" id="site-nav" aria-label="Principal">
+                <ul class="site-nav__links">
+                    <li><a href="{% url 'core:landing' %}" {% if pagina == 'landing' %}aria-current="page"{% endif %}>Inicio</a></li>
+                    <li><a href="{% url 'core:como_funciona' %}" {% if pagina == 'como_funciona' %}aria-current="page"{% endif %}>Cómo funciona</a></li>
+                    <li><a href="{% url 'core:precios' %}" {% if pagina == 'precios' %}aria-current="page"{% endif %}>Precios</a></li>
+                    <li><a href="{% url 'core:contacto' %}" {% if pagina == 'contacto' %}aria-current="page"{% endif %}>Contacto</a></li>
+                    {% if user.is_authenticated and user.is_superuser %}
+                    <li><a href="/admin/">Django Admin</a></li>
+                    <li><a href="{% url 'core:superadmin_negocios' %}">Negocios</a></li>
+                    {% endif %}
+                </ul>
+                <div class="site-nav__actions">
                     {% if user.is_authenticated %}
-                        <!-- Menú para usuarios autenticados -->
-                        {% if user.is_superuser %}
-                            <!-- Botón Django Admin para superadmin -->
-                            <li class="nav-item">
-                                <a class="nav-link" href="/admin/" style="color: var(--accent-color); font-weight: 600;">
-                                    <i class="bi bi-gear-fill"></i> Django Admin
-                                </a>
-                            </li>
-                            <!-- Negocios inscritos (con indicadores de uso y acceso de soporte) -->
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'core:superadmin_negocios' %}">
-                                    <i class="bi bi-shop"></i> Negocios
-                                </a>
-                            </li>
-                        {% endif %}
-
-                        <!-- Usuario y Logout -->
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                <i class="bi bi-person-circle"></i> {{ user.nombre|default:user.email }}
+                        <div class="dropdown">
+                            <a class="fa-btn fa-btn--ghost dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                {% icono 'usuario' %} {{ user.nombre|default:user.email }}
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end">
                                 {% if user.negocio %}
                                 <li>
-                                    <a class="dropdown-item" href="/{{ user.negocio.slug }}/admin/">
-                                        <i class="bi bi-speedometer2"></i> Mi Panel
-                                    </a>
+                                    <a class="dropdown-item" href="/{{ user.negocio.slug }}/admin/">Mi panel</a>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
                                 {% endif %}
                                 <li>
                                     <form method="post" action="{% url 'logout' %}" class="d-inline">
                                         {% csrf_token %}
-                                        <button type="submit" class="dropdown-item text-danger">
-                                            <i class="bi bi-box-arrow-right"></i> Cerrar Sesión
-                                        </button>
+                                        <button type="submit" class="dropdown-item text-danger">Cerrar sesión</button>
                                     </form>
                                 </li>
                             </ul>
-                        </li>
+                        </div>
                     {% else %}
-                        <!-- Menú para usuarios NO autenticados -->
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'login' %}">
-                                <i class="bi bi-box-arrow-in-right"></i> Iniciar Sesión
-                            </a>
-                        </li>
-                        <li class="nav-item ms-2">
-                            <a class="btn btn-primary-gradient" href="{% url 'suscripciones:registro_negocio' %}">
-                                <i class="bi bi-rocket-takeoff"></i> Prueba Gratis
-                            </a>
-                        </li>
+                        <a class="fa-btn fa-btn--ghost" href="{% url 'login' %}">{% icono 'usuario' %} Iniciar sesión</a>
+                        <a class="fa-btn fa-btn--accent" href="{% url 'suscripciones:registro_negocio' %}">Prueba gratis</a>
                     {% endif %}
-                </ul>
-            </div>
+                </div>
+            </nav>
         </div>
-    </nav>
+    </header>
+    {% endwith %}
 
     {% block messages %}
     {% if messages %}
-        <div class="container mt-3">
+        <div class="fa-container mt-3">
             {% for message in messages %}
                 <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
                     {{ message }}
@@ -243,63 +127,72 @@
     {% endif %}
     {% endblock %}
 
-    <!-- Content -->
-    {% block content %}{% endblock %}
+    <main id="contenido">
+        {% block content %}{% endblock %}
+    </main>
 
-    <!-- Footer -->
-    <footer>
-        <div class="container">
-            <div class="row">
-                <div class="col-md-4 mb-4">
-                    <h5 class="mb-3">
-                        <i class="bi bi-calendar-check-fill"></i> facilacces
-                    </h5>
-                    <p class="text-muted">
+    <footer class="site-footer">
+        <div class="fa-container">
+            <div class="site-footer__grid">
+                <div>
+                    <a class="fa-logo" href="{% url 'core:landing' %}" aria-label="facilacces, ir al inicio">
+                        <img src="{% static 'images/marca/logo-sobre-navy.svg' %}" alt="facilacces" width="174" height="36">
+                    </a>
+                    <p>
                         Sistema completo de gestión para spas, peluquerías y barberías.
                         Simplifica tu negocio con tecnología.
                     </p>
                 </div>
-                <div class="col-md-2 mb-4">
-                    <h6>Producto</h6>
-                    <ul class="list-unstyled">
-                        <li><a href="{% url 'core:como_funciona' %}" class="text-muted text-decoration-none">Cómo Funciona</a></li>
-                        <li><a href="{% url 'core:precios' %}" class="text-muted text-decoration-none">Precios</a></li>
-                        <li><a href="#" class="text-muted text-decoration-none">Demo</a></li>
+                <div>
+                    <h2>Producto</h2>
+                    <ul>
+                        <li><a href="{% url 'core:como_funciona' %}">Cómo funciona</a></li>
+                        <li><a href="{% url 'core:precios' %}">Precios</a></li>
+                        <li><a href="#">Demo</a></li>
                     </ul>
                 </div>
-                <div class="col-md-2 mb-4">
-                    <h6>Soporte</h6>
-                    <ul class="list-unstyled">
-                        <li><a href="{% url 'core:contacto' %}" class="text-muted text-decoration-none">Contacto</a></li>
-                        <li><a href="#" class="text-muted text-decoration-none">FAQ</a></li>
-                        <li><a href="#" class="text-muted text-decoration-none">Documentación</a></li>
+                <div>
+                    <h2>Soporte</h2>
+                    <ul>
+                        <li><a href="{% url 'core:contacto' %}">Contacto</a></li>
+                        <li><a href="#">FAQ</a></li>
+                        <li><a href="#">Documentación</a></li>
                     </ul>
                 </div>
-                <div class="col-md-4 mb-4">
-                    <h6>Newsletter</h6>
-                    <p class="text-muted small">Recibe consejos y novedades</p>
-                    <form class="d-flex gap-2">
-                        <input type="email" class="form-control" placeholder="tu@email.com">
-                        <button class="btn btn-primary-gradient">Suscribir</button>
+                <div>
+                    <h2>Newsletter</h2>
+                    <p class="fa-small">Recibe consejos y novedades</p>
+                    <form class="newsletter">
+                        <label class="fa-sr-only" for="correo-newsletter">Correo electrónico</label>
+                        <input type="email" class="fa-input" id="correo-newsletter" placeholder="tu@email.com">
+                        <button class="fa-btn fa-btn--accent" type="button">Suscribir</button>
                     </form>
                 </div>
             </div>
-            <hr class="border-secondary">
-            <div class="row">
-                <div class="col-md-6 text-center text-md-start">
-                    <p class="text-muted small mb-0">© 2024 facilacces. Todos los derechos reservados.</p>
-                </div>
-                <div class="col-md-6 text-center text-md-end">
-                    <a href="#" class="text-muted me-3"><i class="bi bi-facebook"></i></a>
-                    <a href="#" class="text-muted me-3"><i class="bi bi-instagram"></i></a>
-                    <a href="#" class="text-muted me-3"><i class="bi bi-twitter"></i></a>
-                    <a href="#" class="text-muted"><i class="bi bi-linkedin"></i></a>
+            <div class="fa-dotline site-footer__line" style="color: var(--fa-white);"></div>
+            <div class="site-footer__bottom">
+                <p class="fa-small">© 2024 facilacces. Todos los derechos reservados.</p>
+                <div class="socials">
+                    <a href="#" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
+                    <a href="#" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+                    <a href="#" aria-label="Twitter"><i class="bi bi-twitter"></i></a>
+                    <a href="#" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
                 </div>
             </div>
         </div>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Menú del sitio en celular
+        document.querySelectorAll('[data-toggle-nav]').forEach(function(boton) {
+            const menu = document.getElementById(boton.getAttribute('aria-controls'));
+            boton.addEventListener('click', function() {
+                const abierto = menu.classList.toggle('is-open');
+                boton.setAttribute('aria-expanded', String(abierto));
+            });
+        });
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

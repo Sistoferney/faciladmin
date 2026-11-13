@@ -39,6 +39,39 @@
         filter: brightness(0.92);
     }
 
+    /* Diseño de la mini-página (marca-minipagina.css) con los colores del negocio */
+    .mp .fa-btn--accent,
+    .mp .fa-btn--primary {
+        --btn-bg: var(--negocio-fondo);
+        --btn-bd: transparent;
+        --btn-fg: var(--negocio-texto);
+        background-origin: border-box;
+    }
+    .mp .mp-nav a.fa-btn { color: var(--btn-fg); }
+    .mp .fa-btn--accent:hover,
+    .mp .fa-btn--primary:hover { filter: brightness(.92); }
+    .mp-header { border-top: 4px solid transparent; border-image: var(--negocio-fondo) 1; border-image-slice: 1; }
+    .mp-brand { color: var(--negocio-acento); }
+    .mp-brand__mark { background: var(--negocio-fondo); color: var(--negocio-texto); }
+    .mp-brand__logo { max-height: 52px; max-width: min(220px, 50vw); width: auto; }
+    .mp-brand { min-width: 0; }
+    .mp-brand__mark { flex: none; }
+    .mp-brand__nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    @media (max-width: 480px) { .mp-brand__nombre { max-width: 34vw; } }
+    .mp-cover { background: var(--negocio-degradado); }
+    .mp-cover::after { background: linear-gradient(180deg, rgba(0, 0, 0, 0) 20%, rgba(0, 0, 0, .7) 100%); }
+    .mp-cover__meta .fa-icon { color: var(--fa-white); }
+    .mp-cover .fa-tag { background: rgba(0, 0, 0, .3); }
+    .mp :where(h2, h3, .mp-price) { color: var(--negocio-acento); }
+    .mp .fa-eyebrow { color: var(--negocio-acento); }
+    .mp .fa-eyebrow::before { background: var(--negocio-acento); }
+    .mp .mp-cover h1 { color: var(--fa-white); }
+    .mp-footer { background: var(--fa-navy); }
+    .mp .alert { border: 0; border-left: 4px solid; border-radius: var(--fa-r); }
+    .mp .alert-info { background: var(--fa-royal-soft); border-left-color: var(--negocio-acento); color: var(--fa-ink); }
+    .mp .alert-warning { background: var(--fa-orange-soft); border-left-color: var(--fa-orange); color: var(--fa-ink); }
+    .mp .card { border: 1px solid var(--fa-line); border-radius: var(--fa-r-lg); }
+
     .btn-outline-primary {
         --bs-btn-color: var(--negocio-acento);
         --bs-btn-border-color: var(--negocio-acento);

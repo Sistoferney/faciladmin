@@ -1,141 +1,95 @@
 {% extends 'landing/base_landing.html' %}
+{% load iconos %}
 {% block descripcion %}Planes de facilacces: agenda online, recordatorios automáticos, abonos y gestión de clientes para tu negocio de belleza. Empieza gratis.{% endblock %}
 
 {% block content %}
-<section class="py-5">
-    <div class="container">
-        <div class="text-center mb-5">
-            <h1 class="display-4 fw-bold">Planes y Precios</h1>
-            <p class="lead text-muted">Elige el plan perfecto para tu negocio</p>
+<section class="page-hero">
+    <div class="fa-container">
+        <div class="page-hero__inner">
+            <span class="fa-eyebrow fa-eyebrow--on-dark">Precios</span>
+            <h1>Planes y Precios</h1>
+            <p>Elige el plan perfecto para tu negocio</p>
         </div>
+    </div>
+</section>
 
-        <div class="row g-4 justify-content-center">
+<section class="section">
+    <div class="fa-container">
+        <div class="plans">
             <!-- Plan Gratis -->
-            <div class="col-lg-4">
-                <div class="card border-0 shadow-sm rounded-4 h-100">
-                    <div class="card-body p-4">
-                        <h5 class="text-muted mb-3">Gratis</h5>
-                        <div class="mb-4">
-                            <span class="display-4 fw-bold">$0</span>
-                            <span class="text-muted">/mes</span>
-                        </div>
-                        <p class="text-muted mb-4">Perfecto para empezar</p>
-                        <ul class="list-unstyled mb-4">
-                            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Hasta 50 citas/mes</li>
-                            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> 1 usuario</li>
-                            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Mini página web</li>
-                            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Agenda básica</li>
-                            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Soporte por email</li>
-                        </ul>
-                        <a href="{% url 'suscripciones:registro_negocio' %}" class="btn btn-outline-primary w-100 py-2">
-                            Comenzar Gratis
-                        </a>
-                    </div>
-                </div>
-            </div>
+            <article class="plan">
+                <h2 class="plan__name">Gratis</h2>
+                <p class="plan__price"><strong>$0</strong><span>/mes</span></p>
+                <p class="plan__desc">Perfecto para empezar</p>
+                <ul class="plan__list">
+                    <li>{% icono 'check' %}<span>Hasta 50 citas/mes</span></li>
+                    <li>{% icono 'check' %}<span>1 usuario</span></li>
+                    <li>{% icono 'check' %}<span>Mini página web</span></li>
+                    <li>{% icono 'check' %}<span>Agenda básica</span></li>
+                    <li>{% icono 'check' %}<span>Soporte por email</span></li>
+                </ul>
+                <a class="fa-btn fa-btn--outline fa-btn--block" href="{% url 'suscripciones:registro_negocio' %}">Comenzar Gratis</a>
+            </article>
 
             <!-- Plan Pro -->
-            <div class="col-lg-4">
-                <div class="card border-primary shadow rounded-4 h-100" style="border-width: 3px !important;">
-                    <div class="card-header bg-primary text-white text-center py-3 border-0">
-                        <span class="badge bg-white text-primary">Más Popular</span>
-                    </div>
-                    <div class="card-body p-4">
-                        <h5 class="text-muted mb-3">Pro</h5>
-                        <div class="mb-4">
-                            <span class="display-4 fw-bold">$299</span>
-                            <span class="text-muted">/mes</span>
-                        </div>
-                        <p class="text-muted mb-4">Para negocios en crecimiento</p>
-                        <ul class="list-unstyled mb-4">
-                            <li class="mb-2"><i class="bi bi-check-circle-fill text-primary me-2"></i> <strong>Citas ilimitadas</strong></li>
-                            <li class="mb-2"><i class="bi bi-check-circle-fill text-primary me-2"></i> Hasta 3 usuarios</li>
-                            <li class="mb-2"><i class="bi bi-check-circle-fill text-primary me-2"></i> Mini página personalizada</li>
-                            <li class="mb-2"><i class="bi bi-check-circle-fill text-primary me-2"></i> Recordatorios automáticos</li>
-                            <li class="mb-2"><i class="bi bi-check-circle-fill text-primary me-2"></i> Sistema de abonos</li>
-                            <li class="mb-2"><i class="bi bi-check-circle-fill text-primary me-2"></i> Promociones</li>
-                            <li class="mb-2"><i class="bi bi-check-circle-fill text-primary me-2"></i> Reportes avanzados</li>
-                            <li class="mb-2"><i class="bi bi-check-circle-fill text-primary me-2"></i> Soporte prioritario</li>
-                        </ul>
-                        <a href="{% url 'suscripciones:registro_negocio' %}" class="btn btn-primary-gradient w-100 py-2">
-                            Probar 30 días Gratis
-                        </a>
-                    </div>
-                </div>
-            </div>
+            <article class="plan plan--featured">
+                <span class="plan__badge">Más Popular</span>
+                <h2 class="plan__name">Pro</h2>
+                <p class="plan__price"><strong>$299</strong><span>/mes</span></p>
+                <p class="plan__desc">Para negocios en crecimiento</p>
+                <ul class="plan__list">
+                    <li>{% icono 'check' %}<span>Citas ilimitadas</span></li>
+                    <li>{% icono 'check' %}<span>Hasta 3 usuarios</span></li>
+                    <li>{% icono 'check' %}<span>Mini página personalizada</span></li>
+                    <li>{% icono 'check' %}<span>Recordatorios automáticos</span></li>
+                    <li>{% icono 'check' %}<span>Sistema de abonos</span></li>
+                    <li>{% icono 'check' %}<span>Promociones</span></li>
+                    <li>{% icono 'check' %}<span>Reportes avanzados</span></li>
+                    <li>{% icono 'check' %}<span>Soporte prioritario</span></li>
+                </ul>
+                <a class="fa-btn fa-btn--accent fa-btn--block" href="{% url 'suscripciones:registro_negocio' %}">Probar 30 días Gratis</a>
+            </article>
 
             <!-- Plan Enterprise -->
-            <div class="col-lg-4">
-                <div class="card border-0 shadow-sm rounded-4 h-100">
-                    <div class="card-body p-4">
-                        <h5 class="text-muted mb-3">Enterprise</h5>
-                        <div class="mb-4">
-                            <span class="display-4 fw-bold">$599</span>
-                            <span class="text-muted">/mes</span>
-                        </div>
-                        <p class="text-muted mb-4">Para múltiples sucursales</p>
-                        <ul class="list-unstyled mb-4">
-                            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Todo de Pro +</li>
-                            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Usuarios ilimitados</li>
-                            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Múltiples sucursales</li>
-                            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> API personalizada</li>
-                            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Integraciones avanzadas</li>
-                            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Capacitación incluida</li>
-                            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Soporte 24/7</li>
-                        </ul>
-                        <a href="{% url 'core:contacto' %}" class="btn btn-outline-primary w-100 py-2">
-                            Contactar Ventas
-                        </a>
-                    </div>
-                </div>
-            </div>
+            <article class="plan">
+                <h2 class="plan__name">Enterprise</h2>
+                <p class="plan__price"><strong>$599</strong><span>/mes</span></p>
+                <p class="plan__desc">Para múltiples sucursales</p>
+                <ul class="plan__list">
+                    <li>{% icono 'check' %}<span>Todo de Pro +</span></li>
+                    <li>{% icono 'check' %}<span>Usuarios ilimitados</span></li>
+                    <li>{% icono 'check' %}<span>Múltiples sucursales</span></li>
+                    <li>{% icono 'check' %}<span>API personalizada</span></li>
+                    <li>{% icono 'check' %}<span>Integraciones avanzadas</span></li>
+                    <li>{% icono 'check' %}<span>Capacitación incluida</span></li>
+                    <li>{% icono 'check' %}<span>Soporte 24/7</span></li>
+                </ul>
+                <a class="fa-btn fa-btn--primary fa-btn--block" href="{% url 'core:contacto' %}">Contactar Ventas</a>
+            </article>
         </div>
+    </div>
+</section>
 
-        <!-- FAQ -->
-        <div class="row mt-5">
-            <div class="col-lg-8 mx-auto">
-                <h3 class="text-center mb-4">Preguntas Frecuentes</h3>
-                <div class="accordion" id="faqAccordion">
-                    <div class="accordion-item border-0 mb-3 shadow-sm">
-                        <h2 class="accordion-header">
-                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
-                                ¿Puedo cambiar de plan después?
-                            </button>
-                        </h2>
-                        <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
-                            <div class="accordion-body">
-                                Sí, puedes cambiar de plan en cualquier momento. Los cambios se reflejarán en tu próximo ciclo de facturación.
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="accordion-item border-0 mb-3 shadow-sm">
-                        <h2 class="accordion-header">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
-                                ¿Hay costos adicionales?
-                            </button>
-                        </h2>
-                        <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                            <div class="accordion-body">
-                                No. El precio que ves es el precio que pagas. Sin costos ocultos ni tarifas sorpresa.
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="accordion-item border-0 mb-3 shadow-sm">
-                        <h2 class="accordion-header">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
-                                ¿Puedo cancelar en cualquier momento?
-                            </button>
-                        </h2>
-                        <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                            <div class="accordion-body">
-                                Sí, puedes cancelar tu suscripción en cualquier momento sin penalizaciones. Tus datos se mantienen seguros por 30 días.
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+<!-- FAQ -->
+<section class="section section--cream" id="preguntas">
+    <div class="fa-container" style="max-width: 820px;">
+        <header class="section__head">
+            <span class="fa-eyebrow">Resolvemos tus dudas</span>
+            <h2>Preguntas Frecuentes</h2>
+        </header>
+        <div class="fa-accordion">
+            <details open>
+                <summary>¿Puedo cambiar de plan después? {% icono 'chevron-abajo' %}</summary>
+                <div><p>Sí, puedes cambiar de plan en cualquier momento. Los cambios se reflejarán en tu próximo ciclo de facturación.</p></div>
+            </details>
+            <details>
+                <summary>¿Hay costos adicionales? {% icono 'chevron-abajo' %}</summary>
+                <div><p>No. El precio que ves es el precio que pagas. Sin costos ocultos ni tarifas sorpresa.</p></div>
+            </details>
+            <details>
+                <summary>¿Puedo cancelar en cualquier momento? {% icono 'chevron-abajo' %}</summary>
+                <div><p>Sí, puedes cancelar tu suscripción en cualquier momento sin penalizaciones. Tus datos se mantienen seguros por 30 días.</p></div>
+            </details>
         </div>
     </div>
 </section>

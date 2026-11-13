@@ -9,7 +9,7 @@ from django.core.exceptions import ValidationError
 import uuid
 from django.utils import timezone
 
-from .colores import a_rgb, legible_sobre_blanco, texto_legible
+from .colores import MARCA_PRINCIPAL, MARCA_SECUNDARIO, a_rgb, legible_sobre_blanco, texto_legible
 
 # Palabras reservadas del sistema que no se pueden usar como slugs
 SLUGS_RESERVADOS = [
@@ -147,8 +147,8 @@ class Negocio(models.Model):
     # Personalización de mini página
     logo = models.ImageField('Logo', upload_to='negocios/logos/', blank=True, null=True)
     imagen_portada = models.ImageField('Imagen de portada', upload_to='negocios/portadas/', blank=True, null=True)
-    color_primario = models.CharField('Color primario', max_length=7, default='#007bff')
-    color_secundario = models.CharField('Color secundario', max_length=7, default='#6c757d')
+    color_primario = models.CharField('Color primario', max_length=7, default=MARCA_PRINCIPAL)
+    color_secundario = models.CharField('Color secundario', max_length=7, default=MARCA_SECUNDARIO)
     usar_degradado = models.BooleanField('Usar degradado', default=False)
 
     # Configuración

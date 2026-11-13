@@ -1,147 +1,77 @@
-{% extends 'base.html' %}
-{% load static %}
+{% extends 'registration/base_acceso.html' %}
+{% load iconos %}
 
 {% block title %}Crea tu agenda online gratis | facilacces{% endblock %}
 {% block robots %}index, follow{% endblock %}
 
-{% block extra_css %}
-<style>
-    .registro-container {
-        max-width: 500px;
-        margin: 50px auto;
-    }
-    .trial-badge {
-        background: linear-gradient(135deg, #052981 0%, #021A58 100%);
-        color: white;
-        padding: 20px;
-        border-radius: 10px;
-        text-align: center;
-        margin-bottom: 30px;
-    }
-    .trial-badge h2 {
-        font-size: 2rem;
-        margin-bottom: 10px;
-    }
-    .trial-badge p {
-        margin-bottom: 0;
-        opacity: 0.95;
-    }
-    .cupon-toggle {
-        text-align: center;
-        margin: 15px 0;
-    }
-    .cupon-toggle a {
-        color: #052981;
-        text-decoration: none;
-        font-weight: 500;
-    }
-    .cupon-toggle a:hover {
-        text-decoration: underline;
-    }
-    #campo-cupon {
-        margin-top: 15px;
-        padding: 15px;
-        background: #f8f9fa;
-        border-radius: 8px;
-        border-left: 4px solid #052981;
-    }
-    .feature-list {
-        list-style: none;
-        padding: 0;
-    }
-    .feature-list li {
-        padding: 8px 0;
-        padding-left: 25px;
-        position: relative;
-    }
-    .feature-list li:before {
-        content: "✓";
-        position: absolute;
-        left: 0;
-        color: #28a745;
-        font-weight: bold;
-    }
-</style>
+{% block lateral %}
+<div>
+    <span class="trial-badge">{% icono 'regalo' %} ¡120 Días Gratis!</span>
+    <h2 style="margin-top: 24px;">Acceso completo <em>sin restricciones</em></h2>
+    <p>Sin tarjeta de crédito</p>
+</div>
+<div>
+    <h3 style="color: #fff; font-size: 1.125rem; margin-bottom: 16px;">¿Qué obtienes?</h3>
+    <ul class="auth__benefits">
+        <li>{% icono 'check-circulo' %} 120 días completamente gratis</li>
+        <li>{% icono 'check-circulo' %} Gestión ilimitada de citas</li>
+        <li>{% icono 'check-circulo' %} Clientes y servicios ilimitados</li>
+        <li>{% icono 'check-circulo' %} Notificaciones push</li>
+        <li>{% icono 'check-circulo' %} Página web personalizada</li>
+        <li>{% icono 'check-circulo' %} Código QR para reservas</li>
+        <li>{% icono 'check-circulo' %} Soporte técnico incluido</li>
+    </ul>
+</div>
+<p class="price-note"><strong style="color: #fff;">Después del trial:</strong> Solo $29.900/mes (menos de $1.000 por día)</p>
 {% endblock %}
 
-{% block content %}
-<div class="container">
-    <div class="registro-container">
-        <div class="trial-badge">
-            <h2>🎉 ¡120 Días Gratis!</h2>
-            <p>Acceso completo sin restricciones<br>Sin tarjeta de crédito</p>
+{% block encabezado %}
+<h1>Crea tu cuenta gratis</h1>
+{% endblock %}
+
+{% block formulario %}
+<form method="post" id="registroForm">
+    {% csrf_token %}
+
+    <div class="fa-form-grid">
+        <div class="fa-field">
+            <label for="nombre" class="fa-label">Nombre</label>
+            <input type="text" class="fa-input" id="nombre" name="nombre" autocomplete="given-name" required>
         </div>
 
-        <div class="card shadow">
-            <div class="card-body p-4">
-                <h3 class="card-title text-center mb-4">Crea tu cuenta gratis</h3>
-
-                <form method="post" id="registroForm">
-                    {% csrf_token %}
-
-                    <div class="mb-3">
-                        <label for="nombre" class="form-label">Nombre</label>
-                        <input type="text" class="form-control" id="nombre" name="nombre" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="apellido" class="form-label">Apellido</label>
-                        <input type="text" class="form-control" id="apellido" name="apellido" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="telefono" class="form-label">Teléfono</label>
-                        <input type="tel" class="form-control" id="telefono" name="telefono"
-                               placeholder="+57 300 123 4567" required>
-                        <small class="text-muted">Incluye código de país</small>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="email" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="email" name="email" required>
-                        <small class="text-muted">Te enviaremos un enlace de activación</small>
-                    </div>
-
-                    <div class="form-check mb-3 mt-3">
-                        <input class="form-check-input" type="checkbox" id="terminos" required>
-                        <label class="form-check-label" for="terminos">
-                            Acepto los <a href="/terminos" target="_blank">términos y condiciones</a>
-                        </label>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary btn-lg w-100">
-                        Crear Cuenta Gratis
-                    </button>
-                </form>
-
-                <div class="text-center mt-3">
-                    <small class="text-muted">
-                        ¿Ya tienes cuenta? <a href="{% url 'login' %}">Iniciar sesión</a>
-                    </small>
-                </div>
-            </div>
+        <div class="fa-field">
+            <label for="apellido" class="fa-label">Apellido</label>
+            <input type="text" class="fa-input" id="apellido" name="apellido" autocomplete="family-name" required>
         </div>
 
-        <!-- Features destacadas -->
-        <div class="card mt-4">
-            <div class="card-body">
-                <h5 class="card-title">¿Qué obtienes?</h5>
-                <ul class="feature-list">
-                    <li>120 días completamente gratis</li>
-                    <li>Gestión ilimitada de citas</li>
-                    <li>Clientes y servicios ilimitados</li>
-                    <li>Notificaciones push</li>
-                    <li>Página web personalizada</li>
-                    <li>Código QR para reservas</li>
-                    <li>Soporte técnico incluido</li>
-                </ul>
-                <p class="text-muted small mb-0 mt-3">
-                    <strong>Después del trial:</strong> Solo $29.900/mes (menos de $1.000 por día)
-                </p>
-            </div>
+        <div class="fa-field fa-span-2">
+            <label for="telefono" class="fa-label">Teléfono</label>
+            <input type="tel" class="fa-input" id="telefono" name="telefono"
+                   placeholder="+57 300 123 4567" autocomplete="tel" required>
+            <p class="fa-help">Incluye código de país</p>
+        </div>
+
+        <div class="fa-field fa-span-2">
+            <label for="email" class="fa-label">Email</label>
+            <input type="email" class="fa-input" id="email" name="email" autocomplete="email" required>
+            <p class="fa-help">Te enviaremos un enlace de activación</p>
+        </div>
+
+        <label class="fa-check fa-span-2" for="terminos">
+            <input type="checkbox" id="terminos" required>
+            <span class="fa-check__text">
+                <span>Acepto los <a href="/terminos" target="_blank">términos y condiciones</a></span>
+            </span>
+        </label>
+
+        <div class="fa-span-2">
+            <button type="submit" class="fa-btn fa-btn--accent fa-btn--lg fa-btn--block">Crear Cuenta Gratis</button>
         </div>
     </div>
-</div>
+</form>
+
+<div class="auth__divider">¿Ya tienes cuenta?</div>
+<a class="fa-btn fa-btn--outline fa-btn--block" href="{% url 'login' %}">Iniciar sesión</a>
 {% endblock %}
 
 {% block extra_js %}

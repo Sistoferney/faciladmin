@@ -8,7 +8,10 @@ import re
 
 BLANCO = '#ffffff'
 OSCURO = '#212529'
-RESPALDO = '#6366f1'  # color guardado inválido o vacío
+# Colores de facilacces: los de un negocio que no ha elegido los suyos
+MARCA_PRINCIPAL = '#021a58'
+MARCA_SECUNDARIO = '#fe641a'
+RESPALDO = MARCA_PRINCIPAL  # color guardado inválido o vacío
 
 # Combinaciones listas en la configuración: (nombre, principal, secundario)
 PALETAS = [

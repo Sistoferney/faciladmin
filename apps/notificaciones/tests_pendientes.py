@@ -148,7 +148,7 @@ class BandejaPendientesTests(TestCase):
         resp = self.client.get(reverse('public:admin_pendientes', args=[self.negocio.slug]))
         self.assertContains(resp, 'Esperando abono')
         self.assertContains(resp, 'Nueva cita')
-        self.assertContains(resp, 'id="contador-pendientes" class="badge bg-danger ms-auto" >2<')
+        self.assertContains(resp, 'id="contador-pendientes" class="sidebar__badge" >2<')
 
     def test_estado_para_consulta_periodica(self, *mocks):
         self.client.force_login(self.admin)

@@ -1,26 +1,47 @@
 {% extends 'minipagina/base_publica.html' %}
-{% load formato %}
+{% load formato iconos %}
 {% load whatsapp %}
 
+{% block extra_css %}
+<style>
+    .mp-cover { min-height: 460px; }
+    .mp-cover > img { z-index: 0; }
+    .mp-cover__acciones { display: flex; flex-wrap: wrap; gap: var(--fa-s3); }
+    .mp-cover__acciones .fa-btn { position: relative; }
+    .mp-service__media--icono { display: grid; place-items: center; background: var(--negocio-fondo); color: var(--negocio-texto); }
+    .mp-service__media--icono .fa-icon { width: 56px; height: 56px; }
+    .mp-info p { margin-bottom: var(--fa-s2); }
+    .mp-info .fa-card h3 { font-size: var(--fa-fs-md); font-weight: 500; }
+    .mp .cta { background: var(--negocio-degradado); color: var(--negocio-texto-degradado); }
+    .mp .cta h2, .mp .cta p { color: var(--negocio-texto-degradado); }
+    .mp .cta .fa-btn--light { --btn-bg: var(--fa-white); --btn-fg: var(--fa-navy); --btn-bd: var(--fa-white); }
+    @media (max-width: 600px) { .mp-cover { min-height: 380px; } }
+</style>
+{% endblock %}
+
 {% block content %}
-<!-- Hero Section con Imagen de Portada -->
-<section class="position-relative hero-portada" style="height: 400px; overflow: hidden;">
+<!-- Portada -->
+<section class="mp-cover hero-portada">
     {% if negocio.imagen_portada %}
-        <img src="{{ negocio.imagen_portada.url }}" alt="{{ negocio.nombre }}"
-             class="w-100 h-100 portada-imagen" style="object-fit: cover;">
-    {% else %}
-        <div class="w-100 h-100" style="background: var(--negocio-degradado);"></div>
+        <img src="{{ negocio.imagen_portada.url }}" alt="{{ negocio.nombre }}" class="portada-imagen">
     {% endif %}
-    <div class="position-absolute bottom-0 start-0 w-100 d-flex align-items-end pb-4"
-         style="background: linear-gradient(to top, rgba(0,0,0,0.5), transparent);">
-        <div class="container text-center">
-            <a href="{% url 'public:agendar' negocio.slug %}" class="btn btn-light px-4 py-2 m-1">
-                <i class="bi bi-calendar-check me-2"></i> Agendar Cita
+    <div class="fa-container mp-cover__body">
+        <div>
+            <span class="fa-tag fa-tag--on-dark">{{ negocio.get_tipo_display }}{% if negocio.es_a_domicilio %} · A domicilio{% endif %}</span>
+            <h1>{{ negocio.nombre }}</h1>
+            <ul class="mp-cover__meta">
+                {% if negocio.ciudad %}<li>{% icono 'ubicacion' %} {% if negocio.direccion %}{{ negocio.direccion }}, {% endif %}{{ negocio.ciudad }}</li>{% endif %}
+                {% if negocio.horario_apertura %}<li>{% icono 'reloj' %} {{ negocio.horario_apertura|time:"H:i" }} - {{ negocio.horario_cierre|time:"H:i" }}</li>{% endif %}
+            </ul>
+        </div>
+        <div class="mp-cover__acciones">
+            <a href="{% url 'public:agendar' negocio.slug %}" class="fa-btn fa-btn--accent fa-btn--lg">
+                {% icono 'cita-nueva' %} Agendar Cita
             </a>
             {% if tiene_citas %}
             <!-- Cliente reconocido en este dispositivo con citas en el sistema -->
-            <a href="{% url 'public:mis_citas' negocio.slug %}" class="btn btn-outline-light px-4 py-2 m-1 position-relative">
-                <i class="bi bi-list-check me-2"></i> Mis Citas
+            <a href="{% url 'public:mis_citas' negocio.slug %}" class="fa-btn fa-btn--on-dark fa-btn--lg">
+                <i class="bi bi-list-check"></i> Mis Citas
                 {% if citas_proximas %}
                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
                       title="Citas próximas">{{ citas_proximas }}</span>
@@ -32,175 +53,109 @@
 </section>
 
 <!-- Servicios -->
-<section class="py-5" id="servicios">
-    <div class="container">
-        <h2 class="text-center mb-5">Nuestros Servicios</h2>
+<section class="section" id="servicios">
+    <div class="fa-container">
+        <header class="section__head">
+            <span class="fa-eyebrow">Reserva en línea</span>
+            <h2>Nuestros Servicios</h2>
+        </header>
 
         {% if servicios %}
-            <div class="row g-4">
+            <div class="mp-services">
                 {% for servicio in servicios %}
-                <div class="col-md-6 col-lg-4">
-                    <div class="card h-100 border-0 shadow-sm hover-shadow">
-                        {% if servicio.imagen %}
-                            <img src="{{ servicio.imagen.url }}" class="card-img-top" alt="{{ servicio.nombre }}"
-                                 style="height: 200px; object-fit: cover;">
-                        {% else %}
-                            <div class="card-img-top d-flex align-items-center justify-content-center"
-                                 style="height: 200px; background: var(--negocio-fondo); color: var(--negocio-texto);">
-                                <i class="bi bi-scissors fs-1"></i>
-                            </div>
+                <article class="mp-service">
+                    {% if servicio.imagen %}
+                        <div class="mp-service__media"><img src="{{ servicio.imagen.url }}" alt="{{ servicio.nombre }}" loading="lazy"></div>
+                    {% else %}
+                        <div class="mp-service__media mp-service__media--icono">{% icono 'servicios' %}</div>
+                    {% endif %}
+                    <div class="mp-service__body">
+                        <h3>{{ servicio.nombre }}</h3>
+                        {% if servicio.descripcion %}<p>{{ servicio.descripcion|truncatewords:15 }}</p>{% endif %}
+                        {% if servicio.frecuencia_dias %}
+                            <p>{% icono 'recordatorio' %} Recomendado cada {{ servicio.frecuencia_dias }} días</p>
                         {% endif %}
-                        <div class="card-body">
-                            <h5 class="card-title">{{ servicio.nombre }}</h5>
-                            <p class="card-text text-muted small">{{ servicio.descripcion|truncatewords:15 }}</p>
-
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <span class="h4 mb-0 text-primary">{{ servicio.precio|pesos }}</span>
-                                </div>
-                                <div class="text-muted small">
-                                    <i class="bi bi-clock me-1"></i> {{ servicio.duracion_minutos }} min
-                                </div>
-                            </div>
-
-                            {% if servicio.frecuencia_dias %}
-                                <p class="text-muted small mt-2 mb-0">
-                                    <i class="bi bi-arrow-repeat me-1"></i>
-                                    Recomendado cada {{ servicio.frecuencia_dias }} días
-                                </p>
-                            {% endif %}
+                        <div class="mp-service__row">
+                            <span class="mp-price">{{ servicio.precio|pesos }}</span>
+                            <span class="mp-duration">{% icono 'reloj' %} {{ servicio.duracion_minutos }} min</span>
                         </div>
-                        <div class="card-footer bg-white border-0 pt-0">
-                            <a href="{% url 'public:agendar' negocio.slug %}?servicio={{ servicio.id }}"
-                               class="btn btn-primary w-100">
-                                Agendar
-                            </a>
-                        </div>
+                        <a href="{% url 'public:agendar' negocio.slug %}?servicio={{ servicio.id }}" class="fa-btn fa-btn--primary fa-btn--block">Agendar</a>
                     </div>
-                </div>
+                </article>
                 {% endfor %}
             </div>
         {% else %}
-            <div class="text-center text-muted py-5">
-                <i class="bi bi-inbox fs-1 mb-3 d-block"></i>
-                <p>Próximamente agregaremos más servicios</p>
+            <div class="fa-empty">
+                <span class="fa-tile fa-tile--soft">{% icono 'servicios' %}</span>
+                <p class="mb-0">Próximamente agregaremos más servicios</p>
             </div>
         {% endif %}
     </div>
 </section>
 
 <!-- Información de Contacto -->
-<section class="py-5 bg-light" id="contacto">
-    <div class="container">
-        <div class="row">
-            <div class="col-md-6 mb-4">
-                <h3 class="mb-4">Horarios de Atención</h3>
-                <p class="mb-2">
-                    <i class="bi bi-calendar3 me-2 text-primary"></i>
-                    <strong>{{ negocio.dias_atencion }}</strong>
-                </p>
-                {% if negocio.horario_apertura %}
-                <p>
-                    <i class="bi bi-clock me-2 text-primary"></i>
-                    {{ negocio.horario_apertura|time:"H:i" }} - {{ negocio.horario_cierre|time:"H:i" }}
-                </p>
+<section class="section section--cream" id="contacto">
+    <div class="fa-container mp-info">
+        <article class="fa-card">
+            <h3>{% icono 'reloj' %} Horarios de Atención</h3>
+            <p><strong>{{ negocio.dias_atencion }}</strong></p>
+            {% if negocio.horario_apertura %}
+            <p class="mb-0">{{ negocio.horario_apertura|time:"H:i" }} - {{ negocio.horario_cierre|time:"H:i" }}</p>
+            {% endif %}
+        </article>
+
+        <article class="fa-card">
+            <h3>{% icono 'ubicacion' %} Ubicación</h3>
+            <p class="mb-0">
+                {{ negocio.direccion }}
+                {% if negocio.ciudad %}<br>{{ negocio.ciudad }}{% endif %}
+                {% if negocio.estado %}, {{ negocio.estado }}{% endif %}
+            </p>
+        </article>
+
+        <article class="fa-card">
+            <h3>{% icono 'telefono' %} Contacto</h3>
+            <p><a href="tel:{{ negocio.telefono }}" class="text-decoration-none">{{ negocio.telefono }}</a></p>
+            {% if negocio.whatsapp %}
+            <p><i class="bi bi-whatsapp"></i> <a href="{% whatsapp_negocio negocio %}" target="_blank" class="text-decoration-none">WhatsApp</a></p>
+            {% endif %}
+            {% if negocio.email %}
+            <p><a href="mailto:{{ negocio.email }}" class="text-decoration-none">{{ negocio.email }}</a></p>
+            {% endif %}
+
+            {% if negocio.facebook or negocio.instagram or negocio.tiktok %}
+            <div class="d-flex gap-2 mt-3">
+                {% if negocio.facebook %}
+                <a href="{{ negocio.facebook }}" target="_blank" class="btn btn-outline-primary rounded-circle" aria-label="Facebook">
+                    <i class="bi bi-facebook"></i>
+                </a>
                 {% endif %}
-
-                <hr class="my-4">
-
-                <h3 class="mb-4">Ubicación</h3>
-                <p>
-                    <i class="bi bi-geo-alt-fill me-2 text-primary"></i>
-                    {{ negocio.direccion }}
-                    {% if negocio.ciudad %}<br>{{ negocio.ciudad }}{% endif %}
-                    {% if negocio.estado %}, {{ negocio.estado }}{% endif %}
-                </p>
-            </div>
-
-            <div class="col-md-6">
-                <h3 class="mb-4">Contacto</h3>
-                <p>
-                    <i class="bi bi-telephone-fill me-2 text-primary"></i>
-                    <a href="tel:{{ negocio.telefono }}" class="text-decoration-none">
-                        {{ negocio.telefono }}
-                    </a>
-                </p>
-
-                {% if negocio.whatsapp %}
-                <p>
-                    <i class="bi bi-whatsapp me-2 text-success"></i>
-                    <a href="{% whatsapp_negocio negocio %}" target="_blank" class="text-decoration-none">
-                        WhatsApp
-                    </a>
-                </p>
+                {% if negocio.instagram %}
+                <a href="{{ negocio.instagram }}" target="_blank" class="btn btn-outline-primary rounded-circle" aria-label="Instagram">
+                    <i class="bi bi-instagram"></i>
+                </a>
                 {% endif %}
-
-                {% if negocio.email %}
-                <p>
-                    <i class="bi bi-envelope-fill me-2 text-primary"></i>
-                    <a href="mailto:{{ negocio.email }}" class="text-decoration-none">
-                        {{ negocio.email }}
-                    </a>
-                </p>
-                {% endif %}
-
-                {% if negocio.facebook or negocio.instagram or negocio.tiktok %}
-                <hr class="my-4">
-                <h5>Síguenos</h5>
-                <div class="d-flex gap-2">
-                    {% if negocio.facebook %}
-                    <a href="{{ negocio.facebook }}" target="_blank" class="btn btn-outline-primary rounded-circle">
-                        <i class="bi bi-facebook"></i>
-                    </a>
-                    {% endif %}
-                    {% if negocio.instagram %}
-                    <a href="{{ negocio.instagram }}" target="_blank" class="btn btn-outline-primary rounded-circle">
-                        <i class="bi bi-instagram"></i>
-                    </a>
-                    {% endif %}
-                    {% if negocio.tiktok %}
-                    <a href="{{ negocio.tiktok }}" target="_blank" class="btn btn-outline-primary rounded-circle">
-                        <i class="bi bi-tiktok"></i>
-                    </a>
-                    {% endif %}
-                </div>
+                {% if negocio.tiktok %}
+                <a href="{{ negocio.tiktok }}" target="_blank" class="btn btn-outline-primary rounded-circle" aria-label="TikTok">
+                    <i class="bi bi-tiktok"></i>
+                </a>
                 {% endif %}
             </div>
-        </div>
+            {% endif %}
+        </article>
     </div>
 </section>
 
 <!-- CTA Final -->
-<section class="py-5 text-center">
-    <div class="container">
-        <h2 class="mb-3">¿Listo para agendar?</h2>
-        <p class="lead text-muted mb-4">Reserva tu cita en línea, es rápido y fácil</p>
-        <a href="{% url 'public:agendar' negocio.slug %}" class="btn btn-primary btn-lg px-5">
-            <i class="bi bi-calendar-check me-2"></i> Agendar Ahora
-        </a>
+<section class="section section--tight">
+    <div class="fa-container">
+        <div class="cta">
+            <h2>¿Listo para agendar?</h2>
+            <p>Reserva tu cita en línea, es rápido y fácil</p>
+            <a href="{% url 'public:agendar' negocio.slug %}" class="fa-btn fa-btn--light fa-btn--lg">
+                {% icono 'cita-nueva' %} Agendar Ahora
+            </a>
+        </div>
     </div>
 </section>
-
-<style>
-    .hover-shadow {
-        transition: box-shadow 0.3s ease;
-    }
-    .hover-shadow:hover {
-        box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15) !important;
-    }
-
-    /* Ajuste de portada para móviles */
-    @media (max-width: 768px) {
-        .hero-portada {
-            height: 300px !important;
-        }
-    }
-
-    /* Para tablets */
-    @media (min-width: 769px) and (max-width: 1024px) {
-        .portada-imagen {
-            object-position: center center !important;
-        }
-    }
-</style>
 {% endblock %}

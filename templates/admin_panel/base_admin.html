@@ -15,7 +15,7 @@
 
     <!-- PWA Meta Tags -->
     <meta name="description" content="Panel de administración de {{ negocio.nombre }}">
-    <meta name="theme-color" content="{{ negocio.color_primario|default:'#6366f1' }}">
+    <meta name="theme-color" content="#021A58">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -33,132 +33,57 @@
 
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/marca.css' %}">
+    <link rel="stylesheet" href="{% static 'css/marca-componentes.css' %}">
+    <link rel="stylesheet" href="{% static 'css/marca-panel.css' %}">
+    <link rel="stylesheet" href="{% static 'css/marca-panel-bootstrap.css' %}">
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
         :root {
-            --primary-color: {{ negocio.color_primario|default:'#6366f1' }};
-            --secondary-color: {{ negocio.color_secundario|default:'#8b5cf6' }};
-            --sidebar-rgb: {% if negocio and negocio.texto_sobre_degradado != '#ffffff' %}33, 37, 41{% else %}255, 255, 255{% endif %};
+            /* El panel es de facilacces: colores corporativos para todos los negocios */
+            --primary-color: var(--fa-navy);
+            --secondary-color: var(--fa-royal);
         }
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f8f9fa;
-        }
+        /* Ajustes de la estructura del diseño sobre Bootstrap */
+        .sidebar__nav { padding: 0; }
+        .sidebar__link { width: 100%; background: none; border: 0; text-align: left; font: inherit; font-weight: 500; }
+        .sidebar__link .fa-icon { color: inherit; }
+        .sidebar__biz .fa-avatar { flex: none; }
+        .sidebar__biz div > span { display: block; }
+        .sidebar__foot form { margin: 0; }
+        .topbar__title { font-size: var(--fa-fs-lg); }
+        .topbar .fa-btn .bi { font-size: 1.25rem; line-height: 1; }
+        .panel-content { display: block; }
+        .panel-content > .alert { margin-bottom: var(--fa-s6); }
 
-        /* Sidebar */
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 100vh;
-            width: 260px;
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-            padding: 0;
-            z-index: 1000;
-            overflow-y: auto;
-            transition: all 0.3s;
-        }
-
-        .sidebar-header {
-            padding: 20px;
-            background: rgba(0, 0, 0, 0.1);
-            border-bottom: 1px solid rgba(var(--sidebar-rgb), 0.1);
-        }
-
-        .sidebar-header h4 {
-            color: rgb(var(--sidebar-rgb));
-            margin: 0;
-            font-size: 1.2rem;
-            font-weight: 600;
-        }
-
-        .sidebar-header p {
-            color: rgba(var(--sidebar-rgb), 0.8);
-            margin: 5px 0 0 0;
-            font-size: 0.85rem;
-        }
-
-        .sidebar-menu {
-            padding: 20px 0;
-        }
-
-        .sidebar-menu .nav-link {
-            color: rgba(var(--sidebar-rgb), 0.85);
-            padding: 12px 20px;
-            margin: 2px 10px;
-            border-radius: 8px;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-        }
-
-        .sidebar-menu .nav-link i {
-            margin-right: 12px;
-            font-size: 1.1rem;
-            width: 20px;
-        }
-
-        .sidebar-menu .nav-link:hover {
-            background: rgba(var(--sidebar-rgb), 0.1);
-            color: rgb(var(--sidebar-rgb));
-            transform: translateX(5px);
-        }
-
-        .sidebar-menu .nav-link.active {
-            background: rgba(var(--sidebar-rgb), 0.2);
-            color: rgb(var(--sidebar-rgb));
-            font-weight: 600;
-        }
-
-        /* Main Content */
-        .main-content {
-            margin-left: 260px;
-            padding: 0;
-            min-height: 100vh;
-        }
-
-        .top-navbar {
-            background: white;
-            padding: 15px 30px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .content-wrapper {
-            padding: 30px;
-        }
-
-        /* Cards */
+        /* Tarjetas de las pantallas internas */
         .stat-card {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            transition: transform 0.3s, box-shadow 0.3s;
-            border: none;
+            background: var(--fa-white);
+            border-radius: var(--fa-r-lg);
+            padding: var(--fa-s6);
+            border: 1px solid var(--fa-line);
+            transition: transform .2s, box-shadow .2s;
         }
 
         .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transform: translateY(-3px);
+            box-shadow: var(--fa-shadow);
         }
 
         .stat-card .icon {
-            width: 50px;
-            height: 50px;
-            border-radius: 12px;
+            width: 52px;
+            height: 52px;
+            border-radius: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 1.5rem;
             margin-bottom: 15px;
+            background: var(--fa-navy);
+            color: var(--fa-white);
         }
 
         .badge-status {
@@ -168,147 +93,78 @@
             font-weight: 500;
         }
 
-        /* Responsive */
-        @media (max-width: 768px) {
-            .sidebar {
-                width: 0;
-                overflow: hidden;
-            }
-
-            .sidebar.show {
-                width: 260px;
-            }
-
-            /* Fondo oscuro detrás del menú abierto: al tocarlo se cierra */
-            .sidebar-fondo {
-                position: fixed;
-                inset: 0;
-                background: rgba(0, 0, 0, 0.4);
-                z-index: 999;  /* justo debajo del menú (1000) */
-            }
-
-            .main-content {
-                margin-left: 0;
-            }
-
-            .mobile-menu-btn {
-                display: block !important;
-            }
-        }
-
-        .mobile-menu-btn {
-            display: none;
-        }
-
-        /* Botón Vista Pública */
-        .btn-vista-publica {
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 8px;
-            transition: all 0.3s;
-        }
-
-        .btn-vista-publica:hover {
-            background: rgba(255, 255, 255, 0.3);
-            color: white;
+        /* Celular: el menú lateral se abre sobre el contenido */
+        @media (max-width: 1080px) {
+            .sidebar-backdrop[hidden] { display: none !important; }
+            .sidebar-backdrop:not([hidden]) { display: block; }
         }
     </style>
 
     {% block extra_css %}{% endblock %}
 </head>
-<body>
+<body class="fa-ui panel-body">
+    {% load formato iconos %}
+    <div class="panel">
     <!-- Fondo del menú en celular (se muestra con el menú abierto) -->
-    <div class="sidebar-fondo" id="sidebar-fondo" hidden onclick="cerrarSidebar()"></div>
+    <div class="sidebar-backdrop" id="sidebar-fondo" hidden onclick="cerrarSidebar()"></div>
 
-    <!-- Sidebar -->
-    <div class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <div class="text-center mb-3">
-                <img src="{% static 'images/facilacces-logo.png' %}" alt="facilacces" style="max-width: 120px; height: auto;">
+    <aside class="sidebar" id="sidebar" aria-label="Menú del panel">
+        <div class="sidebar__logo">
+            <img src="{% static 'images/marca/logo-sobre-navy.svg' %}" alt="facilacces" width="150" height="32">
+        </div>
+        <div class="sidebar__biz">
+            <span class="fa-avatar">{{ negocio.nombre|iniciales }}</span>
+            <div>
+                <strong>{{ negocio.nombre }}</strong>
+                <span>{{ request.user.nombre }}</span>
             </div>
-            <h4>{{ negocio.nombre }}</h4>
-            <p><i class="bi bi-person-circle"></i> {{ request.user.nombre }}</p>
         </div>
 
-        <nav class="sidebar-menu">
-            <a href="{% url 'public:admin_dashboard' negocio.slug %}" class="nav-link {% if seccion_activa == 'dashboard' %}active{% endif %}">
-                <i class="bi bi-speedometer2"></i>
-                <span>Dashboard</span>
-            </a>
-            {% pendientes_abiertos negocio as total_pendientes %}
-            <a href="{% url 'public:admin_pendientes' negocio.slug %}" class="nav-link {% if seccion_activa == 'pendientes' %}active{% endif %}">
-                <i class="bi bi-inbox"></i>
-                <span>Pendientes</span>
-                <span id="contador-pendientes" class="badge bg-danger ms-auto" {% if not total_pendientes %}hidden{% endif %}>{{ total_pendientes }}</span>
-            </a>
-            <a href="{% url 'public:admin_agenda' negocio.slug %}" class="nav-link {% if seccion_activa == 'agenda' %}active{% endif %}">
-                <i class="bi bi-calendar-check"></i>
-                <span>Agenda de Citas</span>
-            </a>
-            <a href="{% url 'public:admin_servicios' negocio.slug %}" class="nav-link {% if seccion_activa == 'servicios' %}active{% endif %}">
-                <i class="bi bi-scissors"></i>
-                <span>Servicios</span>
-            </a>
-            <a href="{% url 'public:admin_especialistas' negocio.slug %}" class="nav-link {% if seccion_activa == 'especialistas' %}active{% endif %}">
-                <i class="bi bi-person-badge"></i>
-                <span>Especialistas</span>
-            </a>
-            <a href="{% url 'public:admin_clientes' negocio.slug %}" class="nav-link {% if seccion_activa == 'clientes' %}active{% endif %}">
-                <i class="bi bi-people"></i>
-                <span>Clientes</span>
-            </a>
-            <a href="{% url 'public:abonos_admin' negocio.slug %}" class="nav-link {% if seccion_activa == 'abonos' %}active{% endif %}">
-                <i class="bi bi-cash-coin"></i>
-                <span>Abonos</span>
-            </a>
-            <a href="{% url 'public:admin_configuracion' negocio.slug %}" class="nav-link {% if seccion_activa == 'configuracion' %}active{% endif %}">
-                <i class="bi bi-gear"></i>
-                <span>Configuración</span>
-            </a>
+        {% pendientes_abiertos negocio as total_pendientes %}
+        <ul class="sidebar__nav">
+            <li><a class="sidebar__link" href="{% url 'public:admin_dashboard' negocio.slug %}" {% if seccion_activa == 'dashboard' %}aria-current="page"{% endif %}>{% icono 'dashboard' %} Dashboard</a></li>
+            <li><a class="sidebar__link" href="{% url 'public:admin_pendientes' negocio.slug %}" {% if seccion_activa == 'pendientes' %}aria-current="page"{% endif %}>
+                {% icono 'pendientes' %} Pendientes
+                <span id="contador-pendientes" class="sidebar__badge" {% if not total_pendientes %}hidden{% endif %}>{{ total_pendientes }}</span>
+            </a></li>
+            <li><a class="sidebar__link" href="{% url 'public:admin_agenda' negocio.slug %}" {% if seccion_activa == 'agenda' %}aria-current="page"{% endif %}>{% icono 'agenda' %} Agenda de citas</a></li>
+            <li><a class="sidebar__link" href="{% url 'public:admin_servicios' negocio.slug %}" {% if seccion_activa == 'servicios' %}aria-current="page"{% endif %}>{% icono 'servicios' %} Servicios</a></li>
+            <li><a class="sidebar__link" href="{% url 'public:admin_especialistas' negocio.slug %}" {% if seccion_activa == 'especialistas' %}aria-current="page"{% endif %}>{% icono 'especialistas' %} Especialistas</a></li>
+            <li><a class="sidebar__link" href="{% url 'public:admin_clientes' negocio.slug %}" {% if seccion_activa == 'clientes' %}aria-current="page"{% endif %}>{% icono 'clientes' %} Clientes</a></li>
+            <li><a class="sidebar__link" href="{% url 'public:abonos_admin' negocio.slug %}" {% if seccion_activa == 'abonos' %}aria-current="page"{% endif %}>{% icono 'abonos' %} Abonos</a></li>
+            <li><a class="sidebar__link" href="{% url 'public:admin_configuracion' negocio.slug %}" {% if seccion_activa == 'configuracion' %}aria-current="page"{% endif %}>{% icono 'configuracion' %} Configuración</a></li>
+        </ul>
 
-            <hr style="border-color: rgba(var(--sidebar-rgb), 0.2); margin: 20px 15px;">
-
-            <a href="{% url 'public:minipagina' negocio.slug %}" target="_blank" class="nav-link">
-                <i class="bi bi-eye"></i>
-                <span>Ver Mini-Página</span>
-            </a>
-            <form method="post" action="{% url 'logout' %}" style="margin: 0;">
+        <div class="sidebar__foot">
+            <a class="sidebar__link" href="{% url 'public:minipagina' negocio.slug %}" target="_blank">{% icono 'ver' %} Ver mini-página</a>
+            <form method="post" action="{% url 'logout' %}">
                 {% csrf_token %}
-                <button type="submit" class="nav-link" style="border: none; background: none; width: 100%; text-align: left; cursor: pointer;">
-                    <i class="bi bi-box-arrow-right"></i>
-                    <span>Cerrar Sesión</span>
-                </button>
+                <button type="submit" class="sidebar__link">{% icono 'salir' %} Cerrar sesión</button>
             </form>
-        </nav>
-    </div>
+        </div>
+    </aside>
 
-    <!-- Main Content -->
-    <div class="main-content">
-        <!-- Top Navbar -->
-        <div class="top-navbar d-flex justify-content-between align-items-center">
-            <div>
-                <button class="btn btn-link mobile-menu-btn" onclick="toggleSidebar()">
-                    <i class="bi bi-list fs-4"></i>
-                </button>
-                <h5 class="d-inline-block mb-0">{% block page_title %}Panel de Administración{% endblock %}</h5>
-            </div>
-            <div>
+    <div class="panel-main">
+        <header class="topbar">
+            <button class="fa-btn fa-btn--outline fa-btn--icon panel-menu-btn" type="button" onclick="toggleSidebar()" aria-controls="sidebar" aria-label="Abrir menú">
+                {% icono 'menu' %}
+            </button>
+            <h1 class="topbar__title">{% block page_title %}Panel de Administración{% endblock %}</h1>
+            <div class="topbar__actions">
+                <a href="{% url 'public:minipagina' negocio.slug %}" target="_blank" class="fa-btn fa-btn--outline fa-btn--sm hide-mobile">
+                    {% icono 'ver' %} Vista pública
+                </a>
                 {% if not request.modo_soporte %}
-                <button type="button" id="boton-sonido" class="btn btn-sm btn-outline-secondary me-1"
+                <button type="button" id="boton-sonido" class="fa-btn fa-btn--ghost fa-btn--icon"
                         title="Sonido de avisos" aria-label="Sonido de avisos" aria-pressed="true">
                     <i class="bi bi-bell-fill"></i>
                 </button>
                 {% endif %}
-                <a href="{% url 'public:minipagina' negocio.slug %}" target="_blank" class="btn btn-sm btn-outline-primary">
-                    <i class="bi bi-eye"></i> Vista Pública
-                </a>
+                <span class="fa-avatar fa-avatar--orange" title="{{ request.user.nombre }}">{{ request.user.nombre|iniciales }}</span>
             </div>
-        </div>
+        </header>
 
-        <!-- Content Wrapper -->
-        <div class="content-wrapper">
+        <main class="panel-content" id="contenido">
             {% if request.modo_soporte %}
             <div class="alert alert-warning d-flex flex-wrap align-items-center gap-2">
                 <i class="bi bi-life-preserver fs-5"></i>
@@ -330,7 +186,8 @@
             {% endif %}
 
             {% block content %}{% endblock %}
-        </div>
+        </main>
+    </div>
     </div>
 
     <!-- Bootstrap 5 JS -->
@@ -504,17 +361,17 @@
     <script>
         // Menú lateral en celular: se cierra al tocar fuera, al elegir una opción o con Esc
         function abrirSidebar() {
-            document.getElementById('sidebar').classList.add('show');
+            document.getElementById('sidebar').classList.add('is-open');
             document.getElementById('sidebar-fondo').hidden = false;
         }
 
         function cerrarSidebar() {
-            document.getElementById('sidebar').classList.remove('show');
+            document.getElementById('sidebar').classList.remove('is-open');
             document.getElementById('sidebar-fondo').hidden = true;
         }
 
         function toggleSidebar() {
-            if (document.getElementById('sidebar').classList.contains('show')) {
+            if (document.getElementById('sidebar').classList.contains('is-open')) {
                 cerrarSidebar();
             } else {
                 abrirSidebar();

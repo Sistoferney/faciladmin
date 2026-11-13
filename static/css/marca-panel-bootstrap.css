@@ -1,0 +1,113 @@
+/* ==========================================================================
+   facilacces · Bootstrap dentro del panel
+
+   Las pantallas internas del panel usan componentes de Bootstrap: aquí toman
+   la forma y los colores del diseño (tarjetas, tablas, pestañas, estados,
+   avisos y botones) sin cambiar el HTML ni la lógica de cada pantalla.
+   ========================================================================== */
+
+.panel-content .card {
+    --bs-card-border-color: var(--fa-line);
+    --bs-card-border-radius: var(--fa-r-lg);
+    --bs-card-inner-border-radius: calc(var(--fa-r-lg) - 1px);
+    --bs-card-cap-bg: var(--fa-white);
+    border: 1px solid var(--fa-line) !important;
+    box-shadow: var(--fa-shadow-sm) !important;
+}
+.panel-content .card-header { padding: var(--fa-s5) var(--fa-s6); background: var(--fa-white) !important; border-bottom: 1px solid var(--fa-line) !important; }
+.panel-content .card-header h5, .panel-content .card-title { font-size: var(--fa-fs-md); font-weight: 500; color: var(--fa-navy); }
+.panel-content .card-body { padding: var(--fa-s6); }
+.panel-content .card-footer { background: var(--fa-white); border-top: 1px solid var(--fa-line); }
+
+/* Tablas */
+.panel-content .table { --bs-table-hover-bg: #fbfaf7; margin-bottom: 0; }
+.panel-content .table > thead > tr > th {
+    padding: 14px var(--fa-s5); background: var(--fa-cream); color: var(--fa-navy);
+    font-size: var(--fa-fs-sm); font-weight: 500; border-bottom: 1px solid var(--fa-line);
+}
+.panel-content .table > tbody > tr > td { padding: var(--fa-s4) var(--fa-s5); border-color: var(--fa-line); vertical-align: middle; }
+
+/* Estados en píldora (como .fa-status) */
+.panel-content .badge { border-radius: var(--fa-r-pill); padding: 5px 12px; font-weight: 500; font-size: var(--fa-fs-xs); }
+.panel-content .badge.bg-success, .panel-content .badge.bg-primary { background: var(--fa-royal-tint) !important; color: var(--fa-royal) !important; }
+.panel-content .badge.bg-warning { background: var(--fa-orange-soft) !important; color: var(--fa-navy) !important; }
+.panel-content .badge.bg-info { background: var(--fa-navy) !important; color: var(--fa-white) !important; }
+.panel-content .badge.bg-secondary, .panel-content .badge.bg-light { background: var(--fa-ink-soft) !important; color: var(--fa-ink) !important; }
+.panel-content .badge.bg-danger { background: #fde8e6 !important; color: #a3261b !important; }
+
+/* Avisos */
+.panel-content .alert { border: 0; border-left: 4px solid; border-radius: var(--fa-r); padding: var(--fa-s4) var(--fa-s5); }
+.panel-content .alert-info, .panel-content .alert-primary { background: var(--fa-royal-soft); border-left-color: var(--fa-royal); color: var(--fa-ink); }
+.panel-content .alert-warning { background: var(--fa-orange-soft); border-left-color: var(--fa-orange); color: var(--fa-ink); }
+.panel-content .alert-success { background: #e8f5ee; border-left-color: #198754; color: var(--fa-ink); }
+.panel-content .alert-danger { background: #fdecea; border-left-color: #c62828; color: var(--fa-ink); }
+.panel-content .alert-secondary, .panel-content .alert-light { background: var(--fa-cream); border-left-color: var(--fa-line-strong); color: var(--fa-ink); }
+
+/* Pestañas en píldora */
+.panel-content .nav-tabs {
+    gap: var(--fa-s1); padding: 6px; border: 0; border-radius: var(--fa-r-pill); background: var(--fa-cream);
+    flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
+}
+.panel-content .nav-tabs::-webkit-scrollbar { display: none; }
+.panel-content .nav-tabs .nav-link {
+    display: inline-flex; align-items: center; gap: var(--fa-s2); min-height: 44px; padding: 0 var(--fa-s5);
+    border: 0; border-radius: var(--fa-r-pill); color: var(--fa-navy); font-weight: 500; white-space: nowrap; background: transparent;
+}
+.panel-content .nav-tabs .nav-link:hover { background: rgba(255, 255, 255, .7); }
+.panel-content .nav-tabs .nav-link.active { background: var(--fa-navy); color: var(--fa-white); }
+.panel-content .nav-pills .nav-link.active { background: var(--fa-navy); }
+
+/* Botones con los colores de la marca */
+.panel-content .btn-success {
+    --bs-btn-bg: var(--fa-navy); --bs-btn-border-color: var(--fa-navy);
+    --bs-btn-hover-bg: var(--fa-royal); --bs-btn-hover-border-color: var(--fa-royal);
+    --bs-btn-active-bg: var(--fa-royal); --bs-btn-active-border-color: var(--fa-royal);
+}
+.panel-content .btn-outline-success {
+    --bs-btn-color: var(--fa-navy); --bs-btn-border-color: var(--fa-navy);
+    --bs-btn-hover-bg: var(--fa-navy); --bs-btn-hover-border-color: var(--fa-navy); --bs-btn-active-bg: var(--fa-navy);
+}
+.panel-content .btn-warning {
+    --bs-btn-color: var(--fa-navy); --bs-btn-bg: var(--fa-orange); --bs-btn-border-color: var(--fa-orange);
+    --bs-btn-hover-color: var(--fa-white); --bs-btn-hover-bg: var(--fa-orange-strong); --bs-btn-hover-border-color: var(--fa-orange-strong);
+    --bs-btn-active-bg: var(--fa-orange-strong); --bs-btn-font-weight: 600;
+}
+.panel-content .btn-outline-warning {
+    --bs-btn-color: var(--fa-navy); --bs-btn-border-color: var(--fa-orange);
+    --bs-btn-hover-color: var(--fa-navy); --bs-btn-hover-bg: var(--fa-orange-soft); --bs-btn-hover-border-color: var(--fa-orange);
+    --bs-btn-active-color: var(--fa-navy); --bs-btn-active-bg: var(--fa-orange-soft);
+    border-width: 2px;
+}
+.panel-content .btn-info {
+    --bs-btn-color: var(--fa-white); --bs-btn-bg: var(--fa-royal); --bs-btn-border-color: var(--fa-royal);
+    --bs-btn-hover-color: var(--fa-white); --bs-btn-hover-bg: var(--fa-navy); --bs-btn-hover-border-color: var(--fa-navy);
+}
+.panel-content .btn-outline-info {
+    --bs-btn-color: var(--fa-royal); --bs-btn-border-color: var(--fa-royal);
+    --bs-btn-hover-color: var(--fa-white); --bs-btn-hover-bg: var(--fa-royal); --bs-btn-hover-border-color: var(--fa-royal);
+}
+.panel-content .btn-secondary,
+.panel-content .btn-outline-secondary,
+.panel-content .btn-light,
+.panel-content .btn-outline-dark {
+    --bs-btn-color: var(--fa-navy); --bs-btn-bg: var(--fa-white); --bs-btn-border-color: var(--fa-line-strong);
+    --bs-btn-hover-color: var(--fa-navy); --bs-btn-hover-bg: var(--fa-royal-soft); --bs-btn-hover-border-color: var(--fa-navy);
+    --bs-btn-active-color: var(--fa-navy); --bs-btn-active-bg: var(--fa-royal-soft); --bs-btn-active-border-color: var(--fa-navy);
+    border-width: 2px;
+}
+.panel-content .btn-group > .btn { border-radius: 0; }
+.panel-content .btn-group > .btn:first-child { border-top-left-radius: var(--fa-r-pill); border-bottom-left-radius: var(--fa-r-pill); }
+.panel-content .btn-group > .btn:last-child { border-top-right-radius: var(--fa-r-pill); border-bottom-right-radius: var(--fa-r-pill); }
+.panel-content a.btn { text-decoration: none; }
+
+/* Textos de apoyo en colores de la marca */
+.panel-content .text-primary { color: var(--fa-navy) !important; }
+.panel-content .text-info { color: var(--fa-royal) !important; }
+
+/* Listas, campos y ventanas */
+.panel-content .list-group-item { border-color: var(--fa-line); }
+.panel-content .input-group-text { background: var(--fa-cream); border: 1.5px solid var(--fa-line-strong); color: var(--fa-navy); }
+.modal-content { border: 0; border-radius: var(--fa-r-lg); box-shadow: var(--fa-shadow-lg); }
+.modal-header { border-bottom-color: var(--fa-line); }
+.modal-footer { border-top-color: var(--fa-line); }
+.modal-title { color: var(--fa-navy); font-weight: 500; }

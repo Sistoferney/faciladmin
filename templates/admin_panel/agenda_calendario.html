@@ -292,6 +292,76 @@
     .selection-toolbar.active {
         display: block;
     }
+
+    /* ---- Identidad facilacces (como la agenda del diseño) ---- */
+    .calendar-header,
+    .calendar-grid {
+        border: 1px solid var(--fa-line);
+        border-radius: var(--fa-r-lg);
+        box-shadow: var(--fa-shadow-sm);
+    }
+
+    .calendar-header { padding: var(--fa-s6); }
+    .calendar-header h4, .calendar-header h5 { color: var(--fa-navy); }
+
+    .calendar-week-header {
+        background: var(--fa-white);
+        color: var(--fa-navy);
+        border-bottom: 1px solid var(--fa-line);
+    }
+    .calendar-week-header > div { border-right: 1px solid var(--fa-line); }
+    .calendar-week-header > .calendar-corner { background: var(--fa-white); }
+    .calendar-day-name { font-size: var(--fa-fs-sm); color: var(--fa-ink-70); font-weight: 400; opacity: 1; }
+    .calendar-day-number {
+        display: inline-grid; place-items: center; width: 40px; height: 40px;
+        border-radius: 50%; font-size: var(--fa-fs-md); font-weight: 600; color: var(--fa-navy);
+    }
+    .calendar-day-header.today { background: transparent; padding: 0; }
+    .calendar-day-header.today .calendar-day-number { background: var(--fa-orange); color: var(--fa-navy); }
+
+    .time-slot { background: var(--fa-white); color: var(--fa-ink-70); font-weight: 400; border-color: var(--fa-line); }
+    .calendar-cell { border-color: var(--fa-line); }
+    .calendar-cell:hover { background-color: var(--fa-cream); }
+    .calendar-cell.selectable:hover { background-color: var(--fa-royal-soft); }
+    .calendar-cell.selected { background-color: var(--fa-royal-tint) !important; }
+    .calendar-cell.past,
+    .calendar-cell.past:hover,
+    .calendar-cell.fuera-de-horario,
+    .calendar-cell.fuera-de-horario:hover { background-color: var(--fa-cream) !important; }
+
+    /* Citas: los estados del diseño */
+    .cita-block { border-radius: 10px; border-left-width: 4px; }
+    .cita-block.confirmada { background-color: var(--fa-royal-tint); border-left-color: var(--fa-royal); color: var(--fa-navy); }
+    .cita-block.pendiente_abono { background-color: var(--fa-orange-soft); border-left-color: var(--fa-orange); color: var(--fa-navy); }
+    .cita-block.completada { background-color: var(--fa-navy); border-left-color: var(--fa-orange); color: var(--fa-white); }
+    .cita-block.cancelada { background-color: var(--fa-ink-soft); border-left-color: var(--fa-ink-70); color: var(--fa-ink); }
+    .bloqueo-block { border-color: var(--fa-ink-70); color: var(--fa-ink); border-radius: 10px; }
+
+    /* Indicadores de la semana */
+    .stats-card { border: 1px solid var(--fa-line); border-radius: var(--fa-r); box-shadow: none; }
+    .stats-card h3 { color: var(--fa-navy) !important; font-weight: 700; }
+
+    /* Botones de semana anterior / hoy / siguiente */
+    .week-nav-btn {
+        display: inline-flex; align-items: center; gap: 4px; min-height: 40px; padding: 0 var(--fa-s4);
+        border: 2px solid var(--fa-line-strong); border-radius: var(--fa-r-pill);
+        color: var(--fa-navy); font-weight: 500; text-decoration: none; background: var(--fa-white);
+    }
+    .week-nav-btn:hover { background: var(--fa-royal-soft); border-color: var(--fa-navy); color: var(--fa-navy); }
+    .calendar-header .btn-group { gap: var(--fa-s2); }
+    .calendar-header .btn-group > .week-nav-btn { border-radius: var(--fa-r-pill) !important; }
+    .selection-toolbar { border: 1px solid var(--fa-line); border-radius: var(--fa-r); }
+
+    /* Continuación de una cita larga: rayado suave, como los bloqueos del diseño */
+    .cita-block.cita-continuacion {
+        opacity: 1;
+        background: repeating-linear-gradient(135deg, var(--fa-royal-tint) 0 8px, var(--fa-white) 8px 16px);
+        color: var(--fa-ink-70);
+        border-style: solid;
+    }
+    .cita-block.pendiente_abono.cita-continuacion {
+        background: repeating-linear-gradient(135deg, var(--fa-orange-soft) 0 8px, var(--fa-white) 8px 16px);
+    }
 </style>
 {% endblock %}
 
@@ -329,7 +399,7 @@
                     Siguiente <i class="bi bi-chevron-right"></i>
                 </a>
             </div>
-            <a href="{% url 'public:cita_nueva' negocio.slug %}" class="btn btn-primary ms-2">
+            <a href="{% url 'public:cita_nueva' negocio.slug %}" class="btn btn-acento ms-2">
                 <i class="bi bi-calendar-plus"></i> Nueva cita
             </a>
             <a href="{% url 'public:bloqueos_admin' negocio.slug %}" class="btn btn-outline-warning ms-2">

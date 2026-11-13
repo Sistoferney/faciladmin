@@ -13,6 +13,7 @@
 
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/marca.css' %}">
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
@@ -20,12 +21,12 @@
 
     <style>
         :root {
-            --primary-color: {{ negocio.color_primario|default:'#6366f1' }};
-            --secondary-color: {{ negocio.color_secundario|default:'#8b5cf6' }};
+            --primary-color: {{ negocio.color_primario|default:'#021a58' }};
+            --secondary-color: {{ negocio.color_secundario|default:'#fe641a' }};
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: var(--fa-font);
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             min-height: 100vh;
             padding: 20px 0;
@@ -435,6 +436,29 @@
                 margin-bottom: 10px;
             }
         }
+
+        /* ---- Identidad facilacces: flujo de reserva del diseño, con los colores del negocio ---- */
+        body { background: var(--fa-cream); }
+        .booking-container { border: 1px solid var(--fa-line); border-radius: var(--fa-r-xl); box-shadow: var(--fa-shadow); }
+        .booking-header h1 { font-weight: 700; }
+        .progress-steps { background: var(--fa-white); border-bottom: 1px solid var(--fa-line); position: relative; }
+        .step-number {
+            width: 44px; height: 44px; background: var(--fa-white); color: var(--fa-ink-70);
+            border: 2px solid var(--fa-line-strong); font-weight: 600;
+        }
+        .step.active .step-number { border-color: transparent; transform: none; box-shadow: 0 0 0 6px rgba(var(--negocio-acento-rgb), .12); }
+        .step.completed .step-number { background: var(--negocio-acento); border-color: var(--negocio-acento); color: var(--fa-white); }
+        .step.active .step-label, .step.completed .step-label { color: var(--negocio-acento); font-weight: 500; }
+        .step-content h2, .step-content h3, .step-content h4 { color: var(--negocio-acento); font-weight: 700; }
+        .service-card, .especialista-card, .time-slot, .calendar-day { border-radius: var(--fa-r-sm); }
+        .service-card { border-width: 2px; }
+        .booking-summary { border: 1px solid var(--fa-line); border-radius: var(--fa-r-lg); }
+        .btn-primary-custom, .btn-secondary-custom, .btn-cancel-custom { border-radius: var(--fa-r-pill); min-height: var(--fa-control-h); }
+        .btn-cancel-custom { border: 2px solid var(--fa-line-strong); color: var(--fa-ink); background: var(--fa-white); }
+        .btn-cancel-custom:hover { border-color: var(--fa-ink); background: var(--fa-ink-soft); color: var(--fa-ink); }
+        .form-label { color: var(--fa-ink); }
+        .reservas-con { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 24px 0 8px; font-size: var(--fa-fs-sm); color: var(--fa-ink-70); text-decoration: none; }
+        .reservas-con img { height: 20px; width: auto; }
     </style>
 </head>
 <body>
@@ -740,6 +764,10 @@
             </form>
         </div>
     </div>
+
+    <a class="reservas-con" href="{{ url_base }}/" target="_blank" rel="noopener">
+        Reservas con <img src="{% static 'images/marca/logo-principal.svg' %}" alt="facilacces" width="96" height="20">
+    </a>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

@@ -14,7 +14,7 @@
 
     <!-- PWA Meta Tags -->
     <meta name="description" content="{% if negocio.descripcion %}{{ negocio.descripcion|truncatechars:160 }}{% else %}Agenda tu cita en {{ negocio.nombre }}{% if negocio.ciudad %}, {{ negocio.ciudad }}{% endif %}: reserva online las 24 horas y recibe recordatorios.{% endif %}">
-    <meta name="theme-color" content="{{ negocio.color_primario|default:'#6366f1' }}">
+    <meta name="theme-color" content="{{ negocio.color_primario|default:'#021a58' }}">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -53,6 +53,10 @@
     <!-- CSS -->
     <link rel="stylesheet" href="{% static 'css/main.css' %}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/marca.css' %}">
+    <link rel="stylesheet" href="{% static 'css/marca-componentes.css' %}">
+    <link rel="stylesheet" href="{% static 'css/marca-sitio.css' %}">
+    <link rel="stylesheet" href="{% static 'css/marca-minipagina.css' %}">
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
@@ -60,42 +64,30 @@
 
     {% block extra_css %}{% endblock %}
 </head>
-<body>
-    <!-- Navbar del negocio -->
-    <nav class="navbar navbar-expand-lg{% if negocio.texto_sobre_marca == '#ffffff' %} navbar-dark{% endif %}">
-        <div class="container">
-            <a class="navbar-brand" href="{% url 'public:minipagina' negocio.slug %}">
+<body class="mp">
+    {% load iconos %}
+    <a class="fa-skip" href="#contenido">Saltar al contenido</a>
+    <!-- Encabezado del negocio -->
+    <header class="mp-header">
+        <div class="fa-container mp-header__inner">
+            <a class="mp-brand" href="{% url 'public:minipagina' negocio.slug %}">
                 {% if negocio.logo %}
-                    <img src="{{ negocio.logo.url }}" alt="{{ negocio.nombre }}" class="rounded-4" style="max-height: 120px; max-width: min(350px, 70vw);">
+                    <img src="{{ negocio.logo.url }}" alt="{{ negocio.nombre }}" class="mp-brand__logo rounded-3">
                 {% else %}
-                    {{ negocio.nombre }}
+                    <span class="mp-brand__mark" aria-hidden="true">{{ negocio.nombre|slice:":1"|upper }}</span>
+                    <span class="mp-brand__nombre">{{ negocio.nombre }}</span>
                 {% endif %}
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="#servicios">Servicios</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#contacto">Contacto</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'public:mis_citas' negocio.slug %}">
-                            <i class="bi bi-calendar-check"></i> Mis Citas
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="btn btn-light ms-2" href="{% url 'public:agendar' negocio.slug %}">
-                            Agendar Cita
-                        </a>
-                    </li>
+            <nav aria-label="Mini-página">
+                <ul class="mp-nav">
+                    <li class="mp-nav__hide"><a href="{% url 'public:minipagina' negocio.slug %}#servicios">Servicios</a></li>
+                    <li class="mp-nav__hide"><a href="{% url 'public:minipagina' negocio.slug %}#contacto">Contacto</a></li>
+                    <li><a href="{% url 'public:mis_citas' negocio.slug %}" aria-label="Mis Citas">{% icono 'agenda' %}<span class="mp-nav__hide">Mis Citas</span></a></li>
+                    <li><a class="fa-btn fa-btn--accent" href="{% url 'public:agendar' negocio.slug %}">Agendar Cita</a></li>
                 </ul>
-            </div>
+            </nav>
         </div>
-    </nav>
+    </header>
 
     <!-- Banner de Instalación PWA (Android y computador) -->
     <div id="install-banner" class="alert alert-info alert-dismissible fade show sticky-top mb-0" style="display: none; z-index: 1050; border-radius: 0;">
@@ -158,41 +150,45 @@
     {% endif %}
     {% endblock %}
 
-    <main>
+    <main id="contenido">
         {% block content %}{% endblock %}
     </main>
 
-    <!-- Footer del negocio -->
-    <footer class="bg-dark text-white mt-5">
-        <div class="container py-4">
-            <div class="row">
-                <div class="col-md-6">
-                    <h5>{{ negocio.nombre }}</h5>
-                    <p>{{ negocio.descripcion }}</p>
+    <!-- Pie del negocio -->
+    <footer class="mp-footer">
+        <div class="fa-container">
+            <div class="mp-footer__grid">
+                <div>
+                    <h2>{{ negocio.nombre }}</h2>
+                    {% if negocio.descripcion %}<p style="max-width: 46ch;">{{ negocio.descripcion }}</p>{% endif %}
                 </div>
-                <div class="col-md-6">
-                    <h5>Contacto</h5>
-                    <p>
-                        <i class="bi bi-geo-alt"></i> {{ negocio.direccion }}<br>
-                        <i class="bi bi-telephone"></i> {{ negocio.telefono }}<br>
-                        {% if negocio.email %}
-                            <i class="bi bi-envelope"></i> {{ negocio.email }}
-                        {% endif %}
+                <div>
+                    <h2>Contacto</h2>
+                    <p class="mb-0">
+                        {% if negocio.direccion %}{{ negocio.direccion }}<br>{% endif %}
+                        <a href="tel:{{ negocio.telefono }}">{{ negocio.telefono }}</a>
+                        {% if negocio.email %}<br><a href="mailto:{{ negocio.email }}">{{ negocio.email }}</a>{% endif %}
                     </p>
                     {% if negocio.facebook or negocio.instagram or negocio.tiktok %}
-                        <div class="social-links">
+                        <div class="social-links mt-2">
                             {% if negocio.facebook %}
-                                <a href="{{ negocio.facebook }}" class="text-white me-3" target="_blank">Facebook</a>
+                                <a href="{{ negocio.facebook }}" class="me-3" target="_blank">Facebook</a>
                             {% endif %}
                             {% if negocio.instagram %}
-                                <a href="{{ negocio.instagram }}" class="text-white me-3" target="_blank">Instagram</a>
+                                <a href="{{ negocio.instagram }}" class="me-3" target="_blank">Instagram</a>
                             {% endif %}
                             {% if negocio.tiktok %}
-                                <a href="{{ negocio.tiktok }}" class="text-white" target="_blank">TikTok</a>
+                                <a href="{{ negocio.tiktok }}" target="_blank">TikTok</a>
                             {% endif %}
                         </div>
                     {% endif %}
                 </div>
+            </div>
+            <div class="mp-powered">
+                <span>© {% now "Y" %} {{ negocio.nombre }}</span>
+                <a href="{{ url_base }}/" target="_blank" rel="noopener">
+                    Reservas con <img src="{% static 'images/marca/logo-sobre-navy.svg' %}" alt="facilacces" width="106" height="22">
+                </a>
             </div>
         </div>
     </footer>
