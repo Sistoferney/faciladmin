@@ -86,4 +86,7 @@ urlpatterns = [
     # PWA Manifests
     path('<slug:slug>/manifest.json', public_views.manifest_minipagina, name='manifest_minipagina'),
     path('<slug:slug>/admin/manifest.json', public_views.manifest_admin, name='manifest_admin'),
+    path('<slug:slug>/icono-<int:lado>.png', public_views.icono_minipagina, name='icono_minipagina'),
+    path('<slug:slug>/icono-<int:lado>-maskable.png', public_views.icono_minipagina,
+         {'recortable': True}, name='icono_minipagina_maskable'),
 ]

@@ -6,6 +6,7 @@ from django.db import models
 from django.conf import settings
 from django.utils.text import slugify
 from django.core.exceptions import ValidationError
+import hashlib
 import uuid
 from django.utils import timezone
 
@@ -204,6 +205,16 @@ class Negocio(models.Model):
         # Validación final antes de guardar
         self.full_clean()
         super().save(*args, **kwargs)
+
+    @property
+    def version_logo(self):
+        """
+        Cambia con cada logo nuevo: va en la URL de los íconos de la app para
+        que el celular vea un ícono distinto y actualice el instalado.
+        """
+        if not self.logo:
+            return ''
+        return hashlib.md5(self.logo.name.encode()).hexdigest()[:10]
 
     @property
     def texto_sobre_marca(self):

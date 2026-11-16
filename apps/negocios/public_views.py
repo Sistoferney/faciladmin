@@ -5,7 +5,9 @@ RF-08 a RF-12, RF-16 a RF-19
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.utils import timezone
-from django.http import JsonResponse, Http404
+from django.core.cache import cache
+from django.http import HttpResponse, JsonResponse, Http404
+from django.urls import reverse
 from django.utils.html import escape
 from django.templatetags.static import static
 from django.views.decorators.http import require_http_methods
@@ -22,6 +24,7 @@ from .disponibilidad import (
 )
 from . import novedades_cliente
 from .colores import MARCA_PRINCIPAL
+from .imagenes import icono_cuadrado
 from .models import Negocio
 from apps.servicios.models import Servicio
 from apps.clientes.models import Cliente
@@ -495,17 +498,20 @@ def manifest_minipagina(request, slug):
         "icons": []
     }
 
-    # Agregar iconos si el negocio tiene logo
+    # Íconos cuadrados hechos del logo. La ?v= cambia con cada logo nuevo: así
+    # Android nota el cambio y actualiza el ícono de la app ya instalada
     if negocio.logo:
-        logo_url = request.build_absolute_uri(negocio.logo.url)
-        # Generar múltiples tamaños (los navegadores escogen el apropiado)
-        for size in [192, 512]:
-            manifest["icons"].append({
-                "src": logo_url,
-                "sizes": f"{size}x{size}",
-                "type": "image/png",
-                "purpose": "any maskable"
-            })
+        for nombre_url, proposito in [('public:icono_minipagina', 'any'),
+                                      ('public:icono_minipagina_maskable', 'maskable')]:
+            for size in [192, 512]:
+                manifest["icons"].append({
+                    "src": request.build_absolute_uri(
+                        f"{reverse(nombre_url, args=[slug, size])}?v={negocio.version_logo}"
+                    ),
+                    "sizes": f"{size}x{size}",
+                    "type": "image/png",
+                    "purpose": proposito
+                })
     else:
         # Si no hay logo, usar el logo de facilacces como fallback
         manifest["icons"] = [
@@ -522,6 +528,40 @@ def manifest_minipagina(request, slug):
         ]
 
     return JsonResponse(manifest, content_type='application/manifest+json')
+
+
+LADOS_ICONO = (180, 192, 512)  # 180: apple-touch-icon de iPhone
+
+
+def icono_minipagina(request, slug, lado, recortable=False):
+    """
+    Ícono de la app instalada de la mini-página, hecho del logo del negocio.
+
+    Se arma una vez por logo y tamaño y queda en caché: el logo está en
+    Cloudinary y descargarlo en cada visita sería lento.
+    """
+    negocio = get_object_or_404(Negocio, slug=slug, esta_activo=True)
+    if lado not in LADOS_ICONO or not negocio.logo:
+        raise Http404
+
+    clave = f'icono-pwa:{negocio.logo.name}:{lado}:{int(recortable)}'
+    png = cache.get(clave)
+    if png is None:
+        try:
+            with negocio.logo.open('rb') as archivo:
+                png = icono_cuadrado(archivo, lado, recortable)
+        except Exception:
+            logger.exception('No se pudo armar el ícono del negocio %s', slug)
+            return redirect(static('images/facilacces-icon-192.png'))
+        cache.set(clave, png, 60 * 60 * 24 * 30)
+
+    respuesta = HttpResponse(png, content_type='image/png')
+    # Con la versión del logo actual la URL nunca cambia de contenido
+    if request.GET.get('v') == negocio.version_logo:
+        respuesta['Cache-Control'] = 'public, max-age=31536000, immutable'
+    else:
+        respuesta['Cache-Control'] = 'public, max-age=300'
+    return respuesta
 
 
 @ratelimit(key='ip', rate='10/h', method='POST', block=False)

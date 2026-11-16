@@ -7,7 +7,9 @@ from datetime import timedelta
 from io import BytesIO
 from unittest.mock import patch
 
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile, UploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -715,6 +717,37 @@ class ConfiguracionFacilTests(TestCase):
             self.negocio.refresh_from_db()
             with self.negocio.logo.open() as guardado:
                 self.assertEqual(Image.open(guardado).size, (800, 533))
+
+    def test_icono_de_la_app_es_cuadrado_y_cambia_con_el_logo(self):
+        # Un logo rectangular y transparente debe dar íconos cuadrados, y la
+        # URL del manifest debe cambiar al subir otro logo para que Android
+        # actualice el ícono de la app ya instalada
+        cache.clear()
+        slug = self.negocio.slug
+        with tempfile.TemporaryDirectory() as carpeta, override_settings(MEDIA_ROOT=carpeta):
+            salida = BytesIO()
+            Image.new('RGBA', (300, 100), (255, 0, 0, 255)).save(salida, 'PNG')
+            self.negocio.logo.save('logo.png', ContentFile(salida.getvalue()))
+            version = self.negocio.version_logo
+
+            manifest = self.client.get(reverse('public:manifest_minipagina', args=[slug])).json()
+            self.assertTrue(all(f'/{slug}/icono-' in i['src'] and f'v={version}' in i['src']
+                                for i in manifest['icons']))
+            self.assertEqual({i['purpose'] for i in manifest['icons']}, {'any', 'maskable'})
+
+            resp = self.client.get(reverse('public:icono_minipagina_maskable', args=[slug, 512]))
+            self.assertEqual(resp['Content-Type'], 'image/png')
+            icono = Image.open(BytesIO(resp.content))
+            self.assertEqual(icono.size, (512, 512))
+            self.assertEqual(icono.getpixel((5, 5)), (255, 255, 255))  # Esquina blanca, no negra
+            self.assertEqual(icono.getpixel((256, 256)), (255, 0, 0))
+
+            self.assertEqual(self.client.get(reverse('public:icono_minipagina', args=[slug, 100])).status_code, 404)
+            resp = self.client.get(reverse('public:minipagina', args=[slug]))
+            self.assertContains(resp, f'/{slug}/icono-180.png?v={version}')
+
+            self.negocio.logo.save('logo.png', ContentFile(salida.getvalue()))
+            self.assertNotEqual(self.negocio.version_logo, version)
 
     def test_precios_con_formato_de_pesos(self):
         Servicio.objects.create(negocio=self.negocio, nombre='Corte', precio=20000, duracion_minutos=30)

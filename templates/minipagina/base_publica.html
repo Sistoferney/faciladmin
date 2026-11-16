@@ -43,8 +43,8 @@
 
     <!-- Icons -->
     {% if negocio.logo %}
-        <link rel="icon" type="image/png" sizes="192x192" href="{{ negocio.logo.url }}">
-        <link rel="apple-touch-icon" href="{{ negocio.logo.url }}">
+        <link rel="icon" type="image/png" sizes="192x192" href="{% url 'public:icono_minipagina' negocio.slug 192 %}?v={{ negocio.version_logo }}">
+        <link rel="apple-touch-icon" href="{% url 'public:icono_minipagina' negocio.slug 180 %}?v={{ negocio.version_logo }}">
     {% else %}
         <link rel="icon" type="image/png" sizes="192x192" href="{% static 'images/facilacces-icon-192.png' %}">
         <link rel="apple-touch-icon" href="{% static 'images/facilacces-icon-192.png' %}">

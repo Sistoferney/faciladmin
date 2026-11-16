@@ -38,6 +38,27 @@ def ajustar_imagen(archivo, lado_maximo, nombre):
     return SimpleUploadedFile(f'{nombre}.{extension}', salida.getvalue(), content_type=tipo)
 
 
+def icono_cuadrado(archivo, lado, recortable=False):
+    """
+    Ícono de app (PNG cuadrado) con el logo centrado sobre blanco.
+
+    Los logos suelen ser rectangulares y con transparencia: Android los
+    deformaría o los pondría sobre negro, e iOS rellena de negro. El recortable
+    (maskable) deja el logo dentro del círculo central que Android nunca corta.
+    """
+    archivo.seek(0)
+    logo = ImageOps.exif_transpose(Image.open(archivo)).convert('RGBA')
+    espacio = int(lado * (0.6 if recortable else 0.88))
+    logo.thumbnail((espacio, espacio), Image.Resampling.LANCZOS)
+
+    icono = Image.new('RGBA', (lado, lado), (255, 255, 255, 255))
+    icono.alpha_composite(logo, ((lado - logo.width) // 2, (lado - logo.height) // 2))
+
+    salida = BytesIO()
+    icono.convert('RGB').save(salida, 'PNG', optimize=True)
+    return salida.getvalue()
+
+
 class ImagenesAjustadasMixin:
     """Para los formularios con logo y portada. Sin archivo nuevo no cambia nada."""
 
