@@ -55,6 +55,38 @@
 
                 <form method="post">
                     {% csrf_token %}
+                    <!-- Qué se hizo, para repetirlo igual en la próxima cita -->
+                    {% if ultima_vez %}
+                    <div class="alert alert-light border mb-2" id="ultima-vez">
+                        <div class="small text-muted mb-1">
+                            <i class="bi bi-clock-history"></i> Última vez ({{ ultima_vez.fecha_hora|date:"d/m/Y" }}{% if ultima_vez.especialista %}, con {{ ultima_vez.especialista.nombre }}{% endif %})
+                        </div>
+                        <div id="texto-ultima-vez">{{ ultima_vez.observaciones|linebreaksbr }}</div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="usar-lo-mismo">
+                            <i class="bi bi-arrow-repeat"></i> Usar lo mismo
+                        </button>
+                    </div>
+                    {% endif %}
+                    {% with servicio=cita.servicio %}
+                    <div class="mb-3{% if servicio.pedir_observaciones %} p-3 border border-warning rounded bg-warning-subtle{% endif %}" id="grupo-observaciones">
+                        <label for="observaciones" class="form-label">
+                            {% if servicio.pedir_observaciones %}
+                                <i class="bi bi-pencil-square"></i> <strong>Anota lo que hiciste</strong>
+                                <small class="text-muted">(para repetirlo la próxima vez)</small>
+                            {% else %}
+                                Observaciones de la atención <small class="text-muted">(opcional)</small>
+                            {% endif %}
+                        </label>
+                        {% if servicio.guia_observaciones %}
+                        <div class="small mb-2"><i class="bi bi-list-check"></i> {{ servicio.guia_observaciones }}</div>
+                        {% endif %}
+                        <textarea class="form-control" id="observaciones" name="observaciones" rows="3"
+                                  {% if servicio.pedir_observaciones and not cita.observaciones and not ultima_vez %}autofocus{% endif %}
+                                  placeholder="{% if servicio.guia_observaciones %}Escribe aquí lo que hiciste{% else %}Ej: tinte Igora Royal 7-1 + oxigenada 20 vol, 35 min{% endif %}">{{ cita.observaciones }}</textarea>
+                        <div class="form-text">Productos, referencias o técnicas, para repetirlo en la próxima cita. El cliente no las ve. No es una historia clínica.</div>
+                    </div>
+                    {% endwith %}
+
                     <div class="d-flex justify-content-between">
                         <a href="{% url 'public:admin_agenda' negocio.slug %}" class="btn btn-secondary">
                             <i class="bi bi-arrow-left"></i> Cancelar
@@ -68,4 +100,17 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{% if ultima_vez %}
+{{ ultima_vez.observaciones|json_script:"observaciones-ultima-vez" }}
+<script>
+document.getElementById('usar-lo-mismo').addEventListener('click', function () {
+    const campo = document.getElementById('observaciones');
+    campo.value = JSON.parse(document.getElementById('observaciones-ultima-vez').textContent);
+    campo.focus();
+});
+</script>
+{% endif %}
 {% endblock %}

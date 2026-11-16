@@ -43,6 +43,11 @@
                             </option>
                             {% endfor %}
                         </select>
+                        <!-- Lo que se le hizo la última vez en este servicio -->
+                        <div id="ultima-vez" class="alert alert-light border py-2 small mt-2 mb-0" hidden>
+                            <div class="text-muted"><i class="bi bi-clock-history"></i> Última vez (<span data-cuando></span>)</div>
+                            <div data-texto style="white-space: pre-line;"></div>
+                        </div>
                     </div>
 
                     {% if varios_especialistas %}
@@ -134,12 +139,25 @@
     const pedirAbono = document.getElementById('pedir_abono');
     const ayudaAbono = document.getElementById('ayuda-abono');
     let clienteDeConfianza = false;
+    let ultimasObservaciones = {};  // por servicio, del cliente encontrado
+
+    function mostrarUltimaVez() {
+        const caja = document.getElementById('ultima-vez');
+        const ultima = ultimasObservaciones[servicio.value];
+        caja.hidden = !ultima;
+        if (ultima) {
+            caja.querySelector('[data-cuando]').textContent = ultima.fecha + (ultima.especialista ? `, con ${ultima.especialista}` : '');
+            caja.querySelector('[data-texto]').textContent = ultima.texto;
+        }
+    }
 
     // ---- ¿Ya es cliente? ----
     let temporizador = null;
     async function buscarCliente() {
         const digitos = telefono.value.replace(/\D/g, '');
         if (digitos.length < 10) {
+            ultimasObservaciones = {};
+            mostrarUltimaVez();
             estadoCliente.textContent = '';
             grupoNombre.hidden = true;
             nombre.required = false;
@@ -148,6 +166,8 @@
         try {
             const respuesta = await fetch(`${URL_BUSCAR}?telefono=${encodeURIComponent(telefono.value)}`, { credentials: 'same-origin' });
             const datos = await respuesta.json();
+            ultimasObservaciones = datos.ultimas_observaciones || {};
+            mostrarUltimaVez();
             if (datos.encontrado) {
                 estadoCliente.className = 'form-text text-success';
                 estadoCliente.textContent = `✓ Cliente: ${datos.nombre}` + (datos.de_baja ? ' (estaba dado de baja: se reactivará)' : '');
@@ -202,7 +222,7 @@
         actualizarAbono();
     }
     hora.addEventListener('change', () => { horaElegida = hora.value; avisoHora.hidden = true; actualizarAbono(); });
-    servicio.addEventListener('change', () => { llenarEspecialistas(); cargarHoras(); });
+    servicio.addEventListener('change', () => { llenarEspecialistas(); cargarHoras(); mostrarUltimaVez(); });
     if (selectEspecialista) {
         selectEspecialista.addEventListener('change', () => { especialistaElegido = selectEspecialista.value; cargarHoras(); });
     }

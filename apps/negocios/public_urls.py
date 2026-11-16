@@ -59,6 +59,8 @@ urlpatterns = [
     path('<slug:slug>/admin/citas/<int:cita_id>/especialista/', admin_views.cita_asignar_especialista, name='cita_asignar_especialista'),
 
     path('<slug:slug>/admin/clientes/', admin_views.clientes_admin, name='admin_clientes'),
+    path('<slug:slug>/admin/clientes/<int:cliente_id>/', admin_views.cliente_historial, name='admin_cliente_historial'),
+    path('<slug:slug>/admin/citas/<int:cita_id>/observaciones/', admin_views.cita_observaciones, name='cita_observaciones'),
     path('<slug:slug>/admin/clientes/recuperar/', admin_views.clientes_recuperar, name='admin_clientes_recuperar'),
     path('<slug:slug>/admin/clientes/<int:cliente_id>/baja/', admin_views.cliente_baja, name='cliente_baja'),
     path('<slug:slug>/admin/clientes/<int:cliente_id>/reactivar/', admin_views.cliente_reactivar, name='cliente_reactivar'),

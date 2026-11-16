@@ -495,7 +495,8 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p><strong>Cliente:</strong> <span id="modalCliente"></span></p>
+                <p><strong>Cliente:</strong> <span id="modalCliente"></span>
+                    <a href="#" id="modalHistorial" class="small ms-1"><i class="bi bi-clock-history"></i> Historial</a></p>
                 <p><strong>Servicio:</strong> <span id="modalServicio"></span></p>
                 <p><strong>Estado:</strong> <span id="modalEstado" class="badge"></span></p>
                 <p><strong>Pago:</strong> <span id="modalPago"></span></p>
@@ -510,6 +511,17 @@
                     <button type="submit" class="btn btn-sm btn-outline-primary" id="btnCambiarEspecialista" hidden>Cambiar</button>
                 </form>
                 {% endif %}
+                <!-- Lo que se le hizo la última vez en este servicio, y en esta cita -->
+                <div id="modalUltimaVez" class="alert alert-light border py-2 small mb-2" hidden>
+                    <div class="text-muted"><i class="bi bi-clock-history"></i> Última vez (<span data-cuando></span>)</div>
+                    <div data-texto style="white-space: pre-line;"></div>
+                </div>
+                <div id="modalObservaciones" class="small mb-2" hidden>
+                    <strong>Observaciones:</strong> <span data-texto style="white-space: pre-line;"></span>
+                </div>
+                <a href="#" id="modalFaltaAnotar" class="btn btn-sm btn-outline-warning mb-2" hidden>
+                    <i class="bi bi-pencil-square"></i> Anotar lo que se hizo
+                </a>
                 <hr>
                 <div id="modalAcciones">
                     <!-- Las acciones se cargarán dinámicamente según el estado -->
@@ -563,12 +575,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Si es continuación, usar clase especial
                 if (cita.es_continuacion) {
                     citaDiv.className = `cita-block ${cita.estado} cita-continuacion`;
-                    citaDiv.onclick = () => verCita(cita.id, cita.estado, cita.cliente, cita.servicio, cita.whatsapp, cita.pago, cita.especialista_id);
+                    citaDiv.onclick = () => verCita(cita);
                     citaDiv.title = `${cita.cliente} - ${cita.servicio} (Inicia a las ${cita.hora})`;
                     citaDiv.innerHTML = `<small><i class="bi bi-arrow-up"></i> Ocupado</small>`;
                 } else {
                     citaDiv.className = `cita-block ${cita.estado}`;
-                    citaDiv.onclick = () => verCita(cita.id, cita.estado, cita.cliente, cita.servicio, cita.whatsapp, cita.pago, cita.especialista_id);
+                    citaDiv.onclick = () => verCita(cita);
 
                     // Mostrar duración si es mayor a 30 minutos
                     const duracionText = cita.duracion > 30 ? ` (${cita.duracion}min)` : '';
@@ -715,7 +727,24 @@ function crearBloqueoDesdeSeleccion() {
 const VARIOS_ESPECIALISTAS = {{ varios_especialistas|yesno:'true,false' }};
 const FILTRO_ESPECIALISTA = "{{ especialista_filtro.id|default:'' }}";
 
-function verCita(citaId, estado, cliente, servicio, whatsapp, pago, especialistaId) {
+function verCita(cita) {
+    const { id: citaId, estado, cliente, servicio, whatsapp, pago, especialista_id: especialistaId } = cita;
+
+    document.getElementById('modalHistorial').href = `/{{ negocio.slug }}/admin/clientes/${cita.cliente_id}/#cita-${citaId}`;
+    const ultimaVez = document.getElementById('modalUltimaVez');
+    ultimaVez.hidden = !cita.ultima_vez;
+    if (cita.ultima_vez) {
+        ultimaVez.querySelector('[data-cuando]').textContent = cita.ultima_vez.fecha
+            + (cita.ultima_vez.especialista ? `, con ${cita.ultima_vez.especialista}` : '');
+        ultimaVez.querySelector('[data-texto]').textContent = cita.ultima_vez.texto;
+    }
+    const faltaAnotar = document.getElementById('modalFaltaAnotar');
+    faltaAnotar.hidden = !cita.falta_anotar;
+    faltaAnotar.href = document.getElementById('modalHistorial').href;
+    const observaciones = document.getElementById('modalObservaciones');
+    observaciones.hidden = !cita.observaciones;
+    observaciones.querySelector('[data-texto]').textContent = cita.observaciones || '';
+
     // Con quién (y cambiarlo, si la cita sigue activa)
     const formEspecialista = document.getElementById('formEspecialista');
     if (formEspecialista) {

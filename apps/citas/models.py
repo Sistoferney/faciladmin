@@ -2,6 +2,7 @@
 Modelos para sistema de agenda y citas
 RF-16 a RF-23, RF-54, RF-55, RN-01 a RN-04
 """
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 from django.core.exceptions import ValidationError
@@ -89,6 +90,18 @@ class Cita(models.Model):
     # Notas
     notas_cliente = models.TextField('Notas del cliente', blank=True)
     notas_internas = models.TextField('Notas internas', blank=True)
+
+    # Qué se hizo y con qué (ej: referencia del tinte), para repetirlo en la
+    # próxima cita del mismo servicio. Solo las ve el negocio
+    observaciones = models.TextField(
+        'Observaciones de la atención', blank=True,
+        help_text='Productos, referencias, técnicas o preferencias. No es una historia clínica.'
+    )
+    observaciones_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='+', verbose_name='Observaciones escritas por'
+    )
+    observaciones_en = models.DateTimeField('Observaciones escritas el', null=True, blank=True)
 
     # RF-55: Fecha límite de pago (mínimo 2 días antes)
     fecha_limite_abono = models.DateTimeField('Fecha límite de abono', null=True, blank=True)
@@ -246,6 +259,32 @@ class Cita(models.Model):
         self.fecha_confirmacion = timezone.now()
         self.save()
 
+    def guardar_observaciones(self, texto, usuario):
+        """
+        Guarda las observaciones si cambiaron. Va directo a la base para no
+        disparar las señales de la cita (avisos, pendientes).
+        """
+        texto = (texto or '').strip()
+        if texto == self.observaciones:
+            return False
+        self.observaciones = texto
+        self.observaciones_por = usuario if texto else None
+        self.observaciones_en = timezone.now() if texto else None
+        Cita.objects.filter(pk=self.pk).update(
+            observaciones=self.observaciones,
+            observaciones_por=self.observaciones_por,
+            observaciones_en=self.observaciones_en,
+        )
+        return True
+
+    def resumen_observaciones(self):
+        """Para mostrar como "la última vez" (en JSON para la agenda y Nueva cita)"""
+        return {
+            'fecha': timezone.localtime(self.fecha_hora).strftime('%d/%m/%Y'),
+            'especialista': self.especialista.nombre if self.especialista_id else '',
+            'texto': self.observaciones,
+        }
+
     def marcar_completada(self):
         """
         RF-22: Marcar cita como completada
@@ -264,3 +303,27 @@ class Cita(models.Model):
         if motivo:
             self.notas_internas = f"{self.notas_internas}\nCancelación: {motivo}".strip()
         self.save()
+
+
+def ultimas_observaciones(citas):
+    """
+    Para cada cita, la anterior del mismo cliente y servicio que tenga
+    observaciones ("la última vez"): {cita.id: Cita}. Una sola consulta.
+    """
+    citas = list(citas)
+    if not citas:
+        return {}
+    previas = {}
+    for previa in Cita.objects.filter(
+        cliente_id__in={c.cliente_id for c in citas},
+        servicio_id__in={c.servicio_id for c in citas},
+    ).exclude(observaciones='').select_related('especialista').order_by('-fecha_hora'):
+        previas.setdefault((previa.cliente_id, previa.servicio_id), []).append(previa)
+
+    resultado = {}
+    for cita in citas:
+        for previa in previas.get((cita.cliente_id, cita.servicio_id), []):
+            if previa.pk != cita.pk and previa.fecha_hora < cita.fecha_hora:
+                resultado[cita.pk] = previa
+                break
+    return resultado

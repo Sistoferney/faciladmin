@@ -13,7 +13,7 @@ from datetime import timedelta
 from .models import Negocio, BloqueoAgenda
 from apps.servicios.models import Servicio
 from apps.clientes.models import Cliente
-from apps.citas.models import Cita
+from apps.citas.models import Cita, ultimas_observaciones
 from apps.abonos.models import Abono
 from apps.core.formato import parsear_monto, pesos
 from apps.notificaciones import pendientes
@@ -274,6 +274,9 @@ def agenda_admin(request, slug):
     # Crear una matriz para mapear citas y bloqueos a cada celda del calendario
     calendario_grid = {}
 
+    # "La última vez" de cada cita (mismo cliente y servicio), en una consulta
+    ultimas = ultimas_observaciones(citas_semana)
+
     # Mapear citas y marcar todos los slots que ocupan
     for cita in citas_semana:
         # Convertir a zona horaria local (America/Bogota)
@@ -296,6 +299,11 @@ def agenda_admin(request, slug):
             'pago': _resumen_pago(cita),
             'especialista': cita.especialista.nombre if cita.especialista else '',
             'especialista_id': cita.especialista_id,
+            'cliente_id': cita.cliente_id,
+            'observaciones': cita.observaciones,
+            # Completada sin anotar lo que se hizo, en un servicio que lo pide
+            'falta_anotar': cita.estado == 'completada' and cita.servicio.pedir_observaciones and not cita.observaciones,
+            'ultima_vez': ultimas[cita.id].resumen_observaciones() if cita.id in ultimas else None,
         }
 
         # Marcar todos los slots que ocupa esta cita
@@ -860,6 +868,8 @@ def cita_completar(request, slug, cita_id):
     cita = get_object_or_404(Cita, id=cita_id, negocio=negocio)
 
     if request.method == 'POST':
+        # Qué se hizo (ej: referencia del tinte) para la próxima vez
+        cita.guardar_observaciones(request.POST.get('observaciones', ''), request.user)
         # Actualiza también última visita y tipo de cliente
         # (los usan las tareas de clientes inactivos y sugerencias)
         cita.marcar_completada()
@@ -870,9 +880,21 @@ def cita_completar(request, slug, cita_id):
         'negocio': negocio,
         'seccion_activa': 'agenda',
         'cita': cita,
+        'ultima_vez': ultimas_observaciones([cita]).get(cita.id),
     }
 
     return render(request, 'admin_panel/cita_completar.html', context)
+
+
+@admin_required
+def cita_observaciones(request, slug, cita_id):
+    """Escribir o corregir las observaciones de una cita desde el historial del cliente"""
+    negocio = get_object_or_404(Negocio, slug=slug)
+    cita = get_object_or_404(Cita, id=cita_id, negocio=negocio)
+    if request.method == 'POST' and cita.guardar_observaciones(request.POST.get('observaciones', ''), request.user):
+        messages.success(request, 'Observaciones guardadas.')
+    url = reverse('public:admin_cliente_historial', args=[slug, cita.cliente_id])
+    return redirect(f'{url}#cita-{cita.id}')
 
 
 @admin_required
@@ -1245,6 +1267,38 @@ def _puede_pedir_abono(servicio, fecha_hora):
 
 
 @admin_required
+def cliente_historial(request, slug, cliente_id):
+    """
+    Ficha del cliente: todas sus citas con lo que se le hizo en cada una
+    (observaciones), para repetirlo igual. Se puede filtrar por servicio.
+    """
+    negocio = get_object_or_404(Negocio, slug=slug)
+    cliente = get_object_or_404(Cliente, id=cliente_id, negocio=negocio)
+
+    citas = Cita.objects.filter(negocio=negocio, cliente=cliente).select_related(
+        'servicio', 'especialista', 'observaciones_por'
+    ).order_by('-fecha_hora')
+    servicios_usados = Servicio.objects.filter(
+        id__in=citas.values('servicio_id')
+    ).order_by('nombre')
+
+    filtro = request.GET.get('servicio', '')
+    servicio_filtro = next((s for s in servicios_usados if str(s.id) == filtro), None)
+    if servicio_filtro:
+        citas = citas.filter(servicio=servicio_filtro)
+
+    context = {
+        'negocio': negocio,
+        'seccion_activa': 'clientes',
+        'cliente': cliente,
+        'citas': citas,
+        'servicios_usados': servicios_usados,
+        'servicio_filtro': servicio_filtro,
+    }
+    return render(request, 'admin_panel/cliente_historial.html', context)
+
+
+@admin_required
 def cliente_buscar(request, slug):
     """Al escribir el teléfono en "Nueva cita": ¿ya es cliente del negocio?"""
     from django.http import JsonResponse
@@ -1253,11 +1307,18 @@ def cliente_buscar(request, slug):
     cliente = Cliente.buscar_por_telefono(negocio, request.GET.get('telefono', ''))
     if not cliente:
         return JsonResponse({'encontrado': False})
+    # Por servicio, lo que se le hizo la última vez (al elegir el servicio se muestra)
+    ultimas = {}
+    for cita in Cita.objects.filter(negocio=negocio, cliente=cliente).exclude(
+        observaciones=''
+    ).select_related('especialista').order_by('-fecha_hora'):
+        ultimas.setdefault(str(cita.servicio_id), cita.resumen_observaciones())
     return JsonResponse({
         'encontrado': True,
         'nombre': cliente.nombre,
         'de_baja': not cliente.esta_activo,
         'no_exigir_abono': cliente.no_exigir_abono,
+        'ultimas_observaciones': ultimas,
     })
 
 

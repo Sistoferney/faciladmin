@@ -1,0 +1,100 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% load formato %}
+
+{% block page_title %}Historial de {{ cliente.nombre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .cita-historial { scroll-margin-top: 90px; }
+    .cita-historial:target { box-shadow: 0 0 0 2px var(--bs-primary); }
+    .observaciones-texto { white-space: pre-line; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
+    <div>
+        <a href="{% url 'public:admin_clientes' negocio.slug %}" class="small text-decoration-none">
+            <i class="bi bi-arrow-left"></i> Clientes
+        </a>
+        <h4 class="mb-1 mt-1"><i class="bi bi-person-circle"></i> {{ cliente.nombre }}</h4>
+        <div class="text-muted small">
+            {{ cliente.telefono }}
+            · {{ cliente.total_citas }} cita{{ cliente.total_citas|pluralize }} completada{{ cliente.total_citas|pluralize }}
+            {% if cliente.ultima_visita %}· Última visita: {{ cliente.ultima_visita|date:"d/m/Y" }}{% endif %}
+            {% if not cliente.esta_activo %}· <span class="badge bg-secondary">Dado de baja</span>{% endif %}
+        </div>
+    </div>
+    {% if servicios_usados|length > 1 %}
+    <form method="get">
+        <select name="servicio" class="form-select" onchange="this.form.submit()" aria-label="Filtrar por servicio">
+            <option value="">Todos los servicios</option>
+            {% for servicio in servicios_usados %}
+            <option value="{{ servicio.id }}" {% if servicio == servicio_filtro %}selected{% endif %}>{{ servicio.nombre }}</option>
+            {% endfor %}
+        </select>
+    </form>
+    {% endif %}
+</div>
+
+{% for cita in citas %}
+<div class="card shadow-sm border-0 mb-3 cita-historial" id="cita-{{ cita.id }}">
+    <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between gap-2">
+            <div>
+                <div class="fw-bold">{{ cita.servicio.nombre }}</div>
+                <div class="small text-muted">
+                    {{ cita.fecha_hora|date:"d/m/Y · H:i" }}
+                    {% if cita.especialista %}· con {{ cita.especialista.nombre }}{% endif %}
+                </div>
+            </div>
+            <div>
+                {% if cita.estado == 'completada' and cita.servicio.pedir_observaciones and not cita.observaciones %}
+                <span class="badge bg-warning text-dark" title="Este servicio pide anotar lo que se hizo">Sin anotar</span>
+                {% endif %}
+                {% if cita.estado == 'completada' %}<span class="badge bg-info">Completada</span>
+                {% elif cita.estado == 'confirmada' %}<span class="badge bg-success">Confirmada</span>
+                {% elif cita.estado == 'pendiente_abono' %}<span class="badge bg-warning text-dark">Pendiente abono</span>
+                {% elif cita.estado == 'cancelada' %}<span class="badge bg-danger">Cancelada</span>
+                {% else %}<span class="badge bg-secondary">{{ cita.get_estado_display }}</span>{% endif %}
+            </div>
+        </div>
+
+        {% if cita.observaciones %}
+        <div class="mt-3 p-2 bg-light rounded">
+            <div class="observaciones-texto">{{ cita.observaciones }}</div>
+            <div class="small text-muted mt-1">
+                {% if cita.observaciones_por %}{{ cita.observaciones_por.nombre }} · {% endif %}{{ cita.observaciones_en|date:"d/m/Y H:i" }}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if cita.estado != 'cancelada' %}
+        <details class="mt-2">
+            <summary class="small text-primary" role="button">
+                <i class="bi bi-pencil"></i> {% if cita.observaciones %}Editar observaciones{% else %}Agregar observaciones{% endif %}
+            </summary>
+            <form method="post" action="{% url 'public:cita_observaciones' negocio.slug cita.id %}" class="mt-2">
+                {% csrf_token %}
+                {% if cita.servicio.guia_observaciones %}
+                <div class="small text-muted mb-1"><i class="bi bi-list-check"></i> {{ cita.servicio.guia_observaciones }}</div>
+                {% endif %}
+                <textarea name="observaciones" class="form-control mb-2" rows="3"
+                          placeholder="{% if cita.servicio.guia_observaciones %}Escribe aquí lo que hiciste{% else %}Ej: tinte Igora Royal 7-1 + oxigenada 20 vol, 35 min{% endif %}">{{ cita.observaciones }}</textarea>
+                <button type="submit" class="btn btn-sm btn-primary">Guardar</button>
+            </form>
+        </details>
+        {% endif %}
+    </div>
+</div>
+{% empty %}
+<div class="text-center text-muted py-5">
+    <i class="bi bi-calendar-x fs-1"></i>
+    <p class="mt-2">Este cliente aún no tiene citas{% if servicio_filtro %} de {{ servicio_filtro.nombre }}{% endif %}.</p>
+</div>
+{% endfor %}
+
+<p class="small text-muted mt-4">
+    <i class="bi bi-lock"></i> Las observaciones solo las ve tu negocio: anota productos, referencias o técnicas, no una historia clínica.
+</p>
+{% endblock %}

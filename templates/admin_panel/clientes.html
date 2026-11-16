@@ -104,6 +104,10 @@
                                     {% endif %}
                                 </td>
                                 <td class="align-middle">
+                                    <!-- Sus citas y lo que se le hizo en cada una -->
+                                    <a href="{% url 'public:admin_cliente_historial' negocio.slug cliente.id %}" class="btn btn-sm btn-outline-primary mb-1" title="Citas y observaciones de cada atención">
+                                        <i class="bi bi-clock-history"></i> Historial
+                                    </a>
                                     {% if ver_baja %}
                                     <!-- Dado de baja: fecha, motivo y opción de reactivar -->
                                     <div class="small text-muted mb-1">

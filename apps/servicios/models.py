@@ -54,6 +54,17 @@ class Servicio(models.Model):
         help_text='Marcar si este servicio requiere contactar directamente para coordinar (ej: servicios a domicilio que dependen de distancia y disponibilidad)'
     )
 
+    # Qué anotar al atender (ej: tinte -> marca, tono, oxigenada, tiempo), para
+    # repetirlo igual la próxima vez. Ver Cita.observaciones
+    guia_observaciones = models.CharField(
+        'Qué anotar al atender', max_length=200, blank=True,
+        help_text='Ej: Marca, tono, oxigenada y tiempo de exposición'
+    )
+    pedir_observaciones = models.BooleanField(
+        'Pedir observaciones al completar', default=False,
+        help_text='El campo aparece destacado al completar la cita (no es obligatorio)'
+    )
+
     # Configuración de abono específico del servicio (opcional)
     requiere_abono = models.BooleanField(
         'Requiere abono específico',

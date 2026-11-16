@@ -376,6 +376,8 @@ class ServicioForm(forms.ModelForm):
             'orden',
             'esta_activo',
             'requiere_contacto_directo',
+            'guia_observaciones',
+            'pedir_observaciones',
             'requiere_abono',
             'monto_abono',
             'porcentaje_abono',
@@ -420,6 +422,11 @@ class ServicioForm(forms.ModelForm):
             }),
             'esta_activo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'requiere_contacto_directo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'guia_observaciones': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej: Marca, tono, oxigenada y tiempo de exposición'
+            }),
+            'pedir_observaciones': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'requiere_abono': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'monto_abono': forms.NumberInput(attrs={
                 'class': 'form-control',
@@ -461,6 +468,8 @@ class ServicioForm(forms.ModelForm):
             'orden': 'Número para ordenar los servicios (menor número aparece primero)',
             'esta_activo': 'Si está desactivado, el servicio no será visible en la mini-página',
             'requiere_contacto_directo': 'Marcar si este servicio requiere contactar directamente para coordinar (ej: servicios a domicilio). Los clientes serán redirigidos a WhatsApp/llamada en lugar de agendar directamente.',
+            'guia_observaciones': 'Aparece como ayuda al escribir las observaciones de la atención (opcional)',
+            'pedir_observaciones': 'El campo de observaciones aparece destacado al completar la cita, para que no se olvide. No es obligatorio.',
             'requiere_abono': 'Marcar si este servicio requiere un abono diferente al configurado para el negocio',
             'monto_abono': 'Monto fijo de abono para este servicio (deja vacío si usas porcentaje)',
             'porcentaje_abono': 'Porcentaje del precio como abono (deja vacío si usas monto fijo)',
