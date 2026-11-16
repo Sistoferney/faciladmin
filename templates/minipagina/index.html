@@ -16,18 +16,36 @@
     .mp .cta h2, .mp .cta p { color: var(--negocio-texto-degradado); }
     .mp .cta .fa-btn--light { --btn-bg: var(--fa-white); --btn-fg: var(--fa-navy); --btn-bd: var(--fa-white); }
     @media (max-width: 600px) { .mp-cover { min-height: 380px; } }
+
+    /* Con foto de portada: la foto completa (muchas traen su propio texto) y los
+       datos del negocio aparte, sobre blanco, para que no se tapen entre sí.
+       Celular: datos debajo de la foto. Computador: foto a la izquierda */
+    .mp .mp-cover--debajo { min-height: 0; background: none; color: var(--fa-ink); }
+    .mp .mp-cover--debajo::after { content: none; }
+    .mp .mp-cover--debajo .mp-cover__body { display: grid; gap: var(--fa-s5); align-items: start; padding-block: var(--fa-s6) 0; }
+    .mp .mp-cover--debajo .portada-imagen { display: block; width: 100%; height: auto; border-radius: var(--fa-r-lg); }
+    @media (max-width: 600px) { .mp .mp-cover--debajo .mp-cover__body { padding-top: var(--fa-s4); } }
+    @media (min-width: 900px) {
+        .mp .mp-cover--debajo .mp-cover__body { grid-template-columns: 3fr 2fr; grid-template-rows: 1fr 1fr; column-gap: var(--fa-s8); padding-top: var(--fa-s8); }
+        .mp .mp-cover--debajo .portada-imagen { grid-row: 1 / 3; }
+        .mp .mp-cover--debajo .mp-cover__datos { align-self: end; }
+    }
+    .mp .mp-cover--debajo h1 { color: var(--negocio-acento); }
+    .mp .mp-cover--debajo .mp-cover__meta { color: var(--fa-ink-70); }
+    .mp .mp-cover--debajo .mp-cover__meta .fa-icon { color: var(--negocio-acento); }
+    .mp .mp-cover--debajo .fa-tag { background: none; color: var(--negocio-acento); border-color: var(--negocio-acento); }
 </style>
 {% endblock %}
 
 {% block content %}
 <!-- Portada -->
-<section class="mp-cover hero-portada">
-    {% if negocio.imagen_portada %}
-        <img src="{{ negocio.imagen_portada.url }}" alt="{{ negocio.nombre }}" class="portada-imagen">
-    {% endif %}
+<section class="mp-cover hero-portada{% if negocio.imagen_portada %} mp-cover--debajo{% endif %}">
     <div class="fa-container mp-cover__body">
-        <div>
-            <span class="fa-tag fa-tag--on-dark">{{ negocio.get_tipo_display }}{% if negocio.es_a_domicilio %} · A domicilio{% endif %}</span>
+        {% if negocio.imagen_portada %}
+            <img src="{{ negocio.imagen_portada.url }}" alt="{{ negocio.nombre }}" class="portada-imagen">
+        {% endif %}
+        <div class="mp-cover__datos">
+            <span class="fa-tag{% if not negocio.imagen_portada %} fa-tag--on-dark{% endif %}">{{ negocio.get_tipo_display }}{% if negocio.es_a_domicilio %} · A domicilio{% endif %}</span>
             <h1>{{ negocio.nombre }}</h1>
             <ul class="mp-cover__meta">
                 {% if negocio.ciudad %}<li>{% icono 'ubicacion' %} {% if negocio.direccion %}{{ negocio.direccion }}, {% endif %}{{ negocio.ciudad }}</li>{% endif %}
@@ -40,7 +58,7 @@
             </a>
             {% if tiene_citas %}
             <!-- Cliente reconocido en este dispositivo con citas en el sistema -->
-            <a href="{% url 'public:mis_citas' negocio.slug %}" class="fa-btn fa-btn--on-dark fa-btn--lg">
+            <a href="{% url 'public:mis_citas' negocio.slug %}" class="fa-btn {% if negocio.imagen_portada %}fa-btn--outline{% else %}fa-btn--on-dark{% endif %} fa-btn--lg">
                 <i class="bi bi-list-check"></i> Mis Citas
                 {% if citas_proximas %}
                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"

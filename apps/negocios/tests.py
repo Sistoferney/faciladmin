@@ -749,6 +749,26 @@ class ConfiguracionFacilTests(TestCase):
             self.negocio.logo.save('logo.png', ContentFile(salida.getvalue()))
             self.assertNotEqual(self.negocio.version_logo, version)
 
+    def test_datos_del_negocio_van_debajo_de_la_foto_de_portada(self):
+        # Muchas portadas traen su propio texto: encima de la foto se tapaban
+        url = reverse('public:minipagina', args=[self.negocio.slug])
+        resp = self.client.get(url)
+        self.assertContains(resp, 'class="mp-cover hero-portada"')
+        self.assertContains(resp, 'class="fa-tag fa-tag--on-dark"')
+
+        with tempfile.TemporaryDirectory() as carpeta, override_settings(MEDIA_ROOT=carpeta):
+            salida = BytesIO()
+            Image.new('RGB', (1600, 900)).save(salida, 'JPEG')
+            self.negocio.imagen_portada.save('portada.jpg', ContentFile(salida.getvalue()))
+            html = self.client.get(url).content.decode()
+        debajo = 'class="mp-cover hero-portada mp-cover--debajo"'
+        self.assertIn(debajo, html)
+        self.assertNotIn('class="fa-tag fa-tag--on-dark"', html)
+        # La foto va primero y los datos después, en su propio bloque
+        self.assertLess(html.index(debajo), html.index('class="portada-imagen"'))
+        self.assertLess(html.index('class="portada-imagen"'), html.index('class="mp-cover__datos"'))
+        self.assertLess(html.index('class="mp-cover__datos"'), html.index(f'<h1>{self.negocio.nombre}</h1>'))
+
     def test_precios_con_formato_de_pesos(self):
         Servicio.objects.create(negocio=self.negocio, nombre='Corte', precio=20000, duracion_minutos=30)
         for nombre in ('public:minipagina', 'public:agendar'):
