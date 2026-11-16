@@ -749,6 +749,34 @@ class ConfiguracionFacilTests(TestCase):
             self.negocio.logo.save('logo.png', ContentFile(salida.getvalue()))
             self.assertNotEqual(self.negocio.version_logo, version)
 
+    def _datos_configuracion(self, **cambios):
+        form = ConfiguracionNegocioForm(instance=self.negocio)
+        datos = {k: v for k, v in form.initial.items()
+                 if v not in (None, '') and k not in ('logo', 'imagen_portada', 'qr_pago')}
+        datos.update(cambios)
+        return datos
+
+    def test_tipo_otro_se_escribe_a_mano(self):
+        # Ej: un consultorio psicológico no es spa, peluquería ni barbería
+        resp = self.client.post(self.url, self._datos_configuracion(tipo='otro', tipo_personalizado='  '))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Escribe qué tipo de negocio es.')
+
+        self.client.post(self.url, self._datos_configuracion(
+            tipo='otro', tipo_personalizado='Consultorio  psicológico'))
+        self.negocio.refresh_from_db()
+        self.assertEqual(self.negocio.tipo_visible, 'Consultorio psicológico')
+        resp = self.client.get(reverse('public:minipagina', args=[self.negocio.slug]))
+        self.assertContains(resp, f'<title>{self.negocio.nombre} | Consultorio psicológico')
+        self.assertContains(resp, '>Consultorio psicológico</span>')
+        self.assertContains(resp, '"@type": "LocalBusiness"')
+
+        # Al volver a un tipo de la lista, el texto escrito ya no aplica
+        self.client.post(self.url, self._datos_configuracion(tipo='spa', tipo_personalizado='Consultorio'))
+        self.negocio.refresh_from_db()
+        self.assertEqual(self.negocio.tipo_personalizado, '')
+        self.assertEqual(self.negocio.tipo_visible, 'Spa')
+
     def test_datos_del_negocio_van_debajo_de_la_foto_de_portada(self):
         # Muchas portadas traen su propio texto: encima de la foto se tapaban
         url = reverse('public:minipagina', args=[self.negocio.slug])

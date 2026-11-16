@@ -8,7 +8,22 @@ from .models import Negocio, BloqueoAgenda, Especialista
 from apps.servicios.models import Servicio
 
 
-class ConfiguracionNegocioForm(ImagenesAjustadasMixin, forms.ModelForm):
+class TipoPersonalizadoMixin:
+    """
+    Con el tipo 'Otro' el dueño escribe el suyo (ej: Consultorio psicológico).
+    Va después de 'tipo' en fields, para que el tipo ya esté validado aquí.
+    """
+
+    def clean_tipo_personalizado(self):
+        texto = ' '.join(self.cleaned_data.get('tipo_personalizado', '').split())
+        if self.cleaned_data.get('tipo') != 'otro':
+            return ''
+        if not texto:
+            raise forms.ValidationError('Escribe qué tipo de negocio es.')
+        return texto
+
+
+class ConfiguracionNegocioForm(TipoPersonalizadoMixin, ImagenesAjustadasMixin, forms.ModelForm):
     """
     Formulario para que el admin del negocio configure su mini-página
     """
@@ -29,6 +44,7 @@ class ConfiguracionNegocioForm(ImagenesAjustadasMixin, forms.ModelForm):
             # Información básica
             'nombre',
             'tipo',
+            'tipo_personalizado',
             'descripcion',
             'telefono',
             'email',
@@ -82,6 +98,9 @@ class ConfiguracionNegocioForm(ImagenesAjustadasMixin, forms.ModelForm):
                 'placeholder': 'Nombre de tu negocio'
             }),
             'tipo': forms.Select(attrs={'class': 'form-select'}),
+            'tipo_personalizado': forms.TextInput(attrs={
+                'class': 'form-control', 'placeholder': 'Ej: Consultorio psicológico'
+            }),
             'descripcion': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': 4,

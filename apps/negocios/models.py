@@ -39,7 +39,7 @@ class Negocio(models.Model):
         ('peluqueria', 'Peluquería'),
         ('barberia', 'Barbería'),
         ('salon_belleza', 'Salón de Belleza'),
-        ('otro', 'Otro'),
+        ('otro', 'Otro (escríbelo)'),
     ]
 
     # Relación con el administrador
@@ -53,6 +53,10 @@ class Negocio(models.Model):
     # Información básica
     nombre = models.CharField('Nombre del negocio', max_length=200)
     tipo = models.CharField('Tipo de negocio', max_length=20, choices=TIPO_NEGOCIO_CHOICES, default='spa')
+    tipo_personalizado = models.CharField(
+        '¿Qué tipo de negocio es?', max_length=60, blank=True,
+        help_text='Solo con el tipo "Otro". Ej: Consultorio psicológico'
+    )
     descripcion = models.TextField('Descripción', blank=True)
 
     # URL única para mini página (RF-09)
@@ -205,6 +209,13 @@ class Negocio(models.Model):
         # Validación final antes de guardar
         self.full_clean()
         super().save(*args, **kwargs)
+
+    @property
+    def tipo_visible(self):
+        """Tipo que ven los clientes: el que escribió el dueño si eligió 'Otro'"""
+        if self.tipo == 'otro' and self.tipo_personalizado:
+            return self.tipo_personalizado
+        return self.get_tipo_display()
 
     @property
     def version_logo(self):

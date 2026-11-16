@@ -1,0 +1,23 @@
+<script>
+// El campo para escribir el tipo solo se ve con el tipo "Otro"
+(function() {
+    const tipo = document.querySelector('select[name="tipo"]');
+    const campos = document.querySelectorAll('[data-tipo-otro]');
+    if (!tipo || !campos.length) return;
+
+    function actualizar() {
+        const esOtro = tipo.value === 'otro';
+        campos.forEach(function(campo) {
+            campo.hidden = !esOtro;
+            const input = campo.querySelector('input');
+            if (input) input.required = esOtro;
+        });
+    }
+
+    tipo.addEventListener('change', function() {
+        actualizar();
+        if (tipo.value === 'otro') campos[0].querySelector('input')?.focus();
+    });
+    actualizar();
+})();
+</script>

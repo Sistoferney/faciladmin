@@ -45,7 +45,7 @@
             <img src="{{ negocio.imagen_portada.url }}" alt="{{ negocio.nombre }}" class="portada-imagen">
         {% endif %}
         <div class="mp-cover__datos">
-            <span class="fa-tag{% if not negocio.imagen_portada %} fa-tag--on-dark{% endif %}">{{ negocio.get_tipo_display }}{% if negocio.es_a_domicilio %} · A domicilio{% endif %}</span>
+            <span class="fa-tag{% if not negocio.imagen_portada %} fa-tag--on-dark{% endif %}">{{ negocio.tipo_visible }}{% if negocio.es_a_domicilio %} · A domicilio{% endif %}</span>
             <h1>{{ negocio.nombre }}</h1>
             <ul class="mp-cover__meta">
                 {% if negocio.ciudad %}<li>{% icono 'ubicacion' %} {% if negocio.direccion %}{{ negocio.direccion }}, {% endif %}{{ negocio.ciudad }}</li>{% endif %}

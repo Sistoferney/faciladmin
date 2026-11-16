@@ -21,7 +21,16 @@
     {% if form.tipo.errors %}
         <div class="invalid-feedback d-block">{{ form.tipo.errors }}</div>
     {% endif %}
-    <small class="form-text text-muted">Selecciona el tipo que mejor describe tu negocio</small>
+    <small class="form-text text-muted">Selecciona el tipo que mejor describe tu negocio. Si no está, elige "Otro" y escríbelo</small>
+</div>
+
+<div class="mb-4" data-tipo-otro>
+    {{ form.tipo_personalizado.label_tag }}
+    {{ form.tipo_personalizado }}
+    {% if form.tipo_personalizado.errors %}
+        <div class="invalid-feedback d-block">{{ form.tipo_personalizado.errors }}</div>
+    {% endif %}
+    <small class="form-text text-muted">Así aparecerá en tu mini-página</small>
 </div>
 
 <div class="mb-4">
@@ -32,6 +41,10 @@
     {% endif %}
     <small class="form-text text-muted">Esta descripción aparecerá en tu mini-página para atraer clientes</small>
 </div>
+{% endblock %}
+
+{% block paso_js %}
+{% include 'negocios/_tipo_personalizado_js.html' %}
 {% endblock %}
 
 {% block paso_consejo %}

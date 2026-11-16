@@ -32,6 +32,7 @@ TIPOS_SCHEMA = {
     'peluqueria': 'HairSalon',
     'barberia': 'HairSalon',
     'salon_belleza': 'BeautySalon',
+    'otro': 'LocalBusiness',  # Puede no ser de belleza (ej: consultorio)
 }
 TIPO_SCHEMA_DEFECTO = 'HealthAndBeautyBusiness'
 

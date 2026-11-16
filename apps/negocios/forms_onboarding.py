@@ -3,16 +3,17 @@ Formularios para el sistema de Onboarding Guiado
 """
 from django import forms
 from .imagenes import ImagenesAjustadasMixin, TIPOS_ACEPTADOS
+from .forms import TipoPersonalizadoMixin
 from .models import Negocio
 
 
-class DatosBasicosOnboardingForm(forms.ModelForm):
+class DatosBasicosOnboardingForm(TipoPersonalizadoMixin, forms.ModelForm):
     """
     Formulario para el paso 1: Datos Básicos
     """
     class Meta:
         model = Negocio
-        fields = ['nombre', 'tipo', 'descripcion']
+        fields = ['nombre', 'tipo', 'tipo_personalizado', 'descripcion']
         widgets = {
             'nombre': forms.TextInput(attrs={
                 'class': 'form-control form-control-lg',
@@ -21,6 +22,10 @@ class DatosBasicosOnboardingForm(forms.ModelForm):
             }),
             'tipo': forms.Select(attrs={
                 'class': 'form-select form-select-lg'
+            }),
+            'tipo_personalizado': forms.TextInput(attrs={
+                'class': 'form-control form-control-lg',
+                'placeholder': 'Ej: Consultorio psicológico'
             }),
             'descripcion': forms.Textarea(attrs={
                 'class': 'form-control',

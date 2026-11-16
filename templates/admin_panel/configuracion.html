@@ -87,6 +87,13 @@
                             {% if form.tipo.errors %}
                                 <div class="text-danger small">{{ form.tipo.errors }}</div>
                             {% endif %}
+                            <div class="mt-2" id="campoTipoPersonalizado" data-tipo-otro>
+                                <label class="form-label" for="{{ form.tipo_personalizado.id_for_label }}">{{ form.tipo_personalizado.label }}</label>
+                                {{ form.tipo_personalizado }}
+                                {% if form.tipo_personalizado.errors %}
+                                    <div class="text-danger small">{{ form.tipo_personalizado.errors }}</div>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
 
@@ -613,6 +620,7 @@
 {% endblock %}
 
 {% block extra_js %}
+{% include 'negocios/_tipo_personalizado_js.html' %}
 <script>
 // Copiar URL al portapapeles
 function copiarURL() {
@@ -751,7 +759,7 @@ document.getElementById('configForm').addEventListener('submit', function() {
 document.addEventListener('DOMContentLoaded', function() {
     // Mapeo de campos a pestañas
     const camposPorTab = {
-        'info': ['nombre', 'tipo', 'descripcion', 'telefono', 'email', 'whatsapp',
+        'info': ['nombre', 'tipo', 'tipo_personalizado', 'descripcion', 'telefono', 'email', 'whatsapp',
                  'direccion', 'ciudad', 'estado', 'es_a_domicilio', 'esta_activo', 'acepta_reservas_online'],
         'personalizacion': ['logo', 'imagen_portada', 'color_primario', 'color_secundario', 'usar_degradado'],
         'horarios': ['horario_apertura', 'horario_cierre', 'dia_lunes', 'dia_martes', 'dia_miercoles', 'dia_jueves', 'dia_viernes', 'dia_sabado', 'dia_domingo'],

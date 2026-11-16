@@ -10,7 +10,7 @@
          editar y cancelar lo cambian a noindex -->
     <meta name="robots" content="{% block robots %}index, follow{% endblock %}">
 
-    <title>{% block title %}{{ negocio.nombre }} | {{ negocio.get_tipo_display }}{% if negocio.ciudad %} en {{ negocio.ciudad }}{% endif %} · Agenda tu cita online{% endblock %}</title>
+    <title>{% block title %}{{ negocio.nombre }} | {{ negocio.tipo_visible }}{% if negocio.ciudad %} en {{ negocio.ciudad }}{% endif %} · Agenda tu cita online{% endblock %}</title>
 
     <!-- PWA Meta Tags -->
     <meta name="description" content="{% if negocio.descripcion %}{{ negocio.descripcion|truncatechars:160 }}{% else %}Agenda tu cita en {{ negocio.nombre }}{% if negocio.ciudad %}, {{ negocio.ciudad }}{% endif %}: reserva online las 24 horas y recibe recordatorios.{% endif %}">
