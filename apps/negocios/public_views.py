@@ -151,6 +151,12 @@ def agendar_cita(request, slug):
         esta_activo=True
     ).order_by('orden', 'nombre')
 
+    # Desde el botón "Agendar" de un servicio en la mini-página: ya viene elegido
+    servicio_param = request.GET.get('servicio', '')
+    servicio_elegido = next(
+        (s for s in servicios if str(s.id) == servicio_param), None
+    ) if servicio_param.isdigit() else None
+
     if request.method == 'POST':
         try:
             # Obtener y limpiar datos del formulario
@@ -309,6 +315,7 @@ def agendar_cita(request, slug):
     context = {
         'negocio': negocio,
         'servicios': servicios,
+        'servicio_elegido': servicio_elegido,
         # Con 2 o más especialistas el cliente elige con quién (ver disponibilidad.py)
         'varios_especialistas': tiene_varios_especialistas(negocio),
         'especialistas': [_datos_especialista(e) for e in especialistas_para(negocio)],

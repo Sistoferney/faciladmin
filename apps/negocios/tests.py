@@ -456,6 +456,30 @@ class SesionPersistentePWATests(TestCase):
         self.client.post(self.url_mis_citas, {'usuario': '3001111111'})
         self.assertContains(self.client.get(url), '+573001111111')
 
+    def test_agendar_desde_un_servicio_no_lo_vuelve_a_pedir(self, *mocks):
+        url = reverse('public:agendar', args=[self.negocio.slug])
+        servicio = Servicio.objects.get(negocio=self.negocio, nombre='Corte')
+
+        resp = self.client.get(f'{url}?servicio={servicio.id}')
+        self.assertEqual(resp.context['servicio_elegido'], servicio)
+        self.assertContains(resp, f'const SERVICIO_ELEGIDO = {servicio.id};')
+        self.assertContains(resp, 'Vas a agendar')
+
+        # Sin servicio, con uno de otro negocio, inactivo o inválido: flujo completo
+        ajeno = Servicio.objects.create(
+            negocio=Negocio.objects.create(
+                administrador=Usuario.objects.create_user(
+                    telefono='3009990000', password='x', nombre='Otro', email='o@o.com'),
+                nombre='Otro Spa', telefono='3009990000'),
+            nombre='Ajeno', precio=1, duracion_minutos=30)
+        inactivo = Servicio.objects.create(
+            negocio=self.negocio, nombre='Viejo', precio=1, duracion_minutos=30, esta_activo=False)
+        for consulta in ('', f'?servicio={ajeno.id}', f'?servicio={inactivo.id}', '?servicio=abc'):
+            resp = self.client.get(f'{url}{consulta}')
+            self.assertIsNone(resp.context['servicio_elegido'])
+            self.assertContains(resp, 'const SERVICIO_ELEGIDO = null;')
+            self.assertNotContains(resp, 'Vas a agendar')
+
     def test_service_worker_sin_cache_http(self, *mocks):
         resp = self.client.get('/sw.js')
         self.assertEqual(resp['Cache-Control'], 'no-cache')

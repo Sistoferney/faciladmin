@@ -152,6 +152,12 @@
         }
 
         /* Service Cards */
+        /* Servicio que ya viene elegido desde la mini-página */
+        .servicio-elegido { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .75rem 1rem; margin-bottom: 1.5rem; border: 1px solid var(--fa-line, #dee2e6); border-left: 4px solid var(--negocio-acento); border-radius: 12px; background: #fff; }
+        .servicio-elegido[hidden] { display: none; }
+        .servicio-elegido__nombre { font-weight: 600; }
+        .servicio-elegido .btn-link { color: var(--negocio-acento); font-weight: 500; white-space: nowrap; }
+
         .service-card {
             border: 2px solid #e9ecef;
             border-radius: 15px;
@@ -508,6 +514,16 @@
 
                     <div class="row justify-content-center">
                         <div class="col-md-8">
+                            {% if servicio_elegido %}
+                            <div class="servicio-elegido" data-servicio-fijo>
+                                <div>
+                                    <small class="text-muted">Vas a agendar</small>
+                                    <div class="servicio-elegido__nombre">{{ servicio_elegido.nombre }}</div>
+                                    <small class="text-muted">{{ servicio_elegido.precio|pesos }} · {{ servicio_elegido.duracion_minutos }} min</small>
+                                </div>
+                                <button type="button" class="btn btn-link p-0" data-cambiar-servicio>Cambiar</button>
+                            </div>
+                            {% endif %}
                             <div class="mb-4">
                                 <label class="form-label">Celular de contacto *</label>
                                 <input type="tel" name="telefono" id="telefono_step1" class="form-control form-control-lg"
@@ -567,6 +583,16 @@
 
                 <!-- Step 2: Select Service -->
                 <div class="step-content" id="step-2">
+                    {% if servicio_elegido %}
+                    <div class="servicio-elegido" data-servicio-fijo>
+                        <div>
+                            <small class="text-muted">Vas a agendar</small>
+                            <div class="servicio-elegido__nombre">{{ servicio_elegido.nombre }}</div>
+                        </div>
+                        <button type="button" class="btn btn-link p-0" data-cambiar-servicio>Cambiar servicio</button>
+                    </div>
+                    {% endif %}
+                    <div data-lista-servicios>
                     <h4 class="mb-4">Selecciona un Servicio</h4>
                     <div class="services-list">
                         {% for servicio in servicios %}
@@ -595,6 +621,7 @@
                             {% endif %}
                         </div>
                         {% endfor %}
+                    </div>
                     </div>
                     <input type="hidden" name="servicio" id="selectedService">
 
@@ -789,12 +816,40 @@
         let currentMonth = new Date();
         let fechasDisponibles = []; // Almacena las fechas con disponibilidad
 
+        // Servicio elegido desde su botón "Agendar" en la mini-página: no se
+        // vuelve a preguntar (con varios especialistas el paso 2 solo pide con quién)
+        const SERVICIO_ELEGIDO = {{ servicio_elegido.id|default:'null' }};
+        let servicioFijo = false;
+
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             renderCalendar();
             setupServiceSelection();
             setupNavigation();
+            fijarServicioElegido();
         });
+
+        function fijarServicioElegido() {
+            const card = SERVICIO_ELEGIDO && document.querySelector(`.service-card[data-service-id="${SERVICIO_ELEGIDO}"]`);
+            if (!card) return;
+            card.click();
+            servicioFijo = true;
+            mostrarServicioFijo();
+            document.querySelectorAll('[data-cambiar-servicio]').forEach((boton) => boton.addEventListener('click', () => {
+                servicioFijo = false;
+                mostrarServicioFijo();
+            }));
+        }
+
+        function mostrarServicioFijo() {
+            document.querySelectorAll('[data-servicio-fijo]').forEach((el) => { el.hidden = !servicioFijo; });
+            document.querySelector('[data-lista-servicios]').hidden = servicioFijo;
+        }
+
+        // Sin especialistas que elegir, con el servicio fijo el paso 2 sobra
+        function saltarPasoServicio() {
+            return servicioFijo && !VARIOS_ESPECIALISTAS;
+        }
 
         // Service Selection
         function setupServiceSelection() {
@@ -1068,9 +1123,12 @@
         function setupNavigation() {
             document.getElementById('btnNext').addEventListener('click', function() {
                 if (validateStep(currentStep)) {
-                    // Si estamos en step 2 y el servicio requiere contacto directo
-                    if (currentStep === 2 && selectedService && selectedService.requiresContact) {
+                    // Servicio ya elegido (paso 2, o paso 1 si vino de la mini-página)
+                    const servicioListo = currentStep === 2 || (currentStep === 1 && servicioFijo);
+                    if (servicioListo && selectedService && selectedService.requiresContact) {
                         showContactScreen();
+                    } else if (currentStep === 1 && saltarPasoServicio()) {
+                        goToStep(3);
                     } else {
                         goToStep(currentStep + 1);
                     }
@@ -1078,7 +1136,7 @@
             });
 
             document.getElementById('btnPrev').addEventListener('click', function() {
-                goToStep(currentStep - 1);
+                goToStep(currentStep === 3 && saltarPasoServicio() ? 1 : currentStep - 1);
             });
 
             document.getElementById('prevMonth').addEventListener('click', function() {
