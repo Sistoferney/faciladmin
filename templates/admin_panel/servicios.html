@@ -7,10 +7,17 @@
 <div class="row mb-4">
     <div class="col-md-12">
         <div class="d-flex justify-content-between align-items-center">
-            <h4><i class="bi bi-scissors"></i> Mis Servicios</h4>
+            <div>
+                <h4 class="mb-0"><i class="bi bi-scissors"></i> Mis Servicios</h4>
+                <small class="text-muted">{{ servicios_activos }} de {{ max_servicios }} servicios activos</small>
+            </div>
+            {% if puede_crear_servicio %}
             <a href="{% url 'public:servicio_crear' negocio.slug %}" class="btn btn-primary">
                 <i class="bi bi-plus-circle"></i> Nuevo Servicio
             </a>
+            {% else %}
+            <span class="text-muted small text-end">Llegaste al máximo de {{ max_servicios }} servicios activos.<br>Desactiva o elimina uno para crear otro.</span>
+            {% endif %}
         </div>
     </div>
 </div>

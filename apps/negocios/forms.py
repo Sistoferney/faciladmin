@@ -475,6 +475,28 @@ class ServicioForm(forms.ModelForm):
             'porcentaje_abono': 'Porcentaje del precio como abono (deja vacío si usas monto fijo)',
         }
 
+    def __init__(self, *args, negocio=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.negocio = negocio
+
+    def clean_imagen(self):
+        imagen = self.cleaned_data.get('imagen')
+        if imagen and hasattr(imagen, 'size') and imagen.size > 5 * 1024 * 1024:
+            raise forms.ValidationError('La imagen no debe superar 5 MB.')
+        return imagen
+
+    def clean_esta_activo(self):
+        """Tope de servicios activos: al crear uno activo o reactivar uno desactivado"""
+        from apps.servicios.models import MAX_SERVICIOS_ACTIVOS, servicios_activos_restantes
+        activo = self.cleaned_data.get('esta_activo')
+        ya_contaba = self.instance.pk and Servicio.objects.filter(pk=self.instance.pk, esta_activo=True).exists()
+        if activo and not ya_contaba and self.negocio and servicios_activos_restantes(self.negocio) == 0:
+            raise forms.ValidationError(
+                f'Ya tienes {MAX_SERVICIOS_ACTIVOS} servicios activos, el máximo. '
+                'Desactiva o elimina uno para activar este.'
+            )
+        return activo
+
     def clean_duracion_minutos(self):
         """Validar duración del servicio"""
         duracion = self.cleaned_data.get('duracion_minutos')

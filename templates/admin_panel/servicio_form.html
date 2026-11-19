@@ -238,6 +238,9 @@
                                 {{ form.esta_activo.label }}
                             </label>
                         </div>
+                        {% if form.esta_activo.errors %}
+                            <div class="text-danger small">{{ form.esta_activo.errors }}</div>
+                        {% endif %}
                         {% if form.esta_activo.help_text %}
                             <small class="form-text text-muted">{{ form.esta_activo.help_text }}</small>
                         {% endif %}

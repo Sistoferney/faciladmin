@@ -181,12 +181,16 @@ def servicios_admin(request, slug):
     Gestión de servicios del negocio
     """
     negocio = get_object_or_404(Negocio, slug=slug)
+    from apps.servicios.models import MAX_SERVICIOS_ACTIVOS, servicios_activos_restantes
     servicios = Servicio.objects.filter(negocio=negocio).order_by('orden', 'nombre')
 
     context = {
         'negocio': negocio,
         'seccion_activa': 'servicios',
         'servicios': servicios,
+        'max_servicios': MAX_SERVICIOS_ACTIVOS,
+        'servicios_activos': sum(1 for s in servicios if s.esta_activo),
+        'puede_crear_servicio': servicios_activos_restantes(negocio) > 0,
     }
 
     return render(request, 'admin_panel/servicios.html', context)
@@ -544,11 +548,20 @@ def servicio_crear(request, slug):
     Crear nuevo servicio desde el dashboard del cliente
     """
     from .forms import ServicioForm
+    from apps.servicios.models import MAX_SERVICIOS_ACTIVOS, servicios_activos_restantes
 
     negocio = get_object_or_404(Negocio, slug=slug)
 
+    if servicios_activos_restantes(negocio) == 0:
+        messages.error(
+            request,
+            f'Ya tienes {MAX_SERVICIOS_ACTIVOS} servicios activos, el máximo. '
+            'Desactiva o elimina uno para crear otro.'
+        )
+        return redirect('public:admin_servicios', slug=slug)
+
     if request.method == 'POST':
-        form = ServicioForm(request.POST, request.FILES)
+        form = ServicioForm(request.POST, request.FILES, negocio=negocio)
         if form.is_valid():
             servicio = form.save(commit=False)
             servicio.negocio = negocio
@@ -566,7 +579,7 @@ def servicio_crear(request, slug):
         else:
             messages.error(request, 'Por favor corrige los errores en el formulario.')
     else:
-        form = ServicioForm()
+        form = ServicioForm(negocio=negocio)
 
     context = {
         'negocio': negocio,
@@ -589,7 +602,7 @@ def servicio_editar(request, slug, servicio_id):
     servicio = get_object_or_404(Servicio, id=servicio_id, negocio=negocio)
 
     if request.method == 'POST':
-        form = ServicioForm(request.POST, request.FILES, instance=servicio)
+        form = ServicioForm(request.POST, request.FILES, instance=servicio, negocio=negocio)
         if form.is_valid():
             try:
                 form.save()
@@ -605,7 +618,7 @@ def servicio_editar(request, slug, servicio_id):
         else:
             messages.error(request, 'Por favor corrige los errores en el formulario.')
     else:
-        form = ServicioForm(instance=servicio)
+        form = ServicioForm(instance=servicio, negocio=negocio)
 
     context = {
         'negocio': negocio,
@@ -621,15 +634,22 @@ def servicio_editar(request, slug, servicio_id):
 @admin_required
 def servicio_eliminar(request, slug, servicio_id):
     """
-    Eliminar servicio desde el dashboard del cliente
+    Elimina el servicio si nunca tuvo citas; si tuvo, solo se desactiva
+    (las citas lo protegen y se conserva el historial). Desactivado deja de
+    aparecer para reservar y no cuenta para el tope de servicios.
     """
     negocio = get_object_or_404(Negocio, slug=slug)
     servicio = get_object_or_404(Servicio, id=servicio_id, negocio=negocio)
 
     if request.method == 'POST':
         nombre = servicio.nombre
-        servicio.delete()
-        messages.success(request, f'Servicio "{nombre}" eliminado exitosamente.')
+        if servicio.citas.exists():
+            servicio.esta_activo = False
+            servicio.save(update_fields=['esta_activo'])
+            messages.success(request, f'Servicio "{nombre}" desactivado (se conserva su historial de citas).')
+        else:
+            servicio.delete()
+            messages.success(request, f'Servicio "{nombre}" eliminado exitosamente.')
         return redirect('public:admin_servicios', slug=slug)
 
     context = {

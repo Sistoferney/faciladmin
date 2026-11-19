@@ -5,6 +5,16 @@ RF-13 a RF-15
 from django.db import models
 from apps.negocios.models import Negocio
 
+# Plan único: cada negocio puede tener hasta 20 servicios activos. Los
+# desactivados no cuentan (un servicio con citas no se borra, se desactiva).
+MAX_SERVICIOS_ACTIVOS = 20
+
+
+def servicios_activos_restantes(negocio):
+    """Cuántos servicios activos más puede crear el negocio"""
+    activos = Servicio.objects.filter(negocio=negocio, esta_activo=True).count()
+    return max(0, MAX_SERVICIOS_ACTIVOS - activos)
+
 
 class Servicio(models.Model):
     """

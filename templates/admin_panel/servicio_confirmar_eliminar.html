@@ -51,11 +51,12 @@
 
                 <div class="alert alert-danger mb-4">
                     <i class="bi bi-exclamation-circle"></i>
-                    <strong>Advertencia:</strong> Esta acción no se puede deshacer.
-                    {% if servicio.citas.count > 0 %}
-                        <br><br>
-                        <strong>Nota importante:</strong> Este servicio tiene {{ servicio.citas.count }} cita(s) asociada(s).
-                        Al eliminarlo, las citas quedarán sin servicio asignado.
+                    {% if servicio.citas.exists %}
+                        <strong>Este servicio tiene {{ servicio.citas.count }} cita(s).</strong>
+                        No se borra: se desactiva. Deja de aparecer para reservar, se conserva el
+                        historial de citas y puedes volver a activarlo editándolo.
+                    {% else %}
+                        <strong>Advertencia:</strong> Esta acción no se puede deshacer.
                     {% endif %}
                 </div>
 
@@ -66,7 +67,7 @@
                             <i class="bi bi-arrow-left"></i> Cancelar
                         </a>
                         <button type="submit" class="btn btn-danger">
-                            <i class="bi bi-trash"></i> Sí, Eliminar Servicio
+                            <i class="bi bi-trash"></i> {% if servicio.citas.exists %}Sí, desactivar servicio{% else %}Sí, Eliminar Servicio{% endif %}
                         </button>
                     </div>
                 </form>
