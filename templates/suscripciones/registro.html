@@ -32,6 +32,12 @@
 {% block formulario %}
 <form method="post" id="registroForm">
     {% csrf_token %}
+    <input type="hidden" name="marca" value="{{ marca }}">
+    {# Campo trampa: invisible para las personas; si llega lleno, es un bot (ver antibots.py) #}
+    <div style="position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden;" aria-hidden="true">
+        <label for="{{ campo_trampa }}">No llenar este campo</label>
+        <input type="text" id="{{ campo_trampa }}" name="{{ campo_trampa }}" tabindex="-1" autocomplete="off">
+    </div>
 
     <div class="fa-form-grid">
         <div class="fa-field">
@@ -47,8 +53,8 @@
         <div class="fa-field fa-span-2">
             <label for="telefono" class="fa-label">Teléfono</label>
             <input type="tel" class="fa-input" id="telefono" name="telefono"
-                   placeholder="+57 300 123 4567" autocomplete="tel" required>
-            <p class="fa-help">Incluye código de país</p>
+                   placeholder="300 123 4567" autocomplete="tel" required>
+            <p class="fa-help">Celular de Colombia</p>
         </div>
 
         <div class="fa-field fa-span-2">
@@ -64,6 +70,10 @@
             </span>
         </label>
 
+        {% if turnstile_site_key %}
+        <div class="fa-span-2 cf-turnstile" data-sitekey="{{ turnstile_site_key }}" data-language="es" data-size="flexible"></div>
+        {% endif %}
+
         <div class="fa-span-2">
             <button type="submit" class="fa-btn fa-btn--accent fa-btn--lg fa-btn--block">Crear Cuenta Gratis</button>
         </div>
@@ -75,6 +85,9 @@
 {% endblock %}
 
 {% block extra_js %}
+{% if turnstile_site_key %}
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+{% endif %}
 <script>
 // Validación del formulario
 document.getElementById('registroForm').addEventListener('submit', function(e) {

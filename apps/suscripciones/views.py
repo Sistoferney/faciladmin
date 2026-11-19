@@ -18,6 +18,9 @@ from .models import (
 from apps.negocios.models import Negocio
 from apps.authentication.models import Usuario
 from apps.authentication.telefonos import normalizar_telefono, telefono_registrado
+from apps.core.red import ip_cliente
+from django_ratelimit.decorators import ratelimit
+from . import antibots
 
 import logging
 from django.db import transaction
@@ -25,9 +28,34 @@ from django.db import transaction
 logger = logging.getLogger(__name__)
 
 
+@ratelimit(key='ip', rate='3/h', method='POST', block=False)
 def registro_negocio(request):
-    """Paso 1: Formulario de registro inicial SIMPLIFICADO (sin cupones)"""
+    """
+    Paso 1: Formulario de registro inicial SIMPLIFICADO (sin cupones)
+    Protegido contra bots (ver antibots.py) y limitado a 3 registros por hora por IP
+    """
+    def mostrar():
+        return render(request, 'suscripciones/registro.html', {
+            'marca': antibots.marca_formulario(),
+            'campo_trampa': antibots.CAMPO_TRAMPA,
+            'turnstile_site_key': settings.TURNSTILE_SITE_KEY if antibots.turnstile_activo() else '',
+        })
+
     if request.method == 'POST':
+        motivo = antibots.motivo_bot(request.POST)
+        if motivo:
+            # Misma pantalla que a una persona: el bot no sabe qué lo delató
+            logger.info('Registro descartado (bot: %s) desde %s', motivo, ip_cliente(request))
+            return redirect('suscripciones:registro_pendiente')
+
+        if getattr(request, 'limited', False):
+            messages.error(request, 'Hiciste muchos intentos de registro seguidos. Intenta de nuevo en una hora.')
+            return mostrar()
+
+        if not antibots.turnstile_valido(request.POST.get('cf-turnstile-response', ''), ip_cliente(request)):
+            messages.error(request, 'No pudimos verificar que no eres un robot. Por favor intenta de nuevo.')
+            return mostrar()
+
         nombre = request.POST.get('nombre', '').strip()
         apellido = request.POST.get('apellido', '').strip()
         telefono = request.POST.get('telefono', '').strip()
@@ -36,24 +64,29 @@ def registro_negocio(request):
         # Validaciones básicas
         if not all([nombre, apellido, telefono, email]):
             messages.error(request, 'Todos los campos son obligatorios')
-            return render(request, 'suscripciones/registro.html')
+            return mostrar()
 
         # Guardar el teléfono en formato único (+573001234567): así cualquier
         # variante del mismo número se reconoce como el mismo (ver telefonos.py)
         telefono_normalizado = normalizar_telefono(telefono)
         if not telefono_normalizado:
             messages.error(request, 'El número de teléfono no es válido. Ejemplo: 300 123 4567')
-            return render(request, 'suscripciones/registro.html')
+            return mostrar()
         telefono = telefono_normalizado
+
+        # Por ahora el servicio es solo para Colombia (además, el bot usaba números +1)
+        if not telefono.startswith('+57'):
+            messages.error(request, 'Por ahora solo aceptamos números de celular de Colombia (+57).')
+            return mostrar()
 
         # Validar que el teléfono no exista en ningún formato (identificador único)
         if telefono_registrado(RegistroNegocio.objects.all(), telefono):
             messages.error(request, 'Este teléfono ya está registrado. Si ya validaste tu email, revisa tu bandeja de entrada.')
-            return render(request, 'suscripciones/registro.html')
+            return mostrar()
 
         if telefono_registrado(Usuario.objects.all(), telefono):
             messages.error(request, 'Este teléfono ya tiene una cuenta activa. Intenta iniciar sesión.')
-            return render(request, 'suscripciones/registro.html')
+            return mostrar()
 
         # Generar token de validación
         token = secrets.token_urlsafe(32)
@@ -113,9 +146,9 @@ Equipo facilacces
             logger.exception('Error enviando email de validación a %s', email)
             registro.delete()
             messages.error(request, 'Hubo un error al enviar el email de validación. Por favor intenta de nuevo.')
-            return render(request, 'suscripciones/registro.html')
+            return mostrar()
 
-    return render(request, 'suscripciones/registro.html')
+    return mostrar()
 
 
 def registro_pendiente(request):

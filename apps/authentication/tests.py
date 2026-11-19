@@ -3,7 +3,7 @@ Tests de identificación por teléfono: el mismo número en distintos formatos
 """
 from unittest.mock import patch
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from apps.suscripciones.models import RegistroNegocio
@@ -73,13 +73,16 @@ class LoginPorTelefonoTests(TestCase):
         self.assertEqual(usuario.telefono, '+573001234567')
 
 
+@override_settings(RATELIMIT_ENABLE=False)
 class RegistroSinDuplicadosTests(TestCase):
 
     def _registrar(self, telefono):
+        import time
+        from apps.suscripciones.antibots import marca_formulario
         with patch('apps.suscripciones.views.send_mail'):
             return self.client.post(reverse('suscripciones:registro_negocio'), {
                 'nombre': 'Ana', 'apellido': 'López', 'email': 'ana@correo.com',
-                'telefono': telefono,
+                'telefono': telefono, 'marca': marca_formulario(time.time() - 10),
             })
 
     def test_registro_guarda_telefono_normalizado(self):

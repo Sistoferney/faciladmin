@@ -196,6 +196,11 @@ WEBPUSH_SETTINGS = {
     "VAPID_ADMIN_EMAIL": config('VAPID_ADMIN_EMAIL', default='admin@faciladmin.app').strip()
 }
 
+# Cloudflare Turnstile en el registro (ver apps/suscripciones/antibots.py).
+# Vacías = no se exige.
+TURNSTILE_SITE_KEY = config('TURNSTILE_SITE_KEY', default='').strip()
+TURNSTILE_SECRET_KEY = config('TURNSTILE_SECRET_KEY', default='').strip()
+
 # Celery Configuration (base)
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
