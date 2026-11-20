@@ -33,7 +33,11 @@ DATABASES = {
 # Static files - Usar WhiteNoise para servir archivos estáticos
 MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# Almacenamiento (Django 5.1+ ya no acepta STATICFILES_STORAGE ni DEFAULT_FILE_STORAGE)
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
+}
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Media files - Cloudinary para almacenamiento permanente
@@ -51,7 +55,7 @@ CLOUDINARY_STORAGE = {
 
 # Usar Cloudinary para archivos media en producción
 if CLOUDINARY_STORAGE['CLOUD_NAME']:
-    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+    STORAGES['default'] = {'BACKEND': 'cloudinary_storage.storage.MediaCloudinaryStorage'}
     CLOUDINARY_URL = f"cloudinary://{CLOUDINARY_STORAGE['API_KEY']}:{CLOUDINARY_STORAGE['API_SECRET']}@{CLOUDINARY_STORAGE['CLOUD_NAME']}"
 
 # Security Settings
