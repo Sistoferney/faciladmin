@@ -171,6 +171,10 @@
 .plan--featured .plan__list .fa-icon { color: var(--fa-orange); }
 .plan__badge { position: absolute; top: -16px; left: var(--fa-s8); padding: 6px var(--fa-s4); border-radius: var(--fa-r-pill); background: var(--fa-orange); color: var(--fa-navy); font-size: var(--fa-fs-sm); font-weight: 600; }
 @media (max-width: 960px) { .plans { grid-template-columns: 1fr; max-width: 480px; margin-inline: auto; } .plan--featured { transform: none; } }
+/* Un solo plan: tarjeta centrada */
+.plans--unico { grid-template-columns: 1fr; max-width: 520px; margin-inline: auto; }
+.plans--unico .plan--featured { transform: none; }
+.plan__trial { margin: 0; font-weight: 600; color: var(--fa-white); }
 
 /* ---------- Contacto ---------- */
 .contact { display: grid; grid-template-columns: .85fr 1.15fr; gap: var(--fa-s8); align-items: start; }

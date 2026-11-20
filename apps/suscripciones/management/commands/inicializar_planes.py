@@ -7,7 +7,7 @@ from apps.suscripciones.models import PlanSuscripcion
 
 
 class Command(BaseCommand):
-    help = 'Crea los planes de suscripción básicos (Trial y Mensual)'
+    help = 'Crea los planes de suscripción (Trial de 120 días y Premium mensual)'
 
     def handle(self, *args, **options):
         self.stdout.write('Inicializando planes de suscripción...\n')
@@ -35,14 +35,14 @@ class Command(BaseCommand):
         else:
             self.stdout.write(self.style.WARNING(f'⚠ Plan Trial ya existía: {plan_trial}'))
 
-        # Plan Mensual ($25.000)
+        # Plan Premium mensual ($29.900)
         plan_mensual, created = PlanSuscripcion.objects.get_or_create(
             tipo='mensual',
             defaults={
-                'nombre': 'Plan Mensual',
-                'precio': 25000.00,
+                'nombre': 'Premium Mensual',
+                'precio': 29900.00,
                 'duracion_dias': 30,
-                'descripcion': 'Plan mensual con acceso completo por 30 días',
+                'descripcion': 'Plan Premium con acceso completo a todas las funciones por 30 días',
                 'activo': True,
                 # Límites (None = ilimitado para plan mensual también)
                 'max_citas_mes': None,

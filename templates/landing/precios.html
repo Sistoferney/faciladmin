@@ -1,70 +1,38 @@
 {% extends 'landing/base_landing.html' %}
 {% load iconos %}
-{% block descripcion %}Planes de facilacces: agenda online, recordatorios automáticos, abonos y gestión de clientes para tu negocio de belleza. Empieza gratis.{% endblock %}
+{% block descripcion %}facilacces Premium: agenda online, recordatorios automáticos, abonos y gestión de clientes por $29.900 al mes. Los primeros 120 días son gratis.{% endblock %}
 
 {% block content %}
 <section class="page-hero">
     <div class="fa-container">
         <div class="page-hero__inner">
             <span class="fa-eyebrow fa-eyebrow--on-dark">Precios</span>
-            <h1>Planes y Precios</h1>
-            <p>Elige el plan perfecto para tu negocio</p>
+            <h1>Un solo plan, todo incluido</h1>
+            <p>Pruébalo gratis durante 120 días, sin tarjeta de crédito</p>
         </div>
     </div>
 </section>
 
 <section class="section">
     <div class="fa-container">
-        <div class="plans">
-            <!-- Plan Gratis -->
-            <article class="plan">
-                <h2 class="plan__name">Gratis</h2>
-                <p class="plan__price"><strong>$0</strong><span>/mes</span></p>
-                <p class="plan__desc">Perfecto para empezar</p>
-                <ul class="plan__list">
-                    <li>{% icono 'check' %}<span>Hasta 50 citas/mes</span></li>
-                    <li>{% icono 'check' %}<span>1 usuario</span></li>
-                    <li>{% icono 'check' %}<span>Mini página web</span></li>
-                    <li>{% icono 'check' %}<span>Agenda básica</span></li>
-                    <li>{% icono 'check' %}<span>Soporte por email</span></li>
-                </ul>
-                <a class="fa-btn fa-btn--outline fa-btn--block" href="{% url 'suscripciones:registro_negocio' %}">Comenzar Gratis</a>
-            </article>
-
-            <!-- Plan Pro -->
+        <div class="plans plans--unico">
             <article class="plan plan--featured">
-                <span class="plan__badge">Más Popular</span>
-                <h2 class="plan__name">Pro</h2>
-                <p class="plan__price"><strong>$299</strong><span>/mes</span></p>
-                <p class="plan__desc">Para negocios en crecimiento</p>
+                <span class="plan__badge">120 días gratis</span>
+                <h2 class="plan__name">Premium</h2>
+                <p class="plan__price"><strong>$29.900</strong><span>/mes</span></p>
+                <p class="plan__trial">Los primeros 120 días son gratis, con acceso completo.</p>
+                <p class="plan__desc">Menos de $1.000 al día para organizar tu negocio.</p>
                 <ul class="plan__list">
-                    <li>{% icono 'check' %}<span>Citas ilimitadas</span></li>
-                    <li>{% icono 'check' %}<span>Hasta 3 usuarios</span></li>
-                    <li>{% icono 'check' %}<span>Mini página personalizada</span></li>
-                    <li>{% icono 'check' %}<span>Recordatorios automáticos</span></li>
-                    <li>{% icono 'check' %}<span>Sistema de abonos</span></li>
-                    <li>{% icono 'check' %}<span>Promociones</span></li>
-                    <li>{% icono 'check' %}<span>Reportes avanzados</span></li>
-                    <li>{% icono 'check' %}<span>Soporte prioritario</span></li>
+                    <li>{% icono 'check' %}<span>Citas y clientes ilimitados</span></li>
+                    <li>{% icono 'check' %}<span>Tu página de reservas abierta 24/7, con código QR</span></li>
+                    <li>{% icono 'check' %}<span>Varios especialistas, cada uno con su horario</span></li>
+                    <li>{% icono 'check' %}<span>Recordatorios automáticos para tus clientes</span></li>
+                    <li>{% icono 'check' %}<span>Abonos con comprobante de pago</span></li>
+                    <li>{% icono 'check' %}<span>Avisos en tu celular de cada cita nueva</span></li>
+                    <li>{% icono 'check' %}<span>Historial y observaciones de cada cliente</span></li>
+                    <li>{% icono 'check' %}<span>Soporte por WhatsApp</span></li>
                 </ul>
-                <a class="fa-btn fa-btn--accent fa-btn--block" href="{% url 'suscripciones:registro_negocio' %}">Probar 30 días Gratis</a>
-            </article>
-
-            <!-- Plan Enterprise -->
-            <article class="plan">
-                <h2 class="plan__name">Enterprise</h2>
-                <p class="plan__price"><strong>$599</strong><span>/mes</span></p>
-                <p class="plan__desc">Para múltiples sucursales</p>
-                <ul class="plan__list">
-                    <li>{% icono 'check' %}<span>Todo de Pro +</span></li>
-                    <li>{% icono 'check' %}<span>Usuarios ilimitados</span></li>
-                    <li>{% icono 'check' %}<span>Múltiples sucursales</span></li>
-                    <li>{% icono 'check' %}<span>API personalizada</span></li>
-                    <li>{% icono 'check' %}<span>Integraciones avanzadas</span></li>
-                    <li>{% icono 'check' %}<span>Capacitación incluida</span></li>
-                    <li>{% icono 'check' %}<span>Soporte 24/7</span></li>
-                </ul>
-                <a class="fa-btn fa-btn--primary fa-btn--block" href="{% url 'core:contacto' %}">Contactar Ventas</a>
+                <a class="fa-btn fa-btn--accent fa-btn--block" href="{% url 'suscripciones:registro_negocio' %}">Empieza tus 120 días gratis</a>
             </article>
         </div>
     </div>
@@ -79,16 +47,20 @@
         </header>
         <div class="fa-accordion">
             <details open>
-                <summary>¿Puedo cambiar de plan después? {% icono 'chevron-abajo' %}</summary>
-                <div><p>Sí, puedes cambiar de plan en cualquier momento. Los cambios se reflejarán en tu próximo ciclo de facturación.</p></div>
+                <summary>¿La prueba gratis tiene alguna limitación? {% icono 'chevron-abajo' %}</summary>
+                <div><p>No. Durante los 120 días tienes acceso a todas las funciones, igual que con el plan Premium. No necesitas tarjeta de crédito para empezar.</p></div>
+            </details>
+            <details>
+                <summary>¿Qué pasa cuando terminan los 120 días? {% icono 'chevron-abajo' %}</summary>
+                <div><p>Te avisaremos antes de que termine tu prueba para que actives el plan Premium por $29.900 al mes. Si decides no continuar, no se te cobra nada.</p></div>
             </details>
             <details>
                 <summary>¿Hay costos adicionales? {% icono 'chevron-abajo' %}</summary>
-                <div><p>No. El precio que ves es el precio que pagas. Sin costos ocultos ni tarifas sorpresa.</p></div>
+                <div><p>No. Pagas $29.900 al mes y tienes todo incluido. Sin costos ocultos ni tarifas sorpresa.</p></div>
             </details>
             <details>
                 <summary>¿Puedo cancelar en cualquier momento? {% icono 'chevron-abajo' %}</summary>
-                <div><p>Sí, puedes cancelar tu suscripción en cualquier momento sin penalizaciones. Tus datos se mantienen seguros por 30 días.</p></div>
+                <div><p>Sí. No hay permanencia mínima ni penalizaciones por cancelar.</p></div>
             </details>
         </div>
     </div>
