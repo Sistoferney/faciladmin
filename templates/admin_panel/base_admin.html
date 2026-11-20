@@ -136,7 +136,7 @@
         </ul>
 
         <div class="sidebar__foot">
-            <a class="sidebar__link" href="{% url 'public:minipagina' negocio.slug %}" target="_blank">{% icono 'ver' %} Ver mini-página</a>
+            <a class="sidebar__link" href="{% url 'public:minipagina' negocio.slug %}" target="_blank">{% icono 'ver' %} Ver mi vitrina</a>
             <form method="post" action="{% url 'logout' %}">
                 {% csrf_token %}
                 <button type="submit" class="sidebar__link">{% icono 'salir' %} Cerrar sesión</button>
@@ -152,7 +152,7 @@
             <h1 class="topbar__title">{% block page_title %}Panel de Administración{% endblock %}</h1>
             <div class="topbar__actions">
                 <a href="{% url 'public:minipagina' negocio.slug %}" target="_blank" class="fa-btn fa-btn--outline fa-btn--sm hide-mobile">
-                    {% icono 'ver' %} Vista pública
+                    {% icono 'ver' %} Mi vitrina
                 </a>
                 {% if not request.modo_soporte %}
                 <button type="button" id="boton-sonido" class="fa-btn fa-btn--ghost fa-btn--icon"

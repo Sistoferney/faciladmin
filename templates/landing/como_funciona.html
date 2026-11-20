@@ -1,6 +1,6 @@
 {% extends 'landing/base_landing.html' %}
 {% load static iconos %}
-{% block descripcion %}Cómo funciona facilacces: crea tu página de reservas, comparte tu enlace y recibe citas con recordatorios automáticos y control de abonos.{% endblock %}
+{% block descripcion %}Cómo funciona facilacces: arma tu vitrina y tu recepcionista virtual, comparte tu enlace y recibe citas con recordatorios automáticos y control de abonos.{% endblock %}
 
 {% block content %}
 <section class="page-hero">
@@ -44,20 +44,20 @@
             <li>
                 <span class="fa-tile fa-tile--soft">{% icono 'paleta' %}</span>
                 <span class="timeline__n">2</span>
-                <h3>Configura tu Mini Página</h3>
-                <p>Personaliza los colores, sube tu logo y agrega los servicios que ofreces con sus precios y duración.</p>
+                <h3>Arma tu Vitrina y tu Recepcionista Virtual</h3>
+                <p>Sube tu logo y tus fotos, y agrega tus servicios con precios y duración. Tu vitrina muestra lo que ofreces, y tu recepcionista virtual agenda, confirma y recuerda las citas por ti, las 24 horas.</p>
             </li>
             <li>
                 <span class="fa-tile fa-tile--soft">{% icono 'compartir' %}</span>
                 <span class="timeline__n">3</span>
-                <h3>Comparte tu Enlace</h3>
-                <p>Obtén una URL única (ej: {{ request.get_host }}/tu-spa). Compártela en redes sociales, WhatsApp o agrégala a tu sitio web.</p>
+                <h3>Comparte tu Vitrina</h3>
+                <p>Obtén tu enlace único (ej: {{ request.get_host }}/tu-spa) y tu código QR. Compártelos en redes sociales, WhatsApp o agrégalos a tu sitio web.</p>
             </li>
             <li>
                 <span class="fa-tile fa-tile--soft">{% icono 'notificacion' %}</span>
                 <span class="timeline__n">4</span>
                 <h3>Recibe Reservas Automáticamente</h3>
-                <p>Tus clientes agendan cuando quieran, 24/7. Tú recibes notificaciones de cada nueva cita.</p>
+                <p>Tu recepcionista virtual atiende a tus clientes 24/7: agendan cuando quieran y tú recibes un aviso de cada cita nueva.</p>
             </li>
             <li>
                 <span class="fa-tile fa-tile--soft">{% icono 'dashboard' %}</span>
