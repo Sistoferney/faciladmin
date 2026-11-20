@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activa tu cuenta de facilacces</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f9;">
+    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f4f7f9; padding: 40px 0;">
+        <tr>
+            <td align="center">
+                <table cellpadding="0" cellspacing="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden;">
+                    <tr>
+                        <td style="background-color: #052981; padding: 32px 30px; text-align: center;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 700;">facilacces</h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 36px 30px;">
+                            <p style="margin: 0 0 18px 0; color: #333333; font-size: 16px; line-height: 1.6;">
+                                Hola <strong>{{ registro.nombre }}</strong>,
+                            </p>
+                            <p style="margin: 0 0 28px 0; color: #555555; font-size: 15px; line-height: 1.6;">
+                                Gracias por registrarte en facilacces. Para crear tu cuenta, confirma tu correo
+                                con el siguiente botón. Después solo te pediremos el nombre de tu negocio y una contraseña.
+                            </p>
+                            <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                <tr>
+                                    <td align="center" style="padding-bottom: 28px;">
+                                        <a href="{{ enlace }}" style="display: inline-block; background-color: #052981; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600;">
+                                            Activar mi cuenta
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="margin: 0 0 8px 0; color: #777777; font-size: 13px; line-height: 1.6;">
+                                Si el botón no funciona, copia este enlace en tu navegador:
+                            </p>
+                            <p style="margin: 0 0 24px 0; font-size: 13px; line-height: 1.6; word-break: break-all;">
+                                <a href="{{ enlace }}" style="color: #052981;">{{ enlace }}</a>
+                            </p>
+                            <p style="margin: 0; color: #777777; font-size: 13px; line-height: 1.6;">
+                                El enlace sirve durante {{ horas }} horas. Si no fuiste tú quien se registró, ignora este correo.
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background-color: #f4f7f9; padding: 20px 30px; text-align: center; color: #999999; font-size: 12px;">
+                            facilacces · Agenda online para tu negocio
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

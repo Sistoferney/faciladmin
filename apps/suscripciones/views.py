@@ -17,7 +17,7 @@ from .models import (
 )
 from apps.negocios.models import Negocio
 from apps.authentication.models import Usuario
-from apps.authentication.telefonos import normalizar_telefono, telefono_registrado
+from apps.authentication.telefonos import filtrar_por_telefono, normalizar_telefono, telefono_registrado
 from apps.core.red import ip_cliente
 from django_ratelimit.decorators import ratelimit
 from . import antibots
@@ -79,81 +79,109 @@ def registro_negocio(request):
             messages.error(request, 'Por ahora solo aceptamos números de celular de Colombia (+57).')
             return mostrar()
 
-        # Validar que el teléfono no exista en ningún formato (identificador único)
-        if telefono_registrado(RegistroNegocio.objects.all(), telefono):
-            messages.error(request, 'Este teléfono ya está registrado. Si ya validaste tu email, revisa tu bandeja de entrada.')
-            return mostrar()
-
         if telefono_registrado(Usuario.objects.all(), telefono):
             messages.error(request, 'Este teléfono ya tiene una cuenta activa. Intenta iniciar sesión.')
             return mostrar()
 
-        # Generar token de validación
-        token = secrets.token_urlsafe(32)
-        fecha_expira = timezone.now() + timedelta(hours=24)
+        # Si ya se había registrado y no activó (enlace vencido, email mal
+        # escrito o que no llegó), se actualizan sus datos y se le envía un
+        # enlace nuevo, en lugar de dejar el teléfono bloqueado
+        registros = filtrar_por_telefono(RegistroNegocio.objects.all(), telefono)
+        registro = registros[0] if registros else None
+        if registro is not None and registro.estado == 'completado':
+            messages.error(request, 'Este teléfono ya está registrado. Intenta iniciar sesión.')
+            return mostrar()
 
-        # Crear registro
-        registro = RegistroNegocio.objects.create(
-            nombre=nombre,
-            apellido=apellido,
-            email=email,
-            telefono=telefono,
-            token_validacion=token,
-            fecha_token_expira=fecha_expira
-        )
-
-        # Enviar email de validación
-        link_validacion = request.build_absolute_uri(
-            reverse('suscripciones:validar_email', kwargs={'token': token})
-        )
+        es_nuevo = registro is None
+        if es_nuevo:
+            registro = RegistroNegocio(telefono=telefono)
+        registro.nombre = nombre
+        registro.apellido = apellido
+        registro.email = email
+        _renovar_enlace(registro)
+        registro.save()
 
         try:
-            send_mail(
-                subject='✨ Activa tu cuenta gratis de 120 días - facilacces',
-                message=f'''
-Hola {nombre},
-
-¡Bienvenido a facilacces! 🎉
-
-Estás a un paso de acceder a tu cuenta GRATIS por 120 días con todas las funciones incluidas.
-
-👉 Activa tu cuenta aquí:
-{link_validacion}
-
-Este enlace expira en 24 horas.
-
-¿Qué obtienes?
-✅ 120 días completamente gratis
-✅ Acceso completo a todas las funciones
-✅ Citas ilimitadas
-✅ Notificaciones push
-✅ Página web personalizada
-✅ Soporte técnico
-
-¡Nos vemos dentro!
-Equipo facilacces
-                ''',
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[email],
-                fail_silently=False,
-            )
-
-            messages.success(request, f'¡Casi listo {nombre}! Te enviamos un email a {email} para activar tu cuenta gratis.')
-            return redirect('suscripciones:registro_pendiente')
-
+            _enviar_activacion(request, registro)
         except Exception:
-            # Si falla el email, borrar el registro y mostrar error
             logger.exception('Error enviando email de validación a %s', email)
-            registro.delete()
+            if es_nuevo:
+                registro.delete()
             messages.error(request, 'Hubo un error al enviar el email de validación. Por favor intenta de nuevo.')
             return mostrar()
+
+        request.session[SESION_REGISTRO_PENDIENTE] = registro.id
+        messages.success(request, f'¡Casi listo {nombre}! Te enviamos un email a {email} para activar tu cuenta.')
+        return redirect('suscripciones:registro_pendiente')
 
     return mostrar()
 
 
+# El enlace de activación dura 3 días: un día se quedaba corto para quien
+# no revisa el correo a diario
+HORAS_ENLACE_ACTIVACION = 72
+
+# Registro hecho desde este navegador, para poder reenviarle el email
+SESION_REGISTRO_PENDIENTE = 'registro_pendiente_id'
+
+
+def _renovar_enlace(registro):
+    """Token nuevo (el anterior deja de servir) con vigencia completa"""
+    registro.token_validacion = secrets.token_urlsafe(32)
+    registro.fecha_token_expira = timezone.now() + timedelta(hours=HORAS_ENLACE_ACTIVACION)
+
+
+def _enviar_activacion(request, registro):
+    """Email de activación (HTML y texto). Lanza la excepción si falla el envío."""
+    from django.core.mail import EmailMultiAlternatives
+    from django.template.loader import render_to_string
+
+    contexto = {
+        'registro': registro,
+        'enlace': request.build_absolute_uri(
+            reverse('suscripciones:validar_email', kwargs={'token': registro.token_validacion})
+        ),
+        'horas': HORAS_ENLACE_ACTIVACION,
+    }
+    correo = EmailMultiAlternatives(
+        subject='Activa tu cuenta de facilacces',
+        body=render_to_string('emails/activar_cuenta.txt', contexto),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[registro.email],
+    )
+    correo.attach_alternative(render_to_string('emails/activar_cuenta.html', contexto), 'text/html')
+    correo.send(fail_silently=False)
+
+
+@ratelimit(key='ip', rate='3/h', method='POST', block=False)
 def registro_pendiente(request):
-    """Página que se muestra después del registro, pidiendo revisar email"""
-    return render(request, 'suscripciones/registro_pendiente.html')
+    """
+    Página que se muestra después del registro, pidiendo revisar email.
+    Permite reenviar el email (máximo 3 veces por hora por IP).
+    """
+    registro = RegistroNegocio.objects.filter(
+        id=request.session.get(SESION_REGISTRO_PENDIENTE), estado='pendiente_email',
+    ).first()
+
+    if request.method == 'POST' and registro is not None:
+        if getattr(request, 'limited', False):
+            messages.error(request, 'Ya reenviamos el email varias veces. Intenta de nuevo en una hora.')
+        else:
+            if not registro.token_valido:
+                _renovar_enlace(registro)
+                registro.save(update_fields=['token_validacion', 'fecha_token_expira', 'actualizado_en'])
+            try:
+                _enviar_activacion(request, registro)
+                messages.success(request, f'Te reenviamos el email a {registro.email}.')
+            except Exception:
+                logger.exception('Error reenviando email de validación a %s', registro.email)
+                messages.error(request, 'No pudimos reenviar el email. Por favor intenta de nuevo en unos minutos.')
+        return redirect('suscripciones:registro_pendiente')
+
+    return render(request, 'suscripciones/registro_pendiente.html', {
+        'registro': registro,
+        'horas_enlace': HORAS_ENLACE_ACTIVACION,
+    })
 
 
 def validar_email(request, token):
@@ -162,7 +190,7 @@ def validar_email(request, token):
 
     # Verificar si el token es válido
     if not registro.token_valido:
-        messages.error(request, 'El enlace ha expirado. Solicita uno nuevo registrándote nuevamente.')
+        messages.error(request, 'El enlace venció. Regístrate de nuevo con el mismo teléfono y te enviaremos uno nuevo.')
         return redirect('suscripciones:registro_negocio')
 
     # Verificar si ya fue completado

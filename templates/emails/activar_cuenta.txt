@@ -1,0 +1,11 @@
+Hola {{ registro.nombre }},
+
+Gracias por registrarte en facilacces. Para crear tu cuenta, confirma tu correo abriendo este enlace:
+
+{{ enlace }}
+
+Después solo te pediremos el nombre de tu negocio y una contraseña.
+
+El enlace sirve durante {{ horas }} horas. Si no fuiste tú quien se registró, ignora este correo.
+
+facilacces · Agenda online para tu negocio

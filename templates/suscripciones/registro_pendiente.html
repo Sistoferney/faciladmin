@@ -41,7 +41,8 @@
 
         <h1 class="mb-3">¡Revisa tu email!</h1>
         <p class="lead text-muted">
-            Te enviamos un enlace de activación a tu correo electrónico.
+            Te enviamos un enlace de activación a
+            {% if registro %}<strong>{{ registro.email }}</strong>{% else %}tu correo electrónico{% endif %}.
         </p>
 
         <div class="card shadow-sm mt-4">
@@ -60,16 +61,23 @@
         <div class="spam-warning">
             <strong>⚠️ ¿No ves el email?</strong>
             <p class="mb-0 mt-2">
-                Revisa tu carpeta de SPAM o correo no deseado.<br>
+                Revisa las carpetas de Spam, Correo no deseado y Promociones.<br>
                 El email puede tardar hasta 5 minutos en llegar.
             </p>
+            {% if registro %}
+            <form method="post" class="mt-3">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-primary btn-sm">Reenviar email</button>
+            </form>
+            {% endif %}
         </div>
 
         <div class="mt-4">
             <p class="text-muted">
                 <small>
-                    El enlace de activación expira en 24 horas.<br>
-                    Si no lo recibes, puedes <a href="{% url 'suscripciones:registro_negocio' %}">intentar registrarte nuevamente</a>.
+                    El enlace de activación sirve durante {{ horas_enlace }} horas.<br>
+                    ¿Escribiste mal tu correo? <a href="{% url 'suscripciones:registro_negocio' %}">Regístrate de nuevo</a>
+                    con el mismo teléfono y el correo correcto: te enviaremos un enlace nuevo.
                 </small>
             </p>
         </div>

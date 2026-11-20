@@ -126,3 +126,95 @@ class RegistroAntibotsTests(TestCase):
                 verificar.return_value.json.return_value = {'success': True}
                 self._registrar(**{'cf-turnstile-response': 'token-bueno'})
                 self.assertTrue(RegistroNegocio.objects.exists())
+
+
+class ReenvioActivacionTests(TestCase):
+    """Registro sin activar: nunca queda bloqueado el teléfono"""
+
+    def setUp(self):
+        import time
+        from django.core.cache import cache
+        from .antibots import marca_formulario
+        cache.clear()
+        self.addCleanup(cache.clear)
+        self.url = reverse('suscripciones:registro_negocio')
+        self.url_pendiente = reverse('suscripciones:registro_pendiente')
+        self.datos = {
+            'nombre': 'Ana', 'apellido': 'López', 'telefono': '300 555 5555',
+            'email': 'ana@correo.com', 'marca': marca_formulario(time.time() - 10),
+        }
+
+    def _registrar(self, **cambios):
+        return self.client.post(self.url, {**self.datos, **cambios}, follow=True)
+
+    def test_email_de_activacion_html_y_72_horas(self):
+        from django.core import mail
+        self._registrar()
+        correo = mail.outbox[0]
+        registro = RegistroNegocio.objects.get()
+        self.assertEqual(correo.subject, 'Activa tu cuenta de facilacces')
+        self.assertIn(registro.token_validacion, correo.body)
+        self.assertIn(registro.token_validacion, correo.alternatives[0][0])
+        self.assertGreater(registro.fecha_token_expira, timezone.now() + timedelta(hours=71))
+
+    def test_enlace_vencido_registrarse_de_nuevo_envia_enlace_nuevo(self):
+        from django.core import mail
+        self._registrar()
+        registro = RegistroNegocio.objects.get()
+        token_viejo = registro.token_validacion
+        registro.fecha_token_expira = timezone.now() - timedelta(hours=1)
+        registro.save()
+
+        self._registrar(email='ana.correcto@correo.com')
+
+        registro.refresh_from_db()
+        self.assertEqual(RegistroNegocio.objects.count(), 1)
+        self.assertNotEqual(registro.token_validacion, token_viejo)
+        self.assertTrue(registro.token_valido)
+        self.assertEqual(registro.email, 'ana.correcto@correo.com')
+        self.assertEqual(mail.outbox[-1].to, ['ana.correcto@correo.com'])
+        # El enlace viejo ya no sirve
+        resp = self.client.get(reverse('suscripciones:validar_email', args=[token_viejo]))
+        self.assertEqual(resp.status_code, 404)
+
+    def test_registro_completado_no_se_reutiliza(self):
+        self._registrar()
+        RegistroNegocio.objects.update(estado='completado')
+        resp = self._registrar()
+        self.assertContains(resp, 'Intenta iniciar sesión')
+
+    def test_reenviar_email_desde_la_pagina_pendiente(self):
+        from django.core import mail
+        self._registrar()
+        resp = self.client.get(self.url_pendiente)
+        self.assertContains(resp, 'ana@correo.com')
+        self.assertContains(resp, 'Reenviar email')
+
+        resp = self.client.post(self.url_pendiente, follow=True)
+        self.assertContains(resp, 'Te reenviamos el email')
+        self.assertEqual(len(mail.outbox), 2)
+
+    def test_reenviar_con_enlace_vencido_lo_renueva(self):
+        self._registrar()
+        RegistroNegocio.objects.update(fecha_token_expira=timezone.now() - timedelta(hours=1))
+        self.client.post(self.url_pendiente)
+        self.assertTrue(RegistroNegocio.objects.get().token_valido)
+
+    def test_reenviar_maximo_3_por_hora(self):
+        from django.core import mail
+        self._registrar()
+        for _ in range(4):
+            resp = self.client.post(self.url_pendiente, follow=True)
+        self.assertContains(resp, 'varias veces')
+        self.assertEqual(len(mail.outbox), 4)  # el registro + 3 reenvíos
+
+    def test_sin_registro_en_la_sesion_no_hay_boton(self):
+        resp = self.client.get(self.url_pendiente)
+        self.assertNotContains(resp, 'Reenviar email')
+
+    def test_enlace_vencido_explica_como_pedir_otro(self):
+        self._registrar()
+        registro = RegistroNegocio.objects.get()
+        RegistroNegocio.objects.update(fecha_token_expira=timezone.now() - timedelta(hours=1))
+        resp = self.client.get(reverse('suscripciones:validar_email', args=[registro.token_validacion]), follow=True)
+        self.assertContains(resp, 'Regístrate de nuevo con el mismo teléfono')
