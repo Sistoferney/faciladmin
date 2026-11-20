@@ -153,6 +153,34 @@ def _enviar_activacion(request, registro):
     correo.send(fail_silently=False)
 
 
+# WhatsApp de soporte de facilacces
+WHATSAPP_SOPORTE = '573007794375'
+
+
+def _enviar_bienvenida(request, registro, usuario, nombre_negocio, suscripcion):
+    """Email de bienvenida al activar la cuenta (HTML y texto)"""
+    from django.core.mail import EmailMultiAlternatives
+    from django.template.loader import render_to_string
+
+    contexto = {
+        'nombre': registro.nombre,
+        'negocio': nombre_negocio,
+        'telefono': usuario.telefono,
+        'fin_prueba': timezone.localtime(suscripcion.fecha_fin).strftime('%d/%m/%Y'),
+        'enlace_panel': request.build_absolute_uri(reverse('core:dashboard_redirect')),
+        'whatsapp_soporte': WHATSAPP_SOPORTE,
+        'whatsapp_soporte_legible': '+57 300 779 4375',
+    }
+    correo = EmailMultiAlternatives(
+        subject='Tu cuenta de facilacces está lista',
+        body=render_to_string('emails/bienvenida.txt', contexto),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[registro.email],
+    )
+    correo.attach_alternative(render_to_string('emails/bienvenida.html', contexto), 'text/html')
+    correo.send(fail_silently=False)
+
+
 @ratelimit(key='ip', rate='3/h', method='POST', block=False)
 def registro_pendiente(request):
     """
@@ -284,42 +312,11 @@ def validar_email(request, token):
             # Login automático
             login(request, user, backend='apps.authentication.backends.TelefonoBackend')
 
-            # Enviar email de bienvenida
+            # Email de bienvenida (si falla, la cuenta igual queda activa)
             try:
-                send_mail(
-                    subject=f'🎉 ¡Bienvenido a facilacces, {registro.nombre}!',
-                    message=f'''
-Hola {registro.nombre},
-
-¡Tu cuenta de facilacces está lista y activa!
-
-🏢 Negocio: {nombre_negocio}
-📧 Email: {registro.email}
-⏰ Plan gratuito válido hasta: {timezone.localtime(suscripcion.fecha_fin).strftime('%d/%m/%Y')}
-
-Accede a tu panel aquí: {request.build_absolute_uri('/dashboard/')}
-
-Durante los próximos {dias_trial} días tendrás acceso COMPLETO a:
-✅ Gestión ilimitada de citas
-✅ Clientes y servicios ilimitados
-✅ Notificaciones push
-✅ Página web personalizada
-✅ Código QR para reservas
-✅ Soporte técnico
-
-💡 Tip: Completa el wizard de configuración para personalizar tu negocio.
-
-¿Preguntas? Responde este email o escríbenos a WhatsApp: +57 300 779 4375
-
-¡Éxitos!
-Equipo facilacces
-                    ''',
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[registro.email],
-                    fail_silently=True,
-                )
-            except:
-                pass  # No fallar si el email de bienvenida falla
+                _enviar_bienvenida(request, registro, user, nombre_negocio, suscripcion)
+            except Exception:
+                logger.exception('Error enviando email de bienvenida a %s', registro.email)
 
             messages.success(request, f'¡Bienvenido {registro.nombre}! Tu cuenta está activa por {dias_trial} días. 🎉')
 

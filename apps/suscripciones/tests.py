@@ -37,6 +37,16 @@ class ActivarCuentaTests(TestCase):
         self.registro.refresh_from_db()
         self.assertEqual(self.registro.estado, 'completado')
 
+    def test_activacion_envia_email_de_bienvenida(self):
+        from django.core import mail
+        self.client.post(self.url, self.datos)
+        correo = mail.outbox[-1]
+        self.assertEqual(correo.subject, 'Tu cuenta de facilacces está lista')
+        self.assertEqual(correo.to, ['ana@correo.com'])
+        self.assertIn('Spa Ana', correo.body)
+        self.assertIn('+573005555555', correo.body)
+        self.assertIn('Ir a mi panel', correo.alternatives[0][0])
+
     def test_activacion_ya_completada_redirige_al_login(self):
         self.registro.estado = 'completado'
         self.registro.save()

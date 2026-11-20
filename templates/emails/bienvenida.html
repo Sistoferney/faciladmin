@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tu cuenta de facilacces está lista</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f9;">
+    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f4f7f9; padding: 40px 0;">
+        <tr>
+            <td align="center">
+                <table cellpadding="0" cellspacing="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden;">
+                    <tr>
+                        <td style="background-color: #052981; padding: 32px 30px; text-align: center;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 700;">facilacces</h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 36px 30px;">
+                            <p style="margin: 0 0 18px 0; color: #333333; font-size: 16px; line-height: 1.6;">
+                                Hola <strong>{{ nombre }}</strong>,
+                            </p>
+                            <p style="margin: 0 0 24px 0; color: #555555; font-size: 15px; line-height: 1.6;">
+                                Tu cuenta de facilacces está lista. Estos son tus datos:
+                            </p>
+                            <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom: 28px; font-size: 15px; color: #333333;">
+                                <tr>
+                                    <td style="padding: 8px 0; color: #777777; width: 45%;">Negocio</td>
+                                    <td style="padding: 8px 0;"><strong>{{ negocio }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; color: #777777;">Usuario para entrar</td>
+                                    <td style="padding: 8px 0;"><strong>{{ telefono }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; color: #777777;">Prueba gratis hasta</td>
+                                    <td style="padding: 8px 0;"><strong>{{ fin_prueba }}</strong></td>
+                                </tr>
+                            </table>
+                            <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                <tr>
+                                    <td align="center" style="padding-bottom: 28px;">
+                                        <a href="{{ enlace_panel }}" style="display: inline-block; background-color: #052981; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600;">
+                                            Ir a mi panel
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="margin: 0 0 12px 0; color: #555555; font-size: 15px; line-height: 1.6;">
+                                Para empezar a recibir reservas, completa la configuración de tu negocio:
+                                tus horarios, tus servicios y tu foto. Luego comparte el enlace de tu página
+                                o el código QR con tus clientes.
+                            </p>
+                            <p style="margin: 0; color: #777777; font-size: 13px; line-height: 1.6;">
+                                ¿Tienes dudas? Escríbenos por WhatsApp al
+                                <a href="https://wa.me/{{ whatsapp_soporte }}" style="color: #052981;">{{ whatsapp_soporte_legible }}</a>.
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background-color: #f4f7f9; padding: 20px 30px; text-align: center; color: #999999; font-size: 12px;">
+                            facilacces · Agenda online para tu negocio
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

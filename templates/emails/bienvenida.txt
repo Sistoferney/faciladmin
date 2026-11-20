@@ -1,0 +1,15 @@
+Hola {{ nombre }},
+
+Tu cuenta de facilacces está lista. Estos son tus datos:
+
+Negocio: {{ negocio }}
+Usuario para entrar: {{ telefono }}
+Prueba gratis hasta: {{ fin_prueba }}
+
+Entra a tu panel: {{ enlace_panel }}
+
+Para empezar a recibir reservas, completa la configuración de tu negocio: tus horarios, tus servicios y tu foto. Luego comparte el enlace de tu página o el código QR con tus clientes.
+
+¿Tienes dudas? Escríbenos por WhatsApp al {{ whatsapp_soporte_legible }}: https://wa.me/{{ whatsapp_soporte }}
+
+facilacces · Agenda online para tu negocio
