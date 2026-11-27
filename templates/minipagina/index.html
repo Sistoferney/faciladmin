@@ -19,15 +19,16 @@
 
     /* Con foto de portada: la foto completa (muchas traen su propio texto) y los
        datos del negocio aparte, sobre blanco, para que no se tapen entre sí.
-       Celular: datos debajo de la foto. Computador: foto a la izquierda */
+       Celular: datos debajo de la foto. Computador: foto a la izquierda.
+       Alto máximo: una foto vertical se achica entera en vez de llenar la pantalla */
     .mp .mp-cover--debajo { min-height: 0; background: none; color: var(--fa-ink); }
     .mp .mp-cover--debajo::after { content: none; }
     .mp .mp-cover--debajo .mp-cover__body { display: grid; gap: var(--fa-s5); align-items: start; padding-block: var(--fa-s6) 0; }
-    .mp .mp-cover--debajo .portada-imagen { display: block; width: 100%; height: auto; border-radius: var(--fa-r-lg); }
+    .mp .mp-cover--debajo .portada-imagen { display: block; width: auto; max-width: 100%; height: auto; max-height: 420px; justify-self: center; border-radius: var(--fa-r-lg); }
     @media (max-width: 600px) { .mp .mp-cover--debajo .mp-cover__body { padding-top: var(--fa-s4); } }
     @media (min-width: 900px) {
         .mp .mp-cover--debajo .mp-cover__body { grid-template-columns: 3fr 2fr; grid-template-rows: 1fr 1fr; column-gap: var(--fa-s8); padding-top: var(--fa-s8); }
-        .mp .mp-cover--debajo .portada-imagen { grid-row: 1 / 3; }
+        .mp .mp-cover--debajo .portada-imagen { grid-row: 1 / 3; max-height: 520px; }
         .mp .mp-cover--debajo .mp-cover__datos { align-self: end; }
     }
     .mp .mp-cover--debajo h1 { color: var(--negocio-acento); }
