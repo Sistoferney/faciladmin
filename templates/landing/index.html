@@ -4,16 +4,6 @@
 
 {% block extra_css %}
 <style>
-    /* Sin fotos por ahora: la composición del hero muestra el producto */
-    .hero__preview {
-        position: absolute; left: 50%; bottom: 8%; z-index: 1; width: 78%;
-        transform: translateX(-50%); border-radius: var(--fa-r-lg); overflow: hidden;
-        border: 8px solid var(--fa-white); box-shadow: var(--fa-shadow-lg); background: var(--fa-white);
-    }
-    .hero__preview img { width: 100%; height: auto; display: block; }
-    .float-card--a { top: 14%; }
-    .float-card--c { bottom: 2%; }
-
     .how__media--marca { position: relative; isolation: isolate; }
     .how__media--marca img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: var(--fa-r-xl) var(--fa-r-xl) var(--fa-r-xl) 160px; }
     .how__media--marca .how__iso { position: absolute; inset: 0; display: grid; place-items: center; }
@@ -45,23 +35,24 @@
             </ul>
         </div>
         <div class="hero__visual" aria-hidden="true">
-            <span class="hero__shape hero__shape--arch"></span>
-            <span class="hero__shape hero__shape--quarter"></span>
-            <span class="hero__shape hero__shape--circle"></span>
-            <div class="hero__preview">
-                <img src="{% static 'images/dashboard-preview.png' %}" alt="">
+            <div class="hero__marco">
+                <div class="hero__preview">
+                    <img src="{% static 'images/dashboard-preview.png' %}" alt="">
+                </div>
             </div>
-            <div class="float-card float-card--a">
-                <span class="fa-tile">{% icono 'cita' %}</span>
-                <div><strong>Nueva cita</strong>Hoy · 3:30 p. m.</div>
-            </div>
-            <div class="float-card float-card--b">
-                <span class="fa-tile fa-tile--orange">{% icono 'recordatorio' %}</span>
-                <div><strong>Recordatorio enviado</strong>Antes de cada cita</div>
-            </div>
-            <div class="float-card float-card--c">
-                <span class="fa-tile fa-tile--royal">{% icono 'abonos' %}</span>
-                <div><strong>Abono recibido</strong>Cita asegurada</div>
+            <div class="hero__avisos">
+                <div class="float-card float-card--a">
+                    <span class="fa-tile">{% icono 'cita' %}</span>
+                    <div><strong>Nueva cita</strong>Hoy · 3:30 p. m.</div>
+                </div>
+                <div class="float-card float-card--b">
+                    <span class="fa-tile fa-tile--orange">{% icono 'recordatorio' %}</span>
+                    <div><strong>Recordatorio enviado</strong>Antes de cada cita</div>
+                </div>
+                <div class="float-card float-card--c">
+                    <span class="fa-tile fa-tile--royal">{% icono 'abonos' %}</span>
+                    <div><strong>Abono recibido</strong>Cita asegurada</div>
+                </div>
             </div>
         </div>
     </div>
